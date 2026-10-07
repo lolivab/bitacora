@@ -916,8 +916,8 @@ async function loadAdmin(){
  if(error){$('adSum').textContent='';return note('adMsg','No pude cargar los usuarios: '+error.message+'\n¿Ejecutaste admin.sql en Supabase?','err')}
  const tot=data.reduce((a,r)=>a+(r.horas||0),0);
  $('adSum').textContent=data.length+' usuarios · '+fmt(tot)+' horas en total';
- const th=['Usuario','Correo','Vuelos','Horas','Último vuelo','Registro'].map((h,i)=>`<th${i>=2&&i<=3?' style="text-align:right"':''}>${h}</th>`).join('');
- t.innerHTML='<thead><tr>'+th+'</tr></thead><tbody>'+data.map(r=>`<tr><td>${esc(r.nombre||'—')}</td><td>${esc(r.email||'')}</td><td style="text-align:right">${r.vuelos}</td><td style="text-align:right"><b>${fmt(r.horas)}</b></td><td>${esc(r.ultimo_vuelo||'—')}</td><td>${esc(String(r.registrado||'').slice(0,10))}</td></tr>`).join('')+'</tbody>';
+ const th=['Usuario','Correo','Vuelos','Horas','Último vuelo','Último login','Registro'].map((h,i)=>`<th${i>=2&&i<=3?' style="text-align:right"':''}>${h}</th>`).join('');
+ t.innerHTML='<thead><tr>'+th+'</tr></thead><tbody>'+data.map(r=>`<tr><td>${esc(r.nombre||'—')}</td><td>${esc(r.email||'')}</td><td style="text-align:right">${r.vuelos}</td><td style="text-align:right"><b>${fmt(r.horas)}</b></td><td>${esc(r.ultimo_vuelo||'—')}</td><td>${r.ultimo_login?esc(new Date(r.ultimo_login).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})):'—'}</td><td>${esc(String(r.registrado||'').slice(0,10))}</td></tr>`).join('')+'</tbody>';
 }
 
 /* ---------- Inicio ---------- */
