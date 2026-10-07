@@ -856,8 +856,8 @@ function drawScratch(){
  const px=(lat,lon,km)=>{const p=leafMap.latLngToContainerPoint([lat,lon]),q=leafMap.latLngToContainerPoint([lat,lon+km/(111.32*Math.cos(lat*Math.PI/180))]);return{x:p.x,y:p.y,r:Math.max(Math.abs(q.x-p.x),6)}};
  const hole=(x,y,r)=>{const h=g.createRadialGradient(x,y,r*.55,x,y,r);h.addColorStop(0,'rgba(0,0,0,1)');h.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=h;g.beginPath();g.arc(x,y,r,0,7);g.fill()};
  const{V,segs}=scrData;
- Object.keys(segs).forEach(k=>{const[a,b]=k.split('-'),A=px(AP[a][0],AP[a][1],0),B=px(AP[b][0],AP[b][1],0);const n=Math.max(2,Math.ceil(Math.hypot(B.x-A.x,B.y-A.y)/6));const r=px(AP[a][0],AP[a][1],15).r;for(let i=0;i<=n;i++)hole(A.x+(B.x-A.x)*i/n,A.y+(B.y-A.y)*i/n,r)});
- Object.keys(V).forEach(c=>{const p=px(AP[c][0],AP[c][1],45);hole(p.x,p.y,p.r)});
+ Object.keys(segs).forEach(k=>{const[a,b]=k.split('-'),A=px(AP[a][0],AP[a][1],0),B=px(AP[b][0],AP[b][1],0);const n=Math.max(2,Math.ceil(Math.hypot(B.x-A.x,B.y-A.y)/6));const r=px(AP[a][0],AP[a][1],100).r;for(let i=0;i<=n;i++)hole(A.x+(B.x-A.x)*i/n,A.y+(B.y-A.y)*i/n,r)});
+ Object.keys(V).forEach(c=>{const p=px(AP[c][0],AP[c][1],300);hole(p.x,p.y,p.r)});
 }
 function setScratch(on){
  if(!leafMap)return;
