@@ -194,7 +194,6 @@ body.ro [data-d],body.ro [data-e],body.ro #nav [data-v=nuevo],body.ro #nav [data
     <div class="card c6"><h2>Pasajeros por destino</h2><div class="hint">Pasajeros que llevaste a cada aeródromo</div><div class="bars" id="mxPxD"></div></div>
     <div class="card c6"><h2>Pasajeros por aeronave</h2><div class="hint">Total y promedio por vuelo según tipo</div><div class="bars" id="mxPxT"></div></div>
     <div class="card c6"><h2>Pasajeros por mes del año</h2><div class="hint">Estacionalidad: suma de todos los años</div><div class="chart"><canvas id="mxPM"></canvas></div></div>
-    <div class="card c6" id="mxPxFC"><h2>Vuelos con más pasajeros</h2><div class="bars" id="mxPxF"></div></div>
     <div class="card c6 hidden" id="mxPaxC"><h2>Pasajeros frecuentes</h2><div class="hint" id="mxPaxH"></div><div class="bars" id="mxPax"></div></div>
    </div>
    <div class="card c6"><h2>Rutas más voladas</h2><div class="hint">Tramos entre aeródromos, sin importar el sentido</div><div class="bars" id="mxRt"></div></div>
@@ -821,13 +820,13 @@ function renderMetrics(){
  if(!AL.length)return;
  const cap=peopleStats(R,'capitan'),cop=peopleStats(R,'copiloto'),jef=peopleStats(R,'jefe_cabina');
  const none='<div class="hint">Sin datos todavía.</div>';
- const sec=(el,hEl,list,color,txt,miss)=>{if(list.length){$(hEl).textContent=txt(list);peopleBars(el,list,color)}else{$(hEl).textContent=miss;$(el).innerHTML=''}};
+ const sec=(el,hEl,list,color,txt,miss,top)=>{if(list.length){$(hEl).textContent=txt(list);peopleBars(el,list,color,top)}else{$(hEl).textContent=miss;$(el).innerHTML=''}};
  sec('mxCap','mxCapH',cap,'var(--pax)',l=>`${l.length} capitanes distintos · con quién más has volado como copiloto`,'Aparece al importar un reporte que incluya Capitán y Copiloto (por ejemplo el .ics de LogTen).');
  sec('mxCop','mxCopH',cop,'var(--ok)',l=>`${l.length} copilotos distintos · con quién más has volado como capitán`,'Aparece al importar un reporte que incluya Capitán y Copiloto (por ejemplo el .ics de LogTen).');
  sec('mxJef','mxJefH',jef,'var(--prp)',l=>`${l.length} jefes de cabina distintos`,'Ningún vuelo tiene jefe de cabina registrado. El reporte .ics de LogTen no incluye ese dato.');
  // alumnos
  const alu=peopleStats(R,'alumno');
- sec('mxAlu','mxAluH',alu,'var(--dual)',l=>`${l.length} alumnos distintos · instrucción dada`,'Sin datos todavía. Aparece al importar el reporte tabulado de LogTen (columna Student).');
+ sec('mxAlu','mxAluH',alu,'var(--dual)',l=>`${l.length} alumnos distintos · instrucción dada (top 20)`,'Sin datos todavía. Aparece al importar el reporte tabulado de LogTen (columna Student).',20);
  // pasajeros
  const names=r=>String(r.pasajeros||'').split(',').map(x=>x.trim()).filter(Boolean);
  const pcount=r=>Math.max(names(r).length,+r.num_pax||0);
@@ -835,7 +834,7 @@ function renderMetrics(){
  const pm={},py={};
  pf.forEach(r=>{names(r).forEach(n=>{const k=nkey(n),o=pm[k]||(pm[k]={n,v:0,h:0});o.v++;o.h+=r.tot});py[r.y]=(py[r.y]||0)+pcount(r)});
  const pl=Object.values(pm).sort((a,b)=>b.v-a.v||b.h-a.h),pmax=pf.reduce((a,r)=>Math.max(a,pcount(r)),0);
- $('mxPaxC').classList.toggle('hidden',!pl.length);$('mxPxFC').classList.toggle('c12',!pl.length);$('mxPxFC').classList.toggle('c6',!!pl.length);
+ $('mxPaxC').classList.toggle('hidden',!pl.length);
  if(pt){
   if(pl.length){$('mxPaxH').textContent=`${pl.length} personas con nombre registrado`;peopleBars('mxPax',pl,'var(--pax)')}
   const ys=Object.keys(py).sort();$('mxPyH').textContent=`${pt.toLocaleString('es-CL')} en total · promedio ${fmt(pt/pf.length)} por vuelo · máximo ${pmax}`;
@@ -858,7 +857,6 @@ function renderMetrics(){
   rl.length?rowsBars('mxPxR',rl.map(([a,n])=>[a,n,L(n)+' pax']),'var(--pax)'):$('mxPxR').innerHTML='<div class="hint">Sin rutas con pasajeros.</div>';
   dl.length?rowsBars('mxPxD',dl.map(([a,n])=>[a,n,L(n)+' pax']),'var(--dual)'):$('mxPxD').innerHTML='<div class="hint">Sin destinos con pasajeros.</div>';
   rowsBars('mxPxT',Object.entries(ty).sort((a,b)=>b[1].n-a[1].n).slice(0,10).map(([m,o])=>[m,o.n,L(o.n)+' · prom. '+fmt(o.n/o.v,0)]),'var(--ok)');
-  rowsBars('mxPxF',[...pf].sort((a,b)=>pcount(b)-pcount(a)||(b.d>a.d?1:-1)).slice(0,8).map(r=>[r.d+(r.rt?' · '+String(r.rt).split(/\s+/).filter(Boolean).join(' → '):''),pcount(r),pcount(r)+' pax'+(r.m?' · '+r.m:'')]),'var(--prp)');
   mk('mxPM',{type:'bar',data:{labels:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],datasets:[{data:mo,backgroundColor:css('--pax')}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:css('--line')},title:{display:true,text:'pasajeros'}}}}});
  }
  // KPIs
