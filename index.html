@@ -177,7 +177,7 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 
  <section id="s-mapa" class="hidden"><div class="card">
   <h2>Mapa de aeródromos</h2><div class="hint" id="mpH">Aeródromos y aeropuertos donde has volado, según la ruta de tus vuelos.</div>
-  <div class="filters" style="margin-bottom:10px"><label class="tog" for="mpRoutes"><input id="mpRoutes" type="checkbox">Mostrar rutas</label><label class="tog" for="mpScratch"><input id="mpScratch" type="checkbox">Modo mapa raspable</label></div>
+  <div class="filters" style="margin-bottom:10px"><label class="tog" for="mpRoutes"><input id="mpRoutes" type="checkbox">Mostrar rutas</label><label class="tog" for="mpScratch"><input id="mpScratch" type="checkbox">Modo mapa raspable</label><select id="mpScrMode" style="width:auto"><option value="r">Radio de 300 km</option><option value="c">Ciudad entera</option></select></div>
   <div id="mpMap" style="height:520px;border-radius:12px;border:1px solid var(--line);overflow:hidden"></div>
   <div id="mpMsg"></div>
   <div style="overflow-x:auto;margin-top:14px"><table id="mpTbl" style="width:100%;border-collapse:collapse"></table></div>
@@ -856,12 +856,41 @@ function drawScratch(){
  const px=(lat,lon,km)=>{const p=leafMap.latLngToContainerPoint([lat,lon]),q=leafMap.latLngToContainerPoint([lat,lon+km/(111.32*Math.cos(lat*Math.PI/180))]);return{x:p.x,y:p.y,r:Math.max(Math.abs(q.x-p.x),6)}};
  const hole=(x,y,r)=>{const h=g.createRadialGradient(x,y,r*.55,x,y,r);h.addColorStop(0,'rgba(0,0,0,1)');h.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=h;g.beginPath();g.arc(x,y,r,0,7);g.fill()};
  const{V,segs}=scrData;
- Object.keys(segs).forEach(k=>{const[a,b]=k.split('-'),A=px(AP[a][0],AP[a][1],0),B=px(AP[b][0],AP[b][1],0);const n=Math.max(2,Math.ceil(Math.hypot(B.x-A.x,B.y-A.y)/6));const r=px(AP[a][0],AP[a][1],100).r;for(let i=0;i<=n;i++)hole(A.x+(B.x-A.x)*i/n,A.y+(B.y-A.y)*i/n,r)});
- Object.keys(V).forEach(c=>{const p=px(AP[c][0],AP[c][1],300);hole(p.x,p.y,p.r)});
+ if($('mpScrMode').value==='c'){
+  const done={};
+  Object.keys(V).forEach(c=>{const key=cityKey(c),P=cityPoly[key];
+   if(P&&P.length){if(done[key])return;done[key]=1;P.forEach(poly=>{g.fillStyle='#000';g.beginPath();poly.forEach(ring=>{ring.forEach((pt,i)=>{const p=leafMap.latLngToContainerPoint([pt[1],pt[0]]);i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y)});g.closePath()});g.fill('evenodd')})}
+   else{const p=px(AP[c][0],AP[c][1],20);hole(p.x,p.y,p.r)}});
+ }else{
+  Object.keys(segs).forEach(k=>{const[a,b]=k.split('-'),A=px(AP[a][0],AP[a][1],0),B=px(AP[b][0],AP[b][1],0);const n=Math.max(2,Math.ceil(Math.hypot(B.x-A.x,B.y-A.y)/6));const r=px(AP[a][0],AP[a][1],100).r;for(let i=0;i<=n;i++)hole(A.x+(B.x-A.x)*i/n,A.y+(B.y-A.y)*i/n,r)});
+  Object.keys(V).forEach(c=>{const p=px(AP[c][0],AP[c][1],300);hole(p.x,p.y,p.r)});
+ }
+}
+let cityPoly={};try{cityPoly=JSON.parse(localStorage.getItem('cityPoly')||'{}')}catch(e){}
+function cityKey(c){const a=AP[c];return (a[3]||c)+'|'+(a[4]||'')}
+let cityBusy=false;
+async function loadCities(){
+ if(cityBusy||!scrData)return;cityBusy=true;
+ const keys={};Object.keys(scrData.V).forEach(c=>{const k=cityKey(c);if(!(k in cityPoly)&&AP[c][3])keys[k]=c});
+ const list=Object.keys(keys);
+ for(let n=0;n<list.length;n++){
+  if($('mpScrMode').value!=='c'||!$('mpScratch').checked)break;
+  note('mpMsg','Buscando límites de ciudades… '+(n+1)+'/'+list.length);
+  const k=list[n],a=AP[keys[k]];
+  try{
+   const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&polygon_geojson=1&polygon_threshold=0.003&q='+encodeURIComponent(a[3]+', '+a[4]));
+   const j=await r.json(),gj=j[0]&&j[0].geojson;
+   cityPoly[k]=gj&&gj.type==='Polygon'?[gj.coordinates]:gj&&gj.type==='MultiPolygon'?gj.coordinates:[];
+  }catch(e){cityPoly[k]=[]}
+  try{localStorage.setItem('cityPoly',JSON.stringify(cityPoly))}catch(e){}
+  drawScratch();
+  await new Promise(r=>setTimeout(r,1100));
+ }
+ note('mpMsg','');cityBusy=false;
 }
 function setScratch(on){
  if(!leafMap)return;
- if(on){if(!scrCv){scrCv=document.createElement('canvas');scrCv.style.cssText='position:absolute;left:0;top:0;z-index:450;pointer-events:none';leafMap.getContainer().appendChild(scrCv);leafMap.on('move zoom resize',drawScratch)}scrCv.style.display='block';drawScratch()}
+ if(on){if(!scrCv){scrCv=document.createElement('canvas');scrCv.style.cssText='position:absolute;left:0;top:0;z-index:450;pointer-events:none';leafMap.getContainer().appendChild(scrCv);leafMap.on('move zoom resize',drawScratch)}scrCv.style.display='block';drawScratch();if($('mpScrMode').value==='c')loadCities()}
  else if(scrCv)scrCv.style.display='none';
 }
 let AP=null,leafMap=null,leafLayer=null,leafLines=null,mapMarkers={};
@@ -898,7 +927,7 @@ async function renderMap(){
  Object.keys(segs).forEach(k=>{const[a,b]=k.split('-');L.polyline([[AP[a][0],AP[a][1]],[AP[b][0],AP[b][1]]],{color:'#2a6fb0',weight:1.5+Math.min(segs[k],6)*0.5,opacity:.45}).addTo(leafLines)});
  const setLines=()=>{if($('mpRoutes').checked)leafLines.addTo(leafMap);else leafLines.remove()};
  $('mpRoutes').onchange=setLines;setLines();
- scrData={V,segs};$('mpScratch').onchange=()=>setScratch($('mpScratch').checked);
+ scrData={V,segs};$('mpScratch').onchange=()=>setScratch($('mpScratch').checked);$('mpScrMode').onchange=()=>{if($('mpScratch').checked){drawScratch();if($('mpScrMode').value==='c')loadCities()}};
  $('mpH').textContent=codes.length?`${codes.length} aeródromos visitados. Toca un pin para ver el detalle.`:'Aún no hay aeródromos para mostrar. Agrega códigos ICAO en la ruta de tus vuelos (ej. SCTB SCVH).';
  if(codes.length){const b=L.latLngBounds(codes.map(c=>[AP[c][0],AP[c][1]]));leafMap.fitBounds(b.pad(0.2),{maxZoom:11})}else leafMap.setView([-33.45,-70.67],5);
  setTimeout(()=>{leafMap.invalidateSize();setScratch($('mpScratch').checked)},50);
