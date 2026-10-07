@@ -177,7 +177,7 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 
  <section id="s-mapa" class="hidden"><div class="card">
   <h2>Mapa de aeródromos</h2><div class="hint" id="mpH">Aeródromos y aeropuertos donde has volado, según la ruta de tus vuelos.</div>
-  <div class="filters" style="margin-bottom:10px"><label class="tog" for="mpRoutes"><input id="mpRoutes" type="checkbox">Mostrar rutas</label></div>
+  <div class="filters" style="margin-bottom:10px"><label class="tog" for="mpRoutes"><input id="mpRoutes" type="checkbox">Mostrar rutas</label><label class="tog" for="mpScratch"><input id="mpScratch" type="checkbox">Modo mapa raspable</label></div>
   <div id="mpMap" style="height:520px;border-radius:12px;border:1px solid var(--line);overflow:hidden"></div>
   <div id="mpMsg"></div>
   <div style="overflow-x:auto;margin-top:14px"><table id="mpTbl" style="width:100%;border-collapse:collapse"></table></div>
@@ -842,6 +842,28 @@ $('cuSave').onclick=async()=>{
 };
 
 /* ---------- Mapa de aeródromos ---------- */
+let scrCv=null,scrData=null;
+function drawScratch(){
+ if(!leafMap||!scrCv)return;
+ const sz=leafMap.getSize(),dpr=window.devicePixelRatio||1;
+ scrCv.width=sz.x*dpr;scrCv.height=sz.y*dpr;scrCv.style.width=sz.x+'px';scrCv.style.height=sz.y+'px';
+ const g=scrCv.getContext('2d');g.scale(dpr,dpr);
+ const gr=g.createLinearGradient(0,0,sz.x,sz.y);gr.addColorStop(0,'#9aa3aa');gr.addColorStop(.5,'#c3c9ce');gr.addColorStop(1,'#8d969d');
+ g.fillStyle=gr;g.fillRect(0,0,sz.x,sz.y);
+ g.fillStyle='rgba(255,255,255,.07)';let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;for(let i=0;i<sz.x*sz.y/90;i++)g.fillRect(rnd()*sz.x,rnd()*sz.y,1.5,1.5);
+ g.fillStyle='rgba(60,70,80,.55)';g.font='600 15px sans-serif';g.textAlign='center';g.fillText('Vuela para raspar el mapa',sz.x/2,sz.y/2);
+ g.globalCompositeOperation='destination-out';
+ const px=(lat,lon,km)=>{const p=leafMap.latLngToContainerPoint([lat,lon]),q=leafMap.latLngToContainerPoint([lat,lon+km/(111.32*Math.cos(lat*Math.PI/180))]);return{x:p.x,y:p.y,r:Math.max(Math.abs(q.x-p.x),6)}};
+ const hole=(x,y,r)=>{const h=g.createRadialGradient(x,y,r*.55,x,y,r);h.addColorStop(0,'rgba(0,0,0,1)');h.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=h;g.beginPath();g.arc(x,y,r,0,7);g.fill()};
+ const{V,segs}=scrData;
+ Object.keys(segs).forEach(k=>{const[a,b]=k.split('-'),A=px(AP[a][0],AP[a][1],0),B=px(AP[b][0],AP[b][1],0);const n=Math.max(2,Math.ceil(Math.hypot(B.x-A.x,B.y-A.y)/6));const r=px(AP[a][0],AP[a][1],15).r;for(let i=0;i<=n;i++)hole(A.x+(B.x-A.x)*i/n,A.y+(B.y-A.y)*i/n,r)});
+ Object.keys(V).forEach(c=>{const p=px(AP[c][0],AP[c][1],45);hole(p.x,p.y,p.r)});
+}
+function setScratch(on){
+ if(!leafMap)return;
+ if(on){if(!scrCv){scrCv=document.createElement('canvas');scrCv.style.cssText='position:absolute;left:0;top:0;z-index:450;pointer-events:none';leafMap.getContainer().appendChild(scrCv);leafMap.on('move zoom resize',drawScratch)}scrCv.style.display='block';drawScratch()}
+ else if(scrCv)scrCv.style.display='none';
+}
 let AP=null,leafMap=null,leafLayer=null,leafLines=null,mapMarkers={};
 function loadLeaflet(){
  if(window.L)return Promise.resolve();
@@ -876,9 +898,10 @@ async function renderMap(){
  Object.keys(segs).forEach(k=>{const[a,b]=k.split('-');L.polyline([[AP[a][0],AP[a][1]],[AP[b][0],AP[b][1]]],{color:'#2a6fb0',weight:1.5+Math.min(segs[k],6)*0.5,opacity:.45}).addTo(leafLines)});
  const setLines=()=>{if($('mpRoutes').checked)leafLines.addTo(leafMap);else leafLines.remove()};
  $('mpRoutes').onchange=setLines;setLines();
+ scrData={V,segs};$('mpScratch').onchange=()=>setScratch($('mpScratch').checked);
  $('mpH').textContent=codes.length?`${codes.length} aeródromos visitados. Toca un pin para ver el detalle.`:'Aún no hay aeródromos para mostrar. Agrega códigos ICAO en la ruta de tus vuelos (ej. SCTB SCVH).';
  if(codes.length){const b=L.latLngBounds(codes.map(c=>[AP[c][0],AP[c][1]]));leafMap.fitBounds(b.pad(0.2),{maxZoom:11})}else leafMap.setView([-33.45,-70.67],5);
- setTimeout(()=>leafMap.invalidateSize(),50);
+ setTimeout(()=>{leafMap.invalidateSize();setScratch($('mpScratch').checked)},50);
  $('mpTbl').innerHTML=codes.length?'<thead><tr><th>Código</th><th>Aeródromo</th><th style="text-align:right">Vuelos</th><th>Último vuelo</th></tr></thead><tbody>'+codes.map(c=>`<tr data-c="${esc(c)}" style="cursor:pointer"><td><b>${esc(c)}</b></td><td>${esc(AP[c][2])}${AP[c][3]?' · '+esc(AP[c][3]):''}</td><td style="text-align:right">${V[c].n}</td><td>${esc(V[c].last)}</td></tr>`).join('')+'</tbody>':'';
 }
 document.addEventListener('click',e=>{const tr=e.target.closest('#mpTbl tr[data-c]');if(!tr||!leafMap)return;const m=mapMarkers[tr.dataset.c];if(m){leafMap.setView(m.getLatLng(),12);m.openPopup();$('mpMap').scrollIntoView({behavior:'smooth',block:'center'})}});
