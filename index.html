@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bitácora de vuelo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e8eff3;--panel:#f7fafb;--ink:#0d2a3a;--mute:#5b7384;--line:#cbd9e1;--dual:#2a6fb0;--solo:#c2306e;--pax:#e0a02c;--ok:#1d8a6b;--prp:#7a5cc2;--gry:#8a9aa6;--bad:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1a24;--panel:#122836;--ink:#e6f0f5;--mute:#8fa8b8;--line:#223a4a;--dual:#5aa4e6;--solo:#f05a97;--pax:#f2bd55;--ok:#46c9a1;--prp:#a58be0;--gry:#7d8f9b;--bad:#ff8a80}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+h1,h2,.big{font-family:"Bricolage Grotesque",system-ui,sans-serif;letter-spacing:-.02em}
+h1{font-size:clamp(24px,5vw,36px);margin:0;line-height:1.05}
+h2{font-size:17px;margin:0 0 2px}
+.hidden{display:none!important}
+.muted,.hint{color:var(--mute)}.hint{font-size:12.5px;margin-bottom:10px}
+button,input,select,textarea{font:400 14px "IBM Plex Sans",sans-serif}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--dual);outline-offset:2px}
+input,select,textarea{width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+label{display:block;font-size:13px;color:var(--mute);margin:0 0 4px}
+.btn{border:0;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9px;font-weight:600;cursor:pointer}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--line)}
+.btn.small{padding:5px 10px;font-size:12.5px}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+.msg{padding:10px 12px;border-radius:9px;font-size:13.5px;margin-top:12px;border:1px solid var(--line);white-space:pre-line}
+.msg.err{color:var(--bad);border-color:var(--bad)}.msg.ok{color:var(--ok);border-color:var(--ok)}
+.auth{max-width:420px;margin:8vh auto 0}.auth .card{padding:22px}
+.tabs{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;margin:16px 0}
+.tabs button{flex:1;border:0;background:none;color:var(--mute);padding:8px;border-radius:7px;cursor:pointer;font-weight:500}
+.tabs button.on{background:var(--ink);color:var(--bg)}
+.field{margin-bottom:12px}
+.av{width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--line);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none;overflow:hidden}
+.av.big{width:96px;height:96px;font-size:30px}
+.avrow{display:flex;align-items:center;gap:16px;margin:4px 0 18px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.avbtns{display:flex;flex-wrap:wrap;gap:8px}
+.top{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:16px}
+.nav{display:flex;gap:4px;overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+.nav button{border:0;background:none;color:var(--mute);padding:8px 14px;border-radius:7px;cursor:pointer;font-weight:500;white-space:nowrap}
+.nav button.on{background:var(--ink);color:var(--bg)}
+.who{display:flex;gap:10px;align-items:center;font-size:13.5px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.filters select{width:auto;background:var(--panel)}
+.tog{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--ink);margin:0;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+.tog input{width:auto;margin:0}
+.seg{display:flex;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;color:var(--mute);font-weight:500;font-size:13px;padding:7px 12px;border-radius:7px;cursor:pointer}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.hero{background:var(--ink);color:var(--bg);border-radius:18px;padding:22px;display:grid;gap:18px;grid-template-columns:1.2fr 2fr;margin-bottom:14px}
+.hero .big{font-size:clamp(54px,11vw,104px);line-height:.9;font-weight:700}
+.hero small{display:block;opacity:.7;margin-top:8px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kpi{border-left:2px solid rgba(255,255,255,.25);padding-left:12px}
+.kpi b{font:700 26px "Bricolage Grotesque";display:block}.kpi span{font-size:12.5px;opacity:.7}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(12,1fr)}
+.hitos{grid-row:span 2}.c8{grid-column:span 8}.c4{grid-column:span 4}.c6{grid-column:span 6}.c12{grid-column:span 12}
+.chart{position:relative;height:260px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--mute);margin-bottom:8px;min-height:18px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+.bars .row{display:grid;grid-template-columns:130px 1fr 64px;gap:8px;align-items:center;margin:7px 0;font-size:13.5px}
+.bars .track{height:10px;background:var(--line);border-radius:6px;overflow:hidden}
+.bars .fill{height:100%;background:var(--dual);border-radius:6px}.bars .n{text-align:right;color:var(--mute)}
+.tl{list-style:none;margin:0;padding:0 0 0 14px;border-left:2px solid var(--line)}
+.tl li{position:relative;margin:0 0 14px;padding-left:12px}
+.tl li:before{content:"";position:absolute;left:-21px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--solo);border:2px solid var(--panel)}
+.tl b{display:block;font-size:14px}.tl span{font-size:12.5px;color:var(--mute)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.tools input{flex:1;min-width:180px}.tools select{width:auto}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:700px}
+th{text-align:left;color:var(--mute);font-weight:500;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:500;color:#fff;white-space:nowrap}
+.form{display:grid;gap:12px;grid-template-columns:repeat(2,1fr);max-width:760px}
+.form input,.form select,.form textarea{box-sizing:border-box;max-width:100%;min-width:0}.form input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-height:42px;text-align:left}.form input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.3em}.form select{min-height:42px}.form>*{min-width:0}.form{align-items:start}.form .full{grid-column:1/-1}.form label{line-height:1.3}.form .opts .opt{min-width:0}.form .opt span{overflow-wrap:anywhere}.form .subbox{box-sizing:border-box}.form .stepper input{width:64px}.form .paxn>*{min-width:0}.form .lblhint{display:block;font-size:12px;color:var(--mute);margin-top:2px}
+.chk{display:flex;gap:8px;align-items:center;margin-top:6px}.chk input{width:auto}.chk label{margin:0;color:var(--ink)}
+.empty{text-align:center;padding:40px 16px}
+.map{display:grid;gap:10px;grid-template-columns:repeat(3,1fr);margin:12px 0}
+.map label{font-size:12px}
+.map select{padding:7px 8px;font-size:13px}
+@media(max-width:820px){.hitos{grid-row:auto}.hero{grid-template-columns:1fr}.c8,.c4,.c6{grid-column:span 12}.map{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr}.bars .row{grid-template-columns:100px 1fr 56px}}
+
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.opt{display:flex;align-items:center;gap:9px;margin:0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);cursor:pointer;font-size:14px;line-height:1.2}
+.opt input{width:18px;height:18px;margin:0;flex:none;accent-color:var(--dual)}
+.opt.on{border-color:var(--dual);background:color-mix(in srgb,var(--dual) 12%,var(--bg))}
+.opt.dis{opacity:.4;cursor:not-allowed}
+.subbox{background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:12px 14px}
+.stepper{display:flex;gap:8px;align-items:center}
+.stepper button{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:20px;line-height:1;cursor:pointer}
+.stepper input{width:64px;text-align:center}
+.paxn{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+.cap{font-size:12.5px;color:var(--mute);margin-top:6px}
+@media(max-width:820px){.opts{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.opts{grid-template-columns:1fr}.paxn{grid-template-columns:1fr}}
+@media(max-width:700px){.form{grid-template-columns:1fr}}
+</style></head><body>
+<div class="wrap">
+
+<div id="vSetup" class="auth hidden"><div class="card"><h1>Falta configurar</h1><p>Abre el archivo <b>config.js</b> y pega los datos de tu proyecto Supabase. Los pasos están en LEEME.md.</p></div></div>
+
+<div id="vAuth" class="auth hidden"><div class="card">
+ <h1>Bitácora de vuelo</h1><div class="muted">Tus horas de vuelo, ordenadas y a la mano.</div>
+ <div class="tabs"><button id="tIn" class="on" type="button">Entrar</button><button id="tUp" type="button">Crear cuenta</button></div>
+ <div class="field hidden" id="fName"><label for="aName">Nombre</label><input id="aName" autocomplete="name"></div>
+ <div class="field"><label for="aMail">Correo</label><input id="aMail" type="email" autocomplete="email"></div>
+ <div class="field"><label for="aPass">Contraseña (mínimo 8 caracteres)</label><input id="aPass" type="password" autocomplete="current-password"></div>
+ <button class="btn" id="aGo" type="button" style="width:100%">Entrar</button>
+ <div id="aMsg"></div>
+</div></div>
+
+<div id="vApp" class="hidden">
+ <div class="top"><h1>Bitácora de vuelo</h1><div class="who"><span id="uAv" class="av"></span><span id="uName" class="muted"></span><button class="btn ghost small" id="out" type="button">Salir</button></div></div>
+ <div class="nav" id="nav" style="margin-bottom:16px">
+  <button data-v="resumen" class="on">Resumen</button><button data-v="vuelos">Mis vuelos</button><button data-v="mapa">Mapa</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="importar">Importar</button><button data-v="cuenta">Mi cuenta</button><button data-v="admin" id="navAdmin" class="hidden">Administrador</button>
+ </div>
+
+ <section id="s-resumen">
+  <div class="filters"><div class="seg" id="fy"></div><select id="fa" aria-label="Aeronave"></select><label class="tog" for="grp"><input id="grp" type="checkbox" checked>Agrupar variantes</label></div>
+  <div id="dashEmpty" class="card empty hidden"><h2>Aún no tienes vuelos</h2><p class="muted">Registra el primero o importa tu historial.</p><button class="btn" data-go="nuevo">Registrar vuelo</button> <button class="btn ghost" data-go="importar">Importar</button></div>
+  <div id="dash">
+   <section class="hero"><div><div class="big" id="hTot">–</div><small>horas totales en el filtro actual</small><small id="hNote" class="hidden"></small></div><div class="kpis" id="kpis"></div></section>
+   <div class="grid">
+    <div class="card c8"><h2 id="tM">Horas por mes</h2><div class="hint">Por tipo de vuelo</div><div class="legend" id="lg"></div><div class="chart"><canvas id="cM"></canvas></div></div>
+    <div class="card c4"><h2>Por aeronave</h2><div class="hint" id="aH">Horas por modelo</div><div class="chart"><canvas id="cA"></canvas></div></div>
+    <div class="card c8"><h2>Horas acumuladas</h2><div class="hint">Evolución en el tiempo</div><div class="chart"><canvas id="cC"></canvas></div></div>
+    <div class="card c4"><h2>Aeródromos más visitados</h2><div class="hint">Vuelos con el aeródromo en la ruta</div><div class="bars" id="ap"></div></div>
+    <div class="card c6 hitos"><h2>Hitos</h2><div class="hint">Calculados con tu bitácora</div><ul class="tl" id="ms"></ul></div>
+    <div class="card c6"><h2 id="xT">Compañeros de vuelo</h2><div class="hint" id="xH"></div><div class="bars" id="px"></div></div>
+    <div class="card c6" id="instCard"><h2>Instructores</h2><div class="hint">Vuelos y horas con cada instructor</div><div class="bars" id="pi"></div></div>
+   </div>
+  </div>
+ </section>
+
+ <section id="s-vuelos" class="hidden"><div class="card">
+  <h2>Mis vuelos</h2>
+  <div class="tools"><input id="q" type="search" placeholder="Buscar por ruta, matrícula, observación o nombre"><select id="fc" aria-label="Tipo"></select></div>
+  <div class="tw"><table><thead><tr><th>Fecha</th><th>Aeronave</th><th>Tiempo</th><th>Aterr.</th><th>Tipo</th><th>Ruta y notas</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+  <button class="btn ghost small" id="more" type="button" style="margin-top:10px">Ver más</button>
+ </div></section>
+
+ <section id="s-nuevo" class="hidden"><div class="card">
+  <h2 id="fTitle">Nuevo vuelo</h2><div class="hint">Los campos con * son obligatorios.</div>
+  <div class="form">
+   <div><label for="fFecha">Fecha *</label><input id="fFecha" type="date"></div>
+   <div><label for="fTotal">Tiempo total *</label><input id="fTotal" placeholder="1:30"><span class="lblhint">1:30 = horas y minutos · 1,5 = decimal</span><div class="hint" id="fPrev" style="margin:4px 0 0"></div></div>
+   <div><label for="fModelo">Aeronave (modelo) *</label><select id="fModelo"></select><input id="fModeloNew" class="hidden" placeholder="Escribe el modelo nuevo, ej. C-182" style="margin-top:8px"></div>
+   <div><label for="fMat">Matrícula</label><select id="fMat"></select><input id="fMatNew" class="hidden" placeholder="Escribe la matrícula, ej. CC-KSZ" style="margin-top:8px"></div>
+   <div class="full" id="optsWrap"><label>Tipo de vuelo (marca todo lo que corresponda)</label>
+    <div class="opts">
+     <label class="opt" id="lXc"><input type="checkbox" id="oXc"><span>Vuelo de travesía</span></label>
+     <label class="opt" id="lSolo"><input type="checkbox" id="oSolo"><span>Vuelo solo</span></label>
+     <label class="opt" id="lPax"><input type="checkbox" id="oPax"><span>Con pasajeros</span></label>
+     <label class="opt" id="lDual"><input type="checkbox" id="oDual"><span>Instrucción recibida</span></label>
+     <label class="opt" id="lDada"><input type="checkbox" id="oDada"><span>Instrucción dada</span></label>
+     <label class="opt" id="lSic"><input type="checkbox" id="oSic"><span>Copiloto (SIC)</span></label>
+    </div>
+    <div class="cap">Si no marcas nada, se registra como vuelo al mando.</div>
+   </div>
+   <div class="full subbox hidden" id="paxBox"><label for="fNPax">¿Cuántos pasajeros?</label>
+    <div class="stepper"><button type="button" id="paxMinus" aria-label="Menos pasajeros">−</button><input id="fNPax" type="number" min="1" max="9" value="1"><button type="button" id="paxPlus" aria-label="Más pasajeros">+</button></div>
+    <div class="paxn" id="paxNames"></div></div>
+   <div class="full subbox hidden" id="fInstWrap"><label for="fInst">Nombre del instructor</label><input id="fInst"></div>
+   <div><label for="fAterr">Aterrizajes</label><input id="fAterr" type="number" min="0" value="1"></div>
+   <div><label for="fRuta">Ruta</label><input id="fRuta" placeholder="SCTB SCSN SCTB"><span class="lblhint">Códigos ICAO separados por espacio</span></div>
+   <div class="full"><label for="fCom">Comentarios</label><textarea id="fCom" rows="2"></textarea></div>
+   <div class="full"><button class="btn" id="fSave" type="button">Guardar vuelo</button> <button class="btn ghost hidden" id="fCancel" type="button">Cancelar edición</button><div id="fMsg"></div></div>
+  </div>
+ </div></section>
+
+ <section id="s-mapa" class="hidden"><div class="card">
+  <h2>Mapa de aeródromos</h2><div class="hint" id="mpH">Aeródromos y aeropuertos donde has volado, según la ruta de tus vuelos.</div>
+  <div class="filters" style="margin-bottom:10px"><label class="tog" for="mpRoutes"><input id="mpRoutes" type="checkbox">Mostrar rutas</label></div>
+  <div id="mpMap" style="height:520px;border-radius:12px;border:1px solid var(--line);overflow:hidden"></div>
+  <div id="mpMsg"></div>
+  <div style="overflow-x:auto;margin-top:14px"><table id="mpTbl" style="width:100%;border-collapse:collapse"></table></div>
+ </div></section>
+ <section id="s-cuenta" class="hidden"><div class="card" style="max-width:420px">
+  <h2>Mi cuenta</h2><div class="hint" id="cuMail"></div>
+  <div class="avrow"><span id="cuAv" class="av big"></span><div><div class="avbtns"><label class="btn ghost small" for="cuFile" style="margin:0;cursor:pointer">Subir foto</label><button class="btn ghost small" id="cuDel" type="button">Quitar foto</button></div><input id="cuFile" type="file" accept="image/*" class="hidden"><div class="hint" style="margin:8px 0 0">Se recorta en cuadrado y se guarda en tu cuenta.</div></div></div>
+  <div id="avMsg"></div>
+  <div class="field"><label for="cuP1">Nueva contraseña (mínimo 8 caracteres)</label><input id="cuP1" type="password" autocomplete="new-password"></div>
+  <div class="field"><label for="cuP2">Repite la nueva contraseña</label><input id="cuP2" type="password" autocomplete="new-password"></div>
+  <button class="btn" id="cuSave" type="button">Cambiar contraseña</button>
+  <div id="cuMsg"></div>
+ </div></section>
+ <section id="s-admin" class="hidden"><div class="card" style="max-width:900px">
+  <h2>Administrador</h2><div class="hint">Usuarios registrados y sus horas totales (incluye experiencia previa).</div>
+  <div id="adSum" class="hint"></div>
+  <div style="overflow-x:auto"><table id="adTbl" style="width:100%;border-collapse:collapse"></table></div>
+  <div id="adMsg"></div>
+ </div></section>
+ <section id="s-importar" class="hidden"><div class="card" style="max-width:900px">
+  <h2>Importar vuelos</h2>
+  <p class="muted" style="margin-bottom:6px">Sube un archivo y la app detecta el formato. Formatos que puedes subir:</p>
+  <ol class="muted" style="margin:0 0 14px;padding-left:22px;line-height:1.6">
+   <li>Excel (.xlsx) exportado desde el sitio del Club Aéreo de Santiago</li>
+   <li>PDF "DGAC Chile" exportado desde LogTen Pro</li>
+   <li>CSV o TXT exportado desde LogTen Pro (tabulado o con comas)</li>
+   <li>CSV exportado desde MyFlightbook</li>
+   <li>Cualquier otro CSV que tenga fecha, aeronave y tiempo</li>
+  </ol>
+  <input type="file" id="csv" accept=".xlsx,.csv,.tsv,.txt,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+  <div id="iMap" class="hidden"></div>
+  <div class="chk" style="margin:10px 0"><input id="iUpd" type="checkbox"><label for="iUpd">Actualizar los vuelos que ya existen (márcalo para corregir lo ya importado)</label></div>
+  <div id="iMsg"></div>
+  <button class="btn hidden" id="iGo" type="button" style="margin-top:12px">Importar</button>
+ </div></section>
+</div>
+<div id="ver" class="muted" style="margin-top:18px;font-size:12px;text-align:center"></div>
+</div>
+
+<script src="config.js?v=6"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ===== Lector del PDF "DGAC Chile" exportado desde LogTen Pro ===== */
+const DG_T=/^\d+:\d\d$/;
+const dgH=s=>{const p=s.split(':');return +p[0]+ +p[1]/60};
+function dgWords(vp,tc){
+ const out=[];
+ for(const it of tc.items){
+  const s=it.str;if(!s||!s.trim())continue;
+  const x=it.transform[4],y=it.transform[5],w=it.width||0,sz=Math.abs(it.transform[3])||8;
+  const top=vp.height-y-sz*0.8,n=s.length||1;
+  for(const m of s.matchAll(/\S+/g))out.push({text:m[0].normalize('NFC'),x0:x+w*m.index/n,x1:x+w*(m.index+m[0].length)/n,top});
+ }
+ return out;
+}
+const dgCtr=w=>(w.x0+w.x1)/2;
+function dgFind(band,text,n=0){const c=band.filter(w=>w.text===text).sort((a,b)=>a.x0-b.x0);return c[n]||null}
+async function dgacExtract(doc,onProg){
+ let year=null;const A={},B={};
+ for(let n=2;n<=doc.numPages;n++){
+  if(onProg&&n%10===0)await onProg(n,doc.numPages);
+  const page=await doc.getPage(n),vp=page.getViewport({scale:1}),tc=await page.getTextContent();
+  const ws=dgWords(vp,tc),band=ws.filter(w=>w.top>78&&w.top<132);
+  if(n%2===0){ // pagina A
+   const y=band.filter(w=>/^\d{4}$/.test(w.text)&&w.x0<130);if(y.length)year=+y[0].text;
+   const marca=dgFind(band,'MARCA'),mat=dgFind(band,'MATRICULA'),des=dgFind(band,'DESDE'),has=dgFind(band,'HASTA'),vue=dgFind(band,'VUELO');
+   if(!marca||!mat||!des||!has||!vue)throw new Error('Formato DGAC no reconocido en la página '+n);
+   const D=band.filter(w=>w.text==='D'&&w.x0>650),Nn=band.filter(w=>w.text==='N'&&w.x0>650);
+   const thr=D.length&&Nn.length?((D[0].x0+Nn[0].x0)/2+3):686;
+   const data=ws.filter(w=>w.top>133&&w.top<372);
+   const dates=data.filter(w=>/^\d\d-\d\d$/.test(w.text)&&w.x0<60).sort((a,b)=>a.top-b.top);
+   const list=[];
+   for(const dw of dates){
+    const r=data.filter(w=>Math.abs(w.top-dw.top)<6).sort((a,b)=>a.x0-b.x0);
+    const j=(a,b)=>r.filter(w=>w.x0>=a&&w.x0<b).map(w=>w.text).join(' ');
+    const times=r.filter(w=>DG_T.test(w.text)&&w.x0>=vue.x0-14);
+    const ints=r.filter(w=>/^\d+$/.test(w.text)&&w.x0>=650);
+    const [dd,mm]=dw.text.split('-');
+    list.push({pg:n,y:year,d:dd,mo:mm,m:j(marca.x0-12,mat.x0-12),t:j(mat.x0-12,des.x0-8),fr:j(des.x0-8,has.x0-8),to:j(has.x0-8,vue.x0-12),
+     tot:times.length?dgH(times[0].text):0,ld:ints.filter(w=>dgCtr(w)<thr).reduce((s,w)=>s+ +w.text,0),ln:ints.filter(w=>dgCtr(w)>=thr).reduce((s,w)=>s+ +w.text,0)});
+   }
+   A[n]=list;
+  }else{ // pagina B
+   const c={};
+   const cc=(k,t)=>{const w=dgFind(band,t);if(w)c[k]=dgCtr(w)};
+   cc('dia','DÍA');cc('noche','NOCHE');cc('ifr_sim','SIMULADO');cc('trav','TRAVESÍA');cc('solo','SOLO');cc('pic','(PIC)');cc('sic','(SIC)');cc('inst_rec','RECIBIDA');cc('inst','INSTRUCTOR');cc('sim','ENTRENADOR');cc('app','NO.');
+   const a=dgFind(band,'IFR',0),r_=dgFind(band,'REAL');
+   if(a&&r_)c.ifr_real=(a.x0+r_.x1)/2;
+   const cert=dgFind(ws,'Certifíco'),endy=cert?cert.top-3:372;
+   const data=ws.filter(w=>w.top>133&&w.top<endy),obsx=(c.inst||580)+24;
+   const tcols=['dia','noche','ifr_real','ifr_sim','sim','trav','solo','pic','sic','inst_rec','inst'].filter(k=>k in c);
+   const cells=[],obs=[];
+   for(const w of data){
+    if(w.x0>=obsx){obs.push(w);continue}
+    if(DG_T.test(w.text)){const k=tcols.reduce((b,k)=>Math.abs(dgCtr(w)-c[k])<Math.abs(dgCtr(w)-c[b])?k:b,tcols[0]);cells.push([w.top,k,dgH(w.text)])}
+    else if(/^\d+$/.test(w.text)&&'app' in c&&Math.abs(dgCtr(w)-c.app)<14)cells.push([w.top,'app',+w.text]);
+   }
+   cells.sort((p,q)=>p[0]-q[0]);
+   const cl=[];
+   for(const [t,k,v] of cells){if(cl.length&&t-cl[cl.length-1].top<7)cl[cl.length-1].v[k]=(cl[cl.length-1].v[k]||0)+v;else cl.push({top:t,v:{[k]:v},obs:[]})}
+   for(const w of obs){if(cl.length){let b=cl[0];for(const r of cl)if(Math.abs(r.top-w.top)<Math.abs(b.top-w.top))b=r;b.obs.push(w)}}
+   cl.forEach(r=>{r.obs=r.obs.sort((p,q)=>Math.round(p.top/3)-Math.round(q.top/3)||p.x0-q.x0).map(w=>w.text).join(' ')});
+   B[n]=cl;
+  }
+ }
+ const out=[];let mis=0;
+ for(const pg of Object.keys(A).map(Number)){
+  const a=A[pg],b=B[pg+1]||[];if(a.length!==b.length)mis++;
+  // cruce diciembre a enero dentro de una pagina: las filas previas son del año anterior
+  for(let i=1;i<a.length;i++)if(+a[i].mo<+a[i-1].mo-6)for(let j=0;j<i;j++)a[j].y-=1;
+  a.forEach((x,i)=>{if(b[i])out.push(Object.assign({},x,b[i].v,{obs:b[i].obs}))});
+ }
+ return {rows:out,mismatch:mis};
+}
+/* filas crudas -> filas de la base de datos */
+function dgacToDb(raw){
+ const rows=[];let dropped=0;const seen={};
+ for(const x of raw){
+  const prev=x.pg===2;
+  const fecha=prev?'2012-12-31':`${x.y}-${x.mo}-${x.d}`;
+  if(!(x.tot>0)){dropped++;continue}
+  const sim=/^CH-/.test(x.t),pic=x.pic||0,sic=x.sic||0,ins=x.inst||0,dual=x.inst_rec||0,solo=x.solo||0;
+  let tipo;
+  if(prev)tipo='Previo';else if(sim)tipo='Simulador';else if(ins>0)tipo='Como instructor';else if(dual>0)tipo='Instrucción recibida';else if(solo>0)tipo='Solo';else if(sic>0&&sic>=pic)tipo='Copiloto';else tipo='Al mando';
+  const ruta=[x.fr,x.to].filter(Boolean).join(' ');
+  const key=['dgac',fecha,x.m,x.t,x.fr,x.to,Math.round(x.tot*60)].join(':');
+  seen[key]=(seen[key]||0)+1;
+  rows.push({origen_id:key+':'+seen[key],fecha,modelo:x.m||'Sin modelo',matricula:x.t||null,tipo,total:x.tot,aterrizajes:x.ld||0,aterr_noche:x.ln||0,travesia:x.trav||0,ruta:ruta||null,comentarios:x.obs||null,instructor:null,pasajeros:null,
+   pic,sic,dual,solo,inst_h:ins,nocturno:x.noche||0,ifr:(x.ifr_real||0)+(x.ifr_sim||0),aproximaciones:x.app||0,previo:prev});
+ }
+ return {rows,dropped};
+}
+
+</script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=(n,d=1)=>n.toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d});
+const hm=h=>{const m=Math.round(h*60);return Math.floor(m/60)+':'+String(m%60).padStart(2,'0')};
+const sum=(a,k)=>a.reduce((s,r)=>s+(r[k]||0),0);
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const KC={'Instrucción recibida':'--dual','Solo':'--solo','Al mando':'--pax','Copiloto':'--ok','Como instructor':'--prp','Simulador':'--gry','Previo':'--gry'};
+const KORDER=['Instrucción recibida','Solo','Al mando','Copiloto','Como instructor','Simulador'];
+const FORM_TIPOS=['Al mando','Solo','Instrucción recibida','Copiloto','Como instructor'];
+const cfg=window.APP_CONFIG||{};
+const configured=cfg.url&&cfg.key&&!cfg.url.startsWith('PEGA')&&!cfg.key.startsWith('PEGA');
+let sb,user=null,ALL=[],editId=null,importRows=null,importCtx=null,charts={},famCount={};
+let grpPref=true;try{grpPref=localStorage.getItem('grp')!=='0'}catch(e){}
+const st={y:'Todo',a:'Todas',n:25,grp:grpPref};
+function show(id){['vSetup','vAuth','vApp'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function note(el,txt,kind){$(el).innerHTML=txt?`<div class="msg ${kind||''}">${esc(txt)}</div>`:''}
+
+/* ---------- Auth ---------- */
+let mode='in';
+function setMode(m){mode=m;$('tIn').classList.toggle('on',m==='in');$('tUp').classList.toggle('on',m==='up');$('fName').classList.toggle('hidden',m==='in');$('aGo').textContent=m==='in'?'Entrar':'Crear cuenta';$('aPass').autocomplete=m==='in'?'current-password':'new-password';note('aMsg','')}
+$('tIn').onclick=()=>setMode('in');$('tUp').onclick=()=>setMode('up');
+$('aGo').onclick=async()=>{
+ const email=$('aMail').value.trim(),password=$('aPass').value,nombre=$('aName').value.trim();
+ if(!email||password.length<8)return note('aMsg','Ingresa tu correo y una contraseña de al menos 8 caracteres.','err');
+ $('aGo').disabled=true;
+ try{
+  if(mode==='up'){
+   if(!nombre){note('aMsg','Escribe tu nombre.','err');return}
+   const{data,error}=await sb.auth.signUp({email,password,options:{data:{nombre}}});
+   if(error)throw error;
+   if(!data.session)note('aMsg','Cuenta creada. Revisa tu correo para confirmarla y luego entra.','ok');
+  }else{const{error}=await sb.auth.signInWithPassword({email,password});if(error)throw error}
+ }catch(e){note('aMsg',traduce(e.message),'err')}
+ finally{$('aGo').disabled=false}
+};
+function traduce(m){
+ if(/invalid login/i.test(m))return 'Correo o contraseña incorrectos.';
+ if(/already registered/i.test(m))return 'Ese correo ya tiene una cuenta. Usa "Entrar".';
+ if(/rate limit/i.test(m))return 'Demasiados intentos. Espera unos minutos.';
+ if(/email not confirmed/i.test(m))return 'Falta confirmar tu correo.';
+ return m;
+}
+$('out').onclick=()=>sb.auth.signOut();
+
+/* ---------- Navegación ---------- */
+function go(v){
+ ['resumen','vuelos','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
+ document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+ if(v==='resumen')renderDash();
+ if(v==='vuelos')table();
+ if(v==='nuevo'&&!editId)resetForm();
+ if(v==='admin')loadAdmin();
+ if(v==='mapa')renderMap();
+ if(v==='cuenta'){note('avMsg','');paintAvatar();$('cuMail').textContent=user.email||'';$('cuP1').value=$('cuP2').value='';note('cuMsg','')}
+}
+$('nav').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
+
+/* ---------- Agrupación de aeronaves ---------- */
+function familyOf(m){
+ const k=String(m||'').toUpperCase().replace(/[\s_\-\/.]/g,'');
+ const R=[
+  [/^B?787|^B78[89X]$/,'Boeing 787'],[/^B?73\d|^B3[789]M$/,'Boeing 737'],[/^B?77[\dWL]/,'Boeing 777'],[/^B?76\d/,'Boeing 767'],[/^B?75\d/,'Boeing 757'],[/^B?74\d/,'Boeing 747'],
+  [/^A?(318|319|320|321|19N|20N|21N)/,'Airbus A320'],[/^A33\d/,'Airbus A330'],[/^A34\d/,'Airbus A340'],[/^A35[\dK]/,'Airbus A350'],[/^A38\d/,'Airbus A380'],
+  [/^(C82R|CR182)/,'C-R182'],[/^C(1\d\d|2\d\d)[A-Z]{0,2}$/,null],[/^(PA|P)28/,'PA-28'],[/^(PA|P)(18|22|24|25|30|32|34|38|44|46)/,null],[/^RV(\d+)/,null],
+  [/^ATR(42|72)/,null],[/^(E|EMB)?(17\d|19\d)/,'Embraer E-Jet'],[/^CRJ?(1|2|7|9|10)\d*/,'CRJ'],[/^(DHC8|Q400|DASH8)/,'Dash 8'],
+  [/^(BE|B)?(20|30|35|36|55|58|76|90|99|100|200|300|350)([A-Z]|$)/,null],[/^PC(12|21|6|7|9)/,null],[/^DR(400|300|200)/,null],
+  [/^([A-Z]{1,3})(\d{2,3})(?=[A-Z]|$)/,null]
+ ];
+ for(const [re,lab] of R){const x=k.match(re);if(!x)continue;
+  if(lab)return lab;
+  if(re.source.startsWith('^C('))return 'C-'+x[1];
+  if(re.source.startsWith('^RV'))return 'RV-'+x[1];
+  if(re.source.startsWith('^(PA|P)('))return 'PA-'+x[2];
+  if(re.source.startsWith('^ATR'))return 'ATR '+x[1];
+  if(re.source.startsWith('^(BE|B)?('))return 'Beech '+x[2];
+  if(re.source.startsWith('^PC'))return 'PC-'+x[1];
+  if(re.source.startsWith('^DR'))return 'DR-'+x[1];
+  if(re.source.startsWith('^([A-Z]{1,3})'))return x[1]+'-'+x[2];
+ }
+ return String(m||'').trim();
+}
+function buildFamilies(){
+ const g={};ALL.forEach(r=>{const f=familyOf(r.modelo);(g[f]=g[f]||new Set()).add(r.modelo)});
+ famCount=g;
+}
+function fam(m){if(!st.grp)return m;const f=familyOf(m);return (famCount[f]&&famCount[f].size>1)?f:m}
+$('grp').checked=st.grp;
+$('grp').onchange=e=>{st.grp=e.target.checked;try{localStorage.setItem('grp',st.grp?'1':'0')}catch(x){}st.a='Todas';st.n=25;renderDash();table()};
+
+/* ---------- Datos ---------- */
+function view(x){return Object.assign({},x,{d:x.fecha,m:x.modelo,t:x.matricula||'',rt:x.ruta||'',tot:+x.total,l:(x.aterrizajes||0)+(x.aterr_noche||0),pic:+x.pic||0,sic:+x.sic||0,di:+x.dual||0,so:+x.solo||0,ins:+x.inst_h||0,xc:+x.travesia||0,ni:+x.nocturno||0,ifr:+x.ifr||0,ap:x.aproximaciones||0,c:x.comentarios||'',instr:x.instructor||'',pn:x.pasajeros||'',k:x.tipo,pv:!!x.previo,y:x.fecha.slice(0,4),mo:x.fecha.slice(0,7)})}
+async function loadAll(){
+ let out=[],from=0;
+ for(;;){
+  const{data,error}=await sb.from('vuelos').select('*').order('fecha',{ascending:false}).range(from,from+999);
+  if(error)throw error;
+  out=out.concat(data);if(data.length<1000)break;from+=1000;
+ }
+ ALL=out.map(view);buildFamilies();
+ const kinds=KORDER.filter(k=>ALL.some(r=>r.k===k));
+ $('fc').innerHTML=['',...kinds].map(k=>`<option value="${esc(k)}">${k||'Todos los tipos'}</option>`).join('');
+}
+function hintDb(msg){return /column|schema cache|check constraint|violates/i.test(msg)?msg+'\n¿Ejecutaste migracion_v2.sql en Supabase? (ver LEEME.md)':msg}
+
+/* ---------- Dashboard ---------- */
+function filt(){return ALL.filter(r=>(st.y==='Todo'||(!r.pv&&r.y===st.y))&&(st.a==='Todas'||fam(r.m)===st.a))}
+function mk(id,c){charts[id]&&charts[id].destroy();Chart.defaults.color=css('--mute');Chart.defaults.font.family='"IBM Plex Sans",sans-serif';charts[id]=new Chart($(id),c)}
+function barList(el,items,unit){
+ const mx=Math.max(...items.map(i=>i[1]),1e-9);
+ $(el).innerHTML=items.map(([a,v,extra])=>`<div class="row"><span>${esc(a)}</span><div class="track"><div class="fill" style="width:${v/mx*100}%;${extra||''}"></div></div><span class="n">${unit(v)}</span></div>`).join('');
+}
+function renderDash(){
+ const empty=ALL.length===0;$('dashEmpty').classList.toggle('hidden',!empty);$('dash').classList.toggle('hidden',empty);
+ ['fy','fa'].forEach(i=>$(i).classList.toggle('hidden',empty));
+ if(empty)return;
+ const years=['Todo',...[...new Set(ALL.filter(r=>!r.pv).map(r=>r.y))].sort()];
+ if(!years.includes(st.y))st.y='Todo';
+ $('fy').innerHTML=years.map(y=>`<button class="${y===st.y?'on':''}" data-v="${y}">${y}</button>`).join('');
+ const mh={};ALL.forEach(r=>{const f=fam(r.m);mh[f]=(mh[f]||0)+r.tot});
+ const models=Object.keys(mh).sort((a,b)=>mh[b]-mh[a]);
+ if(st.a!=='Todas'&&!models.includes(st.a))st.a='Todas';
+ $('fa').innerHTML=['Todas',...models].map(m=>`<option value="${esc(m)}">${m==='Todas'?'Todas las aeronaves':esc(m)}</option>`).join('');$('fa').value=st.a;
+ const F=filt(),real=F.filter(r=>!r.pv),prevH=sum(F.filter(r=>r.pv),'tot');
+ $('hTot').textContent=fmt(sum(F,'tot'));
+ $('hNote').classList.toggle('hidden',!prevH);if(prevH)$('hNote').textContent=`incluye ${fmt(prevH)} h de experiencia previa al registro detallado`;
+ const tails=new Set(real.filter(r=>r.k!=='Simulador'&&r.t).map(r=>r.t)).size;
+ const cand=[[real.length.toLocaleString('es-CL'),'vuelos',1],[sum(F,'l').toLocaleString('es-CL'),'aterrizajes',1],
+  [fmt(sum(F,'pic')),'h al mando (PIC)',sum(F,'pic')],[fmt(sum(F,'di')),'h con instructor',sum(F,'di')],[fmt(sum(F,'so')),'h solo',sum(F,'so')],
+  [fmt(sum(F,'sic')),'h copiloto (SIC)',sum(F,'sic')],[fmt(sum(F,'ins')),'h como instructor',sum(F,'ins')],[fmt(sum(F,'ni')),'h nocturnas',sum(F,'ni')],
+  [fmt(sum(F,'ifr')),'h IFR',sum(F,'ifr')],[fmt(sum(F,'xc')),'h travesía',sum(F,'xc')],[sum(F,'ap').toLocaleString('es-CL'),'aproximaciones',sum(F,'ap')],[tails,'matrículas',tails]
+ ].filter(x=>x[2]>0);
+ $('kpis').innerHTML=cand.slice(0,cand.length>=9?9:6).map(x=>`<div class="kpi"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
+ const asc=real.slice().sort((a,b)=>a.d.localeCompare(b.d));
+ const yearly=new Set(asc.map(r=>r.mo)).size>36,key=r=>yearly?r.y:r.mo;
+ $('tM').textContent=yearly?'Horas por año':'Horas por mes';
+ const labels=[...new Set(asc.map(key))],acc={};
+ asc.forEach(r=>{const q=key(r)+'|'+r.k;acc[q]=(acc[q]||0)+r.tot});
+ const kinds=KORDER.filter(k=>asc.some(r=>r.k===k));
+ $('lg').innerHTML=kinds.map(k=>`<span><i style="background:var(${KC[k]})"></i>${k}</span>`).join('');
+ mk('cM',{type:'bar',data:{labels,datasets:kinds.map(k=>({label:k,data:labels.map(l=>+(acc[l+'|'+k]||0).toFixed(1)),backgroundColor:css(KC[k])}))},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,grid:{display:false},ticks:{maxTicksLimit:12}},y:{stacked:true,grid:{color:css('--line')},title:{display:true,text:'horas'}}}}});
+ const am={};F.forEach(r=>{const f=fam(r.m);am[f]=(am[f]||0)+r.tot});
+ let al=Object.entries(am).sort((a,b)=>b[1]-a[1]);
+ if(al.length>7){const rest=al.slice(6).reduce((s,x)=>s+x[1],0);al=[...al.slice(0,6),['Otros',rest]]}
+ $('aH').textContent=st.grp?'Horas por tipo de aeronave (agrupado)':'Horas por modelo';
+ mk('cA',{type:'doughnut',data:{labels:al.map(x=>x[0]),datasets:[{data:al.map(x=>+x[1].toFixed(1)),backgroundColor:[css('--dual'),css('--solo'),css('--pax'),css('--ok'),css('--prp'),'#d9622b',css('--gry')],borderColor:css('--panel'),borderWidth:3}]},options:{maintainAspectRatio:false,cutout:'48%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,generateLabels:ch=>{const d=ch.data.datasets[0].data,t=d.reduce((a,b)=>a+b,0)||1;return ch.data.labels.map((l,i)=>({text:l+' · '+Math.round(d[i]/t*100)+'%',fillStyle:ch.data.datasets[0].backgroundColor[i%ch.data.datasets[0].backgroundColor.length],strokeStyle:'transparent',fontColor:css('--ink'),index:i,hidden:!ch.getDataVisibility(i)}))}}}}},plugins:[{id:'pct',afterDatasetsDraw(ch){const m=ch.getDatasetMeta(0),d=ch.data.datasets[0].data,t=d.reduce((a,b)=>a+b,0)||1,c=ch.ctx;c.save();c.font='600 12px "IBM Plex Sans",sans-serif';c.textAlign='center';c.textBaseline='middle';
+ m.data.forEach((arc,i)=>{if(!ch.getDataVisibility(i))return;const f=d[i]/t;if(f<0.035)return;const p=arc.tooltipPosition();const tx=Math.round(f*100)+'%';c.lineWidth=3;c.strokeStyle='rgba(0,0,0,.45)';c.strokeText(tx,p.x,p.y);c.fillStyle='#fff';c.fillText(tx,p.x,p.y)});c.restore()}}]});
+ let c=prevH;const cp=[];
+ if(prevH>0&&asc.length)cp.push({x:Date.parse(asc[0].d)-864e5,y:+prevH.toFixed(2)});
+ asc.forEach(r=>{c+=r.tot;cp.push({x:Date.parse(r.d),y:+c.toFixed(2)})});
+ mk('cC',{type:'line',data:{datasets:[{data:cp,borderColor:css('--ink'),backgroundColor:css('--dual')+'33',fill:true,pointRadius:0,tension:0,borderWidth:2}]},options:{maintainAspectRatio:false,parsing:false,animation:false,plugins:{legend:{display:false}},scales:{x:{type:'linear',grid:{display:false},ticks:{maxTicksLimit:8,callback:v=>new Date(v).toISOString().slice(0,7)}},y:{grid:{color:css('--line')},title:{display:true,text:'horas acumuladas'}}}}});
+ const apc={};real.forEach(r=>new Set((r.rt||'').match(/\b[A-Z]{4}\b/g)||[]).forEach(a=>apc[a]=(apc[a]||0)+1));
+ const ar=Object.entries(apc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+ if(ar.length){barList('ap',ar,v=>v.toLocaleString('es-CL'));$('ap').querySelectorAll('.row').forEach(r=>r.style.gridTemplateColumns='60px 1fr 44px')}else $('ap').innerHTML='<span class="muted">Agrega códigos ICAO en la ruta para verlos aquí.</span>';
+ const ms=[];
+ const all=F.slice().sort((a,b)=>a.d.localeCompare(b.d));
+ const seen=new Set(all.filter(r=>r.pv).map(r=>fam(r.m))),tot=sum(ALL,'tot'),step=tot>3000?1000:tot>1000?500:50;
+ let a2=prevH,nx=Math.floor(a2/step)*step+step;
+ all.forEach(r=>{if(r.pv)return;const f=fam(r.m);if(!seen.has(f)){if(seen.size||ms.length)ms.push([r.d,`Primer vuelo en ${f}`,r.t]);seen.add(f)}a2+=r.tot;while(a2>=nx){ms.push([r.d,`${nx.toLocaleString('es-CL')} horas totales`,f]);nx+=step}});
+ const s1=asc.find(r=>r.k==='Solo');if(s1)ms.push([s1.d,'Primer vuelo solo',`${s1.m} · ${hm(s1.tot)}`]);
+ if(asc.length)ms.push([asc[0].d,'Primer vuelo del período',`${asc[0].m} · ${hm(asc[0].tot)}`]);
+ const nrm=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const fixed={'jolivab@gmail.com':{lic:'2025-01-21',am:'2025-07-26'}}[String(user&&user.email||'').toLowerCase()]||{};
+ [['lic',/examen.*piloto privado/,'Obtención de licencia (piloto privado)'],['am',/examen.*area media/,'Examen de área media']].forEach(([k,re,lab])=>{
+  let h=real.filter(r=>re.test(nrm(r.comentarios))).sort((a,b)=>a.d.localeCompare(b.d))[0];
+  if(!h&&fixed[k]&&(st.y==='Todo'||fixed[k].startsWith(String(st.y))))h=ALL.find(r=>!r.pv&&r.d===fixed[k]);
+  if(h)ms.push([h.d,lab,h.m+(h.t?' · '+h.t:'')]);
+ });
+ ms.sort((a,b)=>a[0].localeCompare(b[0]));
+ $('ms').innerHTML=ms.slice(-12).map(m=>`<li><b>${esc(m[1])}</b><span>${esc(m[0])}${m[2]?' · '+esc(m[2]):''}</span></li>`).join('')||'<span class="muted">Sin hitos en este filtro.</span>';
+ const pc={};real.forEach(r=>(r.pn||'').split(',').forEach(p=>{p=p.trim();if(p)pc[p]=(pc[p]||0)+1}));
+ const pr=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+ const cap=s=>s.toLowerCase().replace(/(^|\s)\S/g,x=>x.toUpperCase());
+ const ic={};real.forEach(r=>{const n=String(r.instructor||'').trim();if(!n)return;const o=ic[n]||(ic[n]={v:0,h:0});o.v++;o.h+=r.tot});
+ const il=Object.entries(ic).sort((a,b)=>b[1].h-a[1].h).slice(0,10);
+ $('instCard').classList.toggle('hidden',!il.length);
+ if(il.length){const mxh=Math.max(...il.map(x=>x[1].h),1e-9);
+  $('pi').innerHTML=il.map(([n,o])=>`<div class="row" style="grid-template-columns:minmax(90px,150px) 1fr minmax(105px,130px)"><span>${esc(cap(n))}</span><div class="track"><div class="fill" style="width:${o.h/mxh*100}%;background:var(--dual)"></div></div><span class="n">${o.v} ${o.v===1?'vuelo':'vuelos'} · ${hm(o.h)} h</span></div>`).join('')}
+ if(pr.length){$('xT').textContent='Compañeros de vuelo';$('xH').textContent='Pasajeros con más vuelos';barList('px',pr.map(([a,n])=>[cap(a),n,'background:var(--pax)']),v=>v)}
+ else{
+  $('xT').textContent='Composición de las horas';$('xH').textContent='Horas por condición y función';
+  const T=sum(F,'tot'),it=[['Diurnas',T-sum(F,'ni'),''],['Nocturnas',sum(F,'ni'),'background:var(--prp)'],['IFR',sum(F,'ifr'),'background:var(--ok)'],['Travesía',sum(F,'xc'),'background:var(--pax)'],['Al mando (PIC)',sum(F,'pic'),'background:var(--solo)'],['Copiloto (SIC)',sum(F,'sic'),'background:var(--dual)'],['Como instructor',sum(F,'ins'),'background:var(--gry)']].filter(x=>x[1]>0);
+  barList('px',it,v=>fmt(v,0)+' h');
+ }
+}
+$('fy').onclick=e=>{const b=e.target.closest('button');if(b){st.y=b.dataset.v;st.n=25;renderDash();table()}};
+$('fa').onchange=e=>{st.a=e.target.value;st.n=25;renderDash();table()};
+
+/* ---------- Tabla ---------- */
+function table(){
+ const q=$('q').value.toLowerCase(),fk=$('fc').value;
+ const R=filt().filter(r=>(!fk||r.k===fk)&&(!q||[r.rt,r.c,r.instr,r.pn,r.t,r.m].join(' ').toLowerCase().includes(q)));
+ $('tb').innerHTML=R.slice(0,st.n).map(r=>`<tr><td>${r.pv?'Previo':esc(r.d)}</td><td>${esc(r.m)}<div class="muted">${esc(r.t)}</div></td><td>${hm(r.tot)}</td><td>${r.l||''}</td><td><span class="tag" style="background:var(${KC[r.k]||'--gry'});${r.k==='Al mando'?'color:#222':''}">${esc(r.k)}</span></td><td>${esc(r.rt)}<div class="muted">${esc([r.c,r.instr&&'Instr.: '+r.instr,r.pn&&'Pax: '+r.pn].filter(Boolean).join(' · '))}</div></td><td style="white-space:nowrap"><button class="btn ghost small" data-e="${r.id}">Editar</button> <button class="btn ghost small danger" data-d="${r.id}">Borrar</button></td></tr>`).join('')||'<tr><td colspan="7" class="muted">Sin resultados.</td></tr>';
+ $('more').classList.toggle('hidden',R.length<=st.n);$('more').textContent=`Ver más (${(R.length-st.n).toLocaleString('es-CL')} restantes)`;
+}
+$('q').oninput=()=>{st.n=25;table()};$('fc').onchange=()=>{st.n=25;table()};$('more').onclick=()=>{st.n+=25;table()};
+$('tb').onclick=async e=>{
+ const d=e.target.closest('[data-d]'),ed=e.target.closest('[data-e]');
+ if(d){if(!confirm('¿Borrar este vuelo? No se puede deshacer.'))return;
+  const{error}=await sb.from('vuelos').delete().eq('id',d.dataset.d);if(error)return alert(error.message);
+  await loadAll();table();renderDash()}
+ if(ed){const r=ALL.find(x=>x.id===ed.dataset.e);if(!r)return;go('nuevo');loadForm(r)}
+};
+
+/* ---------- Formulario ---------- */
+function parseT(s){s=String(s??'').trim().replace(',','.');if(!s)return 0;
+ if(/^\d+:\d{1,2}(:\d{1,2})?$/.test(s)){const p=s.split(':').map(Number);return p[1]>59?NaN:Math.round((p[0]+p[1]/60)*10000)/10000}
+ if(/^\d+(\.\d+)?$/.test(s))return Math.round(parseFloat(s)*10000)/10000;return NaN}
+function prev(){const v=parseT($('fTotal').value);$('fPrev').textContent=$('fTotal').value&&!isNaN(v)?`= ${hm(v)} (${fmt(v,2)} h)`:($('fTotal').value?'Formato no válido':'')}
+$('fTotal').oninput=prev;
+let editKeep=null;
+/* aeronave y matrícula: se rellenan con lo que ya está en el registro */
+function modelsList(){const c={};ALL.filter(r=>!r.pv).forEach(r=>{c[r.modelo]=(c[r.modelo]||0)+1});return Object.keys(c).sort((a,b)=>c[b]-c[a])}
+function fillModels(sel){
+ const ms=modelsList();
+ $('fModelo').innerHTML=ms.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')+'<option value="__new">＋ Nuevo tipo de aeronave…</option>';
+ $('fModelo').value=ms.includes(sel)?sel:(ms.length?(ms.includes($('fModelo').value)?$('fModelo').value:ms[0]):'__new');
+ onModel();
+}
+function onModel(keepTail){
+ const isNew=$('fModelo').value==='__new';
+ $('fModeloNew').classList.toggle('hidden',!isNew);
+ const tails=isNew?[]:[...new Set(ALL.filter(r=>r.modelo===$('fModelo').value&&r.matricula).map(r=>r.matricula))];
+ $('fMat').innerHTML=['<option value="">Sin matrícula</option>',...tails.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`),'<option value="__new">＋ Otra matrícula…</option>'].join('');
+ if(isNew||!tails.length){$('fMat').classList.add('hidden');$('fMatNew').classList.remove('hidden')}
+ else{$('fMat').classList.remove('hidden');$('fMat').value=keepTail&&tails.includes(keepTail)?keepTail:tails[0];$('fMatNew').classList.toggle('hidden',$('fMat').value!=='__new')}
+}
+function onTail(){$('fMatNew').classList.toggle('hidden',$('fMat').value!=='__new')}
+$('fModelo').onchange=()=>onModel();$('fMat').onchange=onTail;
+function getModel(){return($('fModelo').value==='__new'?$('fModeloNew').value:$('fModelo').value).trim()}
+function getTail(){const useNew=$('fMat').classList.contains('hidden')||$('fMat').value==='__new';return(useNew?$('fMatNew').value:$('fMat').value).trim().toUpperCase()}
+/* casillas de tipo de vuelo */
+const OPTS={xc:'oXc',solo:'oSolo',pax:'oPax',dual:'oDual',dada:'oDada',sic:'oSic'};
+const LBL={xc:'lXc',solo:'lSolo',pax:'lPax',dual:'lDual',dada:'lDada',sic:'lSic'};
+const CONFLICT={solo:['pax','dual','dada','sic'],dual:['solo','dada','sic'],dada:['solo','dual','sic'],sic:['solo','dual','dada'],pax:['solo'],xc:[]};
+const chk=k=>$(OPTS[k]).checked;
+function applyRules(){
+ const dis=new Set();
+ Object.keys(CONFLICT).forEach(k=>{if(chk(k))CONFLICT[k].forEach(x=>dis.add(x))});
+ Object.keys(OPTS).forEach(k=>{
+  if(dis.has(k))$(OPTS[k]).checked=false;
+  $(OPTS[k]).disabled=dis.has(k);
+  $(LBL[k]).classList.toggle('dis',dis.has(k));
+  $(LBL[k]).classList.toggle('on',chk(k));
+ });
+ $('paxBox').classList.toggle('hidden',!chk('pax'));
+ $('fInstWrap').classList.toggle('hidden',!chk('dual'));
+ if(chk('pax'))renderPax();
+}
+Object.values(OPTS).forEach(id=>$(id).onchange=applyRules);
+function paxVals(){return[...$('paxNames').querySelectorAll('input')].map(i=>i.value)}
+function renderPax(names){
+ const n=Math.min(9,Math.max(1,parseInt($('fNPax').value)||1));$('fNPax').value=n;
+ const cur=names||paxVals();
+ $('paxNames').innerHTML=Array.from({length:n},(_,i)=>`<div><label for="px${i}">Pasajero ${i+1}</label><input id="px${i}" value="${esc(cur[i]||'')}" placeholder="Nombre y apellido" autocomplete="off"></div>`).join('');
+}
+$('paxMinus').onclick=()=>{$('fNPax').value=Math.max(1,(parseInt($('fNPax').value)||1)-1);renderPax()};
+$('paxPlus').onclick=()=>{$('fNPax').value=Math.min(9,(parseInt($('fNPax').value)||1)+1);renderPax()};
+$('fNPax').onchange=()=>renderPax();
+function tipoFromChecks(){return chk('solo')?'Solo':chk('dual')?'Instrucción recibida':chk('dada')?'Como instructor':chk('sic')?'Copiloto':'Al mando'}
+function derived(tipo,total){return{pic:['Solo','Al mando','Como instructor'].includes(tipo)?total:0,sic:tipo==='Copiloto'?total:0,dual:tipo==='Instrucción recibida'?total:0,solo:tipo==='Solo'?total:0,inst_h:tipo==='Como instructor'?total:0}}
+function resetForm(){
+ editId=null;editKeep=null;
+ ['fTotal','fModeloNew','fMatNew','fInst','fRuta','fCom'].forEach(i=>$(i).value='');
+ $('fFecha').value=new Date().toLocaleDateString('en-CA');$('fAterr').value=1;$('fNPax').value=1;$('paxNames').innerHTML='';
+ Object.values(OPTS).forEach(id=>$(id).checked=false);
+ $('optsWrap').classList.remove('hidden');
+ const l=ALL.find(r=>!r.pv);
+ fillModels(l&&l.modelo);if(l)onModel(l.matricula);
+ $('fTitle').textContent='Nuevo vuelo';$('fCancel').classList.add('hidden');note('fMsg','');applyRules();prev();
+}
+function loadForm(r){
+ editId=r.id;editKeep=['Simulador','Previo'].includes(r.k)?r.k:null;
+ $('fFecha').value=r.fecha;$('fTotal').value=hm(r.tot);$('fAterr').value=r.aterrizajes;$('fRuta').value=r.ruta||'';$('fCom').value=r.comentarios||'';
+ $('fModeloNew').value='';$('fMatNew').value='';
+ fillModels(r.modelo);onModel(r.matricula);
+ if(r.matricula&&$('fMat').value!==r.matricula){$('fMat').value='__new';$('fMatNew').value=r.matricula;$('fMatNew').classList.remove('hidden')}
+ const names=(r.pasajeros||'').split(',').map(s=>s.trim()).filter(Boolean);
+ $('oXc').checked=r.xc>0;$('oSolo').checked=r.k==='Solo';$('oDual').checked=r.k==='Instrucción recibida';$('oDada').checked=r.k==='Como instructor';$('oSic').checked=r.k==='Copiloto';
+ $('oPax').checked=names.length>0;$('fNPax').value=Math.max(1,names.length);$('fInst').value=r.instructor||'';
+ $('optsWrap').classList.toggle('hidden',!!editKeep);
+ applyRules();if(names.length)renderPax(names);
+ $('fTitle').textContent='Editar vuelo';$('fCancel').classList.remove('hidden');prev();
+}
+$('fCancel').onclick=()=>{resetForm();go('vuelos')};
+$('fSave').onclick=async()=>{
+ const total=parseT($('fTotal').value),modelo=getModel(),fecha=$('fFecha').value;
+ if(!fecha||!modelo||isNaN(total)||total<=0)return note('fMsg','Completa fecha, aeronave y un tiempo total válido.','err');
+ let names=[];
+ if(!editKeep&&chk('pax')){names=paxVals().map(s=>s.trim());if(names.some(s=>!s))return note('fMsg',`Escribe el nombre de cada pasajero (${names.length}).`,'err')}
+ const tipo=editKeep||tipoFromChecks();
+ const row=Object.assign({fecha,modelo,matricula:getTail()||null,tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:$('fCom').value.trim()||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:derived(tipo,total));
+ $('fSave').disabled=true;
+ try{
+  const q=editId?sb.from('vuelos').update(row).eq('id',editId):sb.from('vuelos').insert(Object.assign({},row,{user_id:user.id}));
+  const{error}=await q;if(error)throw error;
+  const was=editId;await loadAll();resetForm();note('fMsg',was?'Vuelo actualizado.':'Vuelo guardado.','ok');
+  if(was)go('vuelos');
+ }catch(e){note('fMsg',hintDb(e.message),'err')}
+ finally{$('fSave').disabled=false}
+};
+
+/* ---------- Importar ---------- */
+const num=x=>{const n=parseFloat(String(x||'').replace(',','.'));return isNaN(n)?0:n};
+const nh=h=>String(h||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+function readBuf(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error('No pude leer el archivo'));r.readAsArrayBuffer(file)})}
+async function loadPdfjs(){
+ if(window.pdfjsLib)return;
+ await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';s.onload=res;s.onerror=()=>rej(new Error('No pude cargar el lector de PDF (revisa tu conexión)'));document.head.appendChild(s)});
+ const code=await(await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js')).text();
+ pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([code],{type:'text/javascript'}));
+}
+function setImport(rows,msg){importRows=rows&&rows.length?rows.map(r=>Object.assign({user_id:user.id},r)):null;$('iGo').classList.toggle('hidden',!importRows);note('iMsg',msg,importRows?'ok':'err')}
+function dateParser(vals){
+ let dmy=null;
+ for(const v of vals){const m=String(v).trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);if(m){if(+m[1]>12){dmy=true;break}if(+m[2]>12){dmy=false;break}}}
+ if(dmy===null)dmy=true;
+ const f=(y,m,d)=>{m=+m;d=+d;return(m>=1&&m<=12&&d>=1&&d<=31)?`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`:null};
+ const p=s=>{s=String(s||'').trim();let m=s.match(/^(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})/);if(m)return f(m[1],m[2],m[3]);
+  m=s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);if(m){const y=m[3].length===2?'20'+m[3]:m[3];return dmy?f(y,m[2],m[1]):f(y,m[1],m[2])}return null};
+ p.dmy=dmy;return p;
+}
+function pickTipo(v){return v.dual>0?'Instrucción recibida':v.inst>0?'Como instructor':v.solo>0?'Solo':(v.sic>0&&v.sic>=v.pic)?'Copiloto':'Al mando'}
+/* MyFlightbook */
+function mfbRows(data){
+ const rows=[],dp=dateParser(data.map(x=>x['Date']));
+ data.forEach(x=>{
+  const total=num(x['Total Flight Time']),fecha=dp(x['Date']);if(total<=0||!fecha)return;
+  const props=x['Flight Properties']||'',sm=props.match(/Solo Time: ([\d.,]+)/);
+  const dual=num(x['Dual Received']),solo=Math.max(num(x['Solo Time']),sm?num(sm[1]):0),pic=num(x['PIC']);
+  const tipo=pickTipo({dual,inst:0,solo,sic:0,pic});
+  rows.push({origen_id:x['Flight ID']||null,fecha,modelo:(x['Model']||'').split(',')[0].replace(/\s*\(FP\)/,'').trim()||'Sin modelo',matricula:x['Tail Number']||null,tipo,total,aterrizajes:parseInt(x['Landings'])||0,travesia:num(x['X-Country']),ruta:x['Route']||null,comentarios:x['Comments']||null,instructor:x['Instructor Name']||x['CFI Name']||null,pasajeros:x['Passenger Names']||null,pic:tipo==='Instrucción recibida'?pic:Math.max(pic,solo),sic:0,dual,solo,inst_h:0});
+ });
+ return rows;
+}
+/* Genérico (LogTen Pro y otros) */
+const FIELDS=[
+ ['fecha','Fecha *',['date','flightdate','flightflightdate','fecha','fechadevuelo']],
+ ['modelo','Aeronave / modelo *',['aircrafttype','aircrafttypetype','type','model','modelo','marcaymodelo','aircraftmodel','aircrafttypeid','typecode']],
+ ['matricula','Matrícula',['aircraftid','tailnumber','registration','matricula','tail','ident','aircraftregistration','flightaircraftid']],
+ ['desde','Desde',['from','desde','departure','origin','flightfrom']],['hasta','Hasta',['to','hasta','destination','flightto']],['ruta','Ruta',['route','ruta','flightroute']],
+ ['total','Tiempo total *',['totaltime','total','totalflighttime','flighttotaltime','duraciontotal','duraciontotaldevuelo','flighttimetotal','totalflightduration','totalduration']],
+ ['pic','PIC',['pic','pictime','flightpic','pilotalmando']],['sic','SIC / copiloto',['sic','sictime','flightsic','copiloto']],
+ ['dual','Instrucción recibida',['dualreceived','dualrecv','instruccionrecibida','flightdualreceived','dual']],['inst','Como instructor',['dualgiven','asinstructor','comoinstructor','flightdualgiven','cfi','cfitime','instructortime']],
+ ['solo','Solo',['solo','solotime','flightsolo']],['noche','Nocturno',['night','nighttime','nocturno','flightnight','noche']],
+ ['ifr','IFR real',['actualinstrument','ifrreal','instrumentactual','flightactualinstrument','instrument','ifr']],['ifrsim','IFR simulado',['simulatedinstrument','ifrsimulado','hood','flightsimulatedinstrument']],
+ ['xc','Travesía',['crosscountry','xc','travesia','flightcrosscountry']],
+ ['ldia','Aterrizajes día',['daylandings','landingsday','aterrizajesdia','flightdaylandings','dayldg','daylandingsfullstop']],['lnoche','Aterrizajes noche',['nightlandings','landingsnight','aterrizajesnoche','flightnightlandings','nightldg','nightlandingsfullstop']],
+ ['ltot','Aterrizajes (total)',['landings','aterrizajes','totallandings','alllandings','flightlandingsall','landingscount']],
+ ['app','Aproximaciones',['approaches','instrumentapproaches','aproximaciones','app','flightapproachescount','approachescount']],
+ ['obs','Observaciones',['remarks','comments','notes','observaciones','comentarios','flightremarks']],['pax','Pasajeros',['passengers','pasajeros','passengernames']],
+ ['instn','Nombre del instructor',['instructorname','instructor','cfiname','instructorperson']],['id','ID del vuelo',['flightid','id','flightkey','uuid','flightuuid']]
+];
+function autoMap(headers){
+ const map={},used=new Set();
+ for(const [k,,syn] of FIELDS){const h=headers.find(h=>!used.has(h)&&syn.includes(nh(h)));if(h){map[k]=h;used.add(h)}}
+ return map;
+}
+function genRows(data,map){
+ const g=(r,k)=>map[k]?String(r[map[k]]??'').trim():'';
+ const dp=dateParser(data.map(r=>g(r,'fecha'))),rows=[],seen={};let skipped=0;
+ for(const r of data){
+  const t=k=>{const v=parseT(g(r,k));return isNaN(v)?0:v};
+  const fecha=dp(g(r,'fecha')),total=t('total');
+  if(!fecha||!(total>0)){skipped++;continue}
+  const v={pic:t('pic'),sic:t('sic'),dual:t('dual'),inst:t('inst'),solo:t('solo')};
+  const tipo=pickTipo(v),modelo=g(r,'modelo')||'Sin modelo',mat=g(r,'matricula');
+  const ldia=parseInt(g(r,'ldia'))||0,lnoc=parseInt(g(r,'lnoche'))||0,ltot=parseInt(g(r,'ltot'))||0;
+  const aterr=(map.ldia||map.lnoche)?ldia:ltot;
+  const ruta=g(r,'ruta')||[g(r,'desde'),g(r,'hasta')].filter(Boolean).join(' ');
+  let id=g(r,'id');
+  if(!id){const key=['imp',fecha,modelo,mat,g(r,'desde'),g(r,'hasta'),Math.round(total*60)].join(':');seen[key]=(seen[key]||0)+1;id=key+':'+seen[key]}
+  rows.push({origen_id:id,fecha,modelo,matricula:mat||null,tipo,total,aterrizajes:aterr,aterr_noche:lnoc,travesia:t('xc'),ruta:ruta||null,comentarios:g(r,'obs')||null,instructor:g(r,'instn')||null,pasajeros:g(r,'pax')||null,
+   pic:v.pic,sic:v.sic,dual:v.dual,solo:v.solo,inst_h:v.inst,nocturno:t('noche'),ifr:t('ifr')+t('ifrsim'),aproximaciones:parseInt(g(r,'app'))||0});
+ }
+ return{rows,skipped,dmy:dp.dmy};
+}
+function drawMap(){
+ const {headers,data,map}=importCtx;
+ $('iMap').innerHTML='<div class="hint" style="margin-top:12px">No reconocí un formato conocido. Revisa a qué columna corresponde cada dato (los marcados con * son obligatorios):</div><div class="map">'+FIELDS.map(([k,l])=>`<div><label for="m_${k}">${l}</label><select id="m_${k}" data-k="${k}"><option value="">— ninguna —</option>${headers.map(h=>`<option value="${esc(h)}"${map[k]===h?' selected':''}>${esc(h)}</option>`).join('')}</select></div>`).join('')+'</div>';
+ $('iMap').classList.remove('hidden');
+}
+$('iMap').onchange=e=>{const s=e.target.closest('select');if(!s)return;importCtx.map[s.dataset.k]=s.value;previewGeneric()};
+function previewGeneric(){
+ const {data,map}=importCtx;
+ if(!map.fecha||!map.total||!map.modelo)return setImport(null,'Falta indicar las columnas obligatorias: '+['fecha','modelo','total'].filter(k=>!map[k]).map(k=>FIELDS.find(f=>f[0]===k)[1]).join(', ')+'.');
+ const {rows,skipped,dmy}=genRows(data,map);
+ if(!rows.length)return setImport(null,'No encontré vuelos válidos con esas columnas. Revisa las columnas de fecha y de tiempo total.');
+ const e=rows[0];
+ setImport(rows,`Encontré ${rows.length} vuelos, ${fmt(sum(rows,'total'))} horas${skipped?` (omití ${skipped} filas sin fecha o sin tiempo)`:''}.\nFechas leídas como ${dmy?'día/mes/año':'mes/día/año'} cuando vienen con barras. Ejemplo: ${e.fecha} · ${e.modelo} · ${hm(e.total)}.\nPresiona Importar para guardarlos.`);
+}
+/* ---------- Excel del Club Aéreo de Santiago ----------
+   Las columnas Total, Duales, Solo, Monomotor, V.F.R vienen ACUMULADAS (y la más nueva arriba).
+   El tiempo de cada vuelo está en la columna "Travesía". Duales/Solo vienen con valor solo en las filas de ese tipo. */
+const casNorm=h=>String(h==null?'':h).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function casMin(v){
+ if(v==null||v==='')return null;
+ if(v instanceof Date)return v.getUTCHours()*60+v.getUTCMinutes();
+ if(typeof v==='number')return Math.round((v%1)*1440);
+ const m=String(v).trim().match(/^(\d+):(\d{1,2})(?::\d+)?$/);
+ return m?(+m[1])*60+(+m[2]):null;
+}
+function casDate(v){
+ if(v instanceof Date)return v.toISOString().slice(0,10);
+ if(typeof v==='number'){const d=new Date(Math.round((v-25569)*86400000));return d.toISOString().slice(0,10)}
+ const t=String(v||'').trim();let m=t.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];
+ m=t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):null;
+}
+function casIsFile(grid){
+ const h=(grid[0]||[]).map(casNorm);
+ return ['fecha','desde','hasta','modelo','matricula','total','duales','solo','travesia'].every(k=>h.includes(k));
+}
+function casRows(grid){
+ const h=grid[0].map(casNorm),ix=k=>h.indexOf(k),C={};
+ ['fecha','desde','hasta','modelo','matricula','observaciones','travesia','duales','solo','alma ndo','copiloto','instructornombre','simulador'].forEach(k=>C[k]=ix(k.replace(' ','')));
+ const rows=[];const seen={};let skipped=0;
+ for(const r of grid.slice(1)){
+  const fecha=casDate(r[C.fecha]);if(!fecha)continue;
+  const min=casMin(r[C.travesia]);
+  if(!(min>0)){skipped++;continue}
+  const total=min/60;
+  const has=k=>C[k]>=0&&r[C[k]]!=null&&String(r[C[k]]).trim()!=='';
+  const sim=has('simulador')&&String(r[C.matricula]||'').toUpperCase().startsWith('SIM');
+  const dual=has('duales'),solo=has('solo');
+  let tipo=sim?'Simulador':dual?'Instrucción recibida':solo?'Solo':has('copiloto')?'Copiloto':'Al mando';
+  let modelo=String(r[C.modelo]||'').trim().toUpperCase()||'Sin modelo';
+  modelo=modelo.replace(/^(RV-?\d+[A-Z])\d$/,'$1');
+  const mat=String(r[C.matricula]||'').trim().toUpperCase()||null;
+  const desde=String(r[C.desde]||'').trim().toUpperCase(),hasta=String(r[C.hasta]||'').trim().toUpperCase();
+  const icao=/^[A-Z]{4}$/;
+  const dest=icao.test(hasta)&&hasta!==desde;
+  const raid=/^RAID/.test(hasta);
+  const ruta=[icao.test(desde)?desde:'',dest?hasta:''].filter(Boolean).join(' ');
+  const extra=(!dest&&hasta&&!/^LOCAL$/.test(hasta))?hasta:'';
+  const obs=[String(r[C.observaciones]||'').trim(),extra].filter(Boolean).join(' · ');
+  const inst=tipo==='Instrucción recibida'?(String(r[C.instructornombre]||'').trim()||null):null;
+  const key=['cas',fecha,modelo,mat,desde,hasta,min].join(':');seen[key]=(seen[key]||0)+1;
+  rows.push(Object.assign({origen_id:key+':'+seen[key],fecha,modelo,matricula:mat,tipo,total,aterrizajes:sim?0:1,aterr_noche:0,travesia:(dest||raid)&&!sim?total:0,ruta:ruta||null,comentarios:obs||null,instructor:inst,pasajeros:null,nocturno:0,ifr:0,aproximaciones:0,previo:false},derived(tipo,total)));
+ }
+ return{rows,skipped};
+}
+function casDropDup(rows){
+ const pool=ALL.filter(x=>!x.pv).slice();let dup=0;
+ const out=rows.filter(r=>{
+  const i=pool.findIndex(x=>x.fecha===r.fecha&&(x.matricula||'')===(r.matricula||'')&&Math.abs(+x.total-r.total)<=0.1);
+  if(i<0)return true;pool.splice(i,1);dup++;return false;
+ });
+ return{rows:out,dup};
+}
+async function loadXlsxLib(){if(window.XLSX)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('No pude cargar el lector de Excel'));document.head.appendChild(s)})}
+
+$('csv').onchange=async e=>{
+ const f=e.target.files[0];importRows=null;importCtx=null;$('iGo').classList.add('hidden');$('iMap').classList.add('hidden');note('iMsg','');if(!f)return;
+ try{
+  if(/\.xlsx?$/i.test(f.name)){
+   await loadXlsxLib();
+   const wb=XLSX.read(await readBuf(f),{type:'array',cellDates:true});
+   let grid=null;
+   for(const n of wb.SheetNames){const g=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});if(casIsFile(g)){grid=g;break}}
+   if(!grid)throw new Error('No reconocí el formato del Excel. Debe ser el exportado desde el sitio del Club Aéreo de Santiago (columnas Fecha, Desde, Hasta, Modelo, Matrícula, Total…).');
+   const all=casRows(grid);
+   if(!all.rows.length)throw new Error('No encontré vuelos en el Excel.');
+   const{rows,dup}=casDropDup(all.rows);
+   const sim=all.rows.filter(r=>r.tipo==='Simulador').length;
+   const msg=`Excel del Club Aéreo de Santiago: ${all.rows.length} vuelos, ${fmt(sum(all.rows,'total'))} horas${sim?` (incluye ${sim} de simulador)`:''}.`
+    +(dup?`\n${dup} ya estaban en tu bitácora (misma fecha, matrícula y tiempo) y no se vuelven a cargar.`:'')
+    +(rows.length?`\nSe cargarán ${rows.length} vuelos nuevos, ${fmt(sum(rows,'total'))} horas.\nPresiona Importar para guardarlos.`:'\nNo hay vuelos nuevos para importar.');
+   return setImport(rows.length?rows:null,msg),rows.length?0:note('iMsg',msg,'ok');
+  }
+  if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){
+   note('iMsg','Leyendo el PDF…');
+   await loadPdfjs();
+   const doc=await pdfjsLib.getDocument({data:new Uint8Array(await readBuf(f))}).promise;
+   const{rows,mismatch}=await dgacExtract(doc,async(n,t)=>{note('iMsg',`Leyendo el PDF… página ${n} de ${t}`);await new Promise(r=>setTimeout(r))});
+   if(!rows.length)throw new Error('No encontré vuelos en el PDF.');
+   const out=dgacToDb(rows);
+   const nprev=out.rows.filter(r=>r.previo).length;
+   setImport(out.rows,`Formato DGAC Chile (LogTen Pro): ${out.rows.length-nprev} vuelos${nprev?` y ${nprev} filas de experiencia previa`:''}, ${fmt(sum(out.rows,'total'))} horas.${out.dropped?`\nOmití ${out.dropped} sesiones sin tiempo total.`:''}${mismatch?`\nAviso: ${mismatch} página(s) con filas que no cuadran; revisa los totales después de importar.`:''}\nPresiona Importar para guardarlos.`);
+   return;
+  }
+  const text=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsText(f)});
+  const res=Papa.parse(text.replace(/^\uFEFF/,''),{header:true,skipEmptyLines:true,transformHeader:h=>String(h).replace(/^\uFEFF/,'').trim()});
+  const headers=(res.meta.fields||[]).filter(Boolean);
+  if(!headers.length||!res.data.length)return setImport(null,'El archivo está vacío o no tiene encabezados.');
+  if(['Date','Flight ID','Model','Total Flight Time'].every(h=>headers.includes(h))){
+   const rows=mfbRows(res.data);
+   return setImport(rows,rows.length?`Formato MyFlightbook: ${rows.length} vuelos, ${fmt(sum(rows,'total'))} horas.\nPresiona Importar para guardarlos.`:'No encontré vuelos válidos en el archivo.');
+  }
+  importCtx={headers,data:res.data,map:autoMap(headers)};
+  drawMap();previewGeneric();
+ }catch(err){setImport(null,'No pude leer el archivo: '+err.message)}
+};
+$('iGo').onclick=async()=>{
+ if(!importRows)return;$('iGo').disabled=true;let added=0;const fails=[];
+ const up=rows=>sb.from('vuelos').upsert(rows,{onConflict:'user_id,origen_id',ignoreDuplicates:!$('iUpd').checked}).select('id');
+ const N=importRows.length;
+ for(let i=0;i<N;i+=100){
+  note('iMsg',`Importando… ${Math.min(i+100,N)} de ${N}`);
+  const chunk=importRows.slice(i,i+100);
+  const{data,error}=await up(chunk);
+  if(!error){added+=data.length;continue}
+  for(const r of chunk){const x=await up([r]);if(x.error)fails.push(`${r.fecha} ${r.modelo}: ${x.error.message}`);else added+=x.data.length}
+ }
+ try{await loadAll()}catch(e){}
+ const skipped=N-added-fails.length;
+ let msg=`Importados ${added} vuelos`+(skipped>0&&!$('iUpd').checked?`, ${skipped} ya existían`:'')+'.';
+ if(fails.length)msg+=`\nNo pude importar ${fails.length}. Primer error: ${hintDb(fails[0])}`;
+ note('iMsg',msg,fails.length?'err':'ok');
+ if(!fails.length){importRows=null;importCtx=null;$('iGo').classList.add('hidden');$('iMap').classList.add('hidden');$('csv').value=''}
+ $('iGo').disabled=false;
+};
+
+$('cuSave').onclick=async()=>{
+ const a=$('cuP1').value,b=$('cuP2').value;
+ if(a.length<8)return note('cuMsg','La contraseña debe tener al menos 8 caracteres.','err');
+ if(a!==b)return note('cuMsg','Las contraseñas no coinciden.','err');
+ $('cuSave').disabled=true;
+ const{error}=await sb.auth.updateUser({password:a});
+ $('cuSave').disabled=false;
+ if(error)return note('cuMsg',error.message,'err');
+ $('cuP1').value=$('cuP2').value='';note('cuMsg','Contraseña actualizada.','ok');
+};
+
+/* ---------- Mapa de aeródromos ---------- */
+let AP=null,leafMap=null,leafLayer=null,leafLines=null,mapMarkers={};
+function loadLeaflet(){
+ if(window.L)return Promise.resolve();
+ return new Promise((res,rej)=>{
+  const l=document.createElement('link');l.rel='stylesheet';l.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.appendChild(l);
+  const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';sc.onload=res;sc.onerror=()=>rej(new Error('No pude cargar el mapa'));document.head.appendChild(sc)})
+}
+function visitedAirports(){
+ const V={},segs={};
+ ALL.filter(r=>!r.pv&&r.k!=='Simulador').forEach(r=>{
+  const codes=String(r.rt||'').toUpperCase().split(/[^A-Z0-9]+/).filter(c=>/^[A-Z]{4}$/.test(c)&&AP[c]);
+  new Set(codes).forEach(c=>{const o=V[c]||(V[c]={n:0,h:0,last:'',first:'9999'});o.n++;o.h+=r.tot;if(r.d>o.last)o.last=r.d;if(r.d<o.first)o.first=r.d});
+  for(let i=1;i<codes.length;i++){if(codes[i]===codes[i-1])continue;const k=[codes[i-1],codes[i]].sort().join('-');segs[k]=(segs[k]||0)+1}
+ });
+ return{V,segs};
+}
+async function renderMap(){
+ note('mpMsg','');
+ try{
+  await loadLeaflet();
+  if(!AP){const r=await fetch('airports.json');if(!r.ok)throw new Error('No pude cargar la base de aeródromos');AP=await r.json()}
+ }catch(e){return note('mpMsg',e.message,'err')}
+ const{V,segs}=visitedAirports();
+ const codes=Object.keys(V).sort((a,b)=>V[b].n-V[a].n||a.localeCompare(b));
+ if(!leafMap){leafMap=L.map('mpMap',{scrollWheelZoom:true});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(leafMap)}
+ if(leafLayer)leafLayer.remove();if(leafLines)leafLines.remove();
+ leafLayer=L.layerGroup().addTo(leafMap);mapMarkers={};
+ codes.forEach(c=>{const a=AP[c],v=V[c];
+  const m=L.marker([a[0],a[1]],{title:c}).bindPopup(`<b>${esc(c)}</b> · ${esc(a[2])}<br>${esc(a[3]||'')}${a[3]?' · ':''}${esc(a[4])}<br>${v.n} ${v.n===1?'vuelo':'vuelos'} · último: ${esc(v.last)}`);
+  m.addTo(leafLayer);mapMarkers[c]=m});
+ leafLines=L.layerGroup();
+ Object.keys(segs).forEach(k=>{const[a,b]=k.split('-');L.polyline([[AP[a][0],AP[a][1]],[AP[b][0],AP[b][1]]],{color:'#2a6fb0',weight:1.5+Math.min(segs[k],6)*0.5,opacity:.45}).addTo(leafLines)});
+ const setLines=()=>{if($('mpRoutes').checked)leafLines.addTo(leafMap);else leafLines.remove()};
+ $('mpRoutes').onchange=setLines;setLines();
+ $('mpH').textContent=codes.length?`${codes.length} aeródromos visitados. Toca un pin para ver el detalle.`:'Aún no hay aeródromos para mostrar. Agrega códigos ICAO en la ruta de tus vuelos (ej. SCTB SCVH).';
+ if(codes.length){const b=L.latLngBounds(codes.map(c=>[AP[c][0],AP[c][1]]));leafMap.fitBounds(b.pad(0.2),{maxZoom:11})}else leafMap.setView([-33.45,-70.67],5);
+ setTimeout(()=>leafMap.invalidateSize(),50);
+ $('mpTbl').innerHTML=codes.length?'<thead><tr><th>Código</th><th>Aeródromo</th><th style="text-align:right">Vuelos</th><th>Último vuelo</th></tr></thead><tbody>'+codes.map(c=>`<tr data-c="${esc(c)}" style="cursor:pointer"><td><b>${esc(c)}</b></td><td>${esc(AP[c][2])}${AP[c][3]?' · '+esc(AP[c][3]):''}</td><td style="text-align:right">${V[c].n}</td><td>${esc(V[c].last)}</td></tr>`).join('')+'</tbody>':'';
+}
+document.addEventListener('click',e=>{const tr=e.target.closest('#mpTbl tr[data-c]');if(!tr||!leafMap)return;const m=mapMarkers[tr.dataset.c];if(m){leafMap.setView(m.getLatLng(),12);m.openPopup();$('mpMap').scrollIntoView({behavior:'smooth',block:'center'})}});
+
+/* ---------- Foto de perfil ---------- */
+let avatar=null;
+function initials(){const n=(user&&((user.user_metadata&&user.user_metadata.nombre)||user.email))||'?';const p=String(n).trim().split(/\s+/);return((p[0]||'')[0]||'?').toUpperCase()+(p.length>1?(p[p.length-1][0]||'').toUpperCase():'')}
+function paintAvatar(){
+ ['uAv','cuAv'].forEach(id=>{const el=$(id);if(!el)return;el.textContent='';el.style.backgroundImage='';
+  if(avatar){el.style.background='url('+avatar+') center/cover no-repeat'}else{el.style.background='';el.textContent=initials()}});
+ const d=$('cuDel');if(d)d.classList.toggle('hidden',!avatar);
+}
+async function loadAvatar(){
+ avatar=null;paintAvatar();
+ const{data,error}=await sb.from('perfiles').select('avatar').eq('user_id',user.id).maybeSingle();
+ if(!error&&data&&data.avatar){avatar=data.avatar;paintAvatar()}
+}
+function cropSquare(file,size){return new Promise((res,rej)=>{
+ const url=URL.createObjectURL(file),img=new Image();
+ img.onload=()=>{const m=Math.min(img.naturalWidth,img.naturalHeight),c=document.createElement('canvas');c.width=c.height=size;
+  c.getContext('2d').drawImage(img,(img.naturalWidth-m)/2,(img.naturalHeight-m)/2,m,m,0,0,size,size);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',0.85))};
+ img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('No pude leer esa imagen. Prueba con JPG o PNG.'))};img.src=url})}
+async function saveAvatar(val){
+ const{error}=await sb.from('perfiles').upsert({user_id:user.id,avatar:val,updated_at:new Date().toISOString()});
+ if(error){note('avMsg',/perfiles/.test(error.message)?'Falta crear la tabla de perfiles en Supabase (ejecutar perfil.sql).':error.message,'err');return false}
+ avatar=val;paintAvatar();return true;
+}
+$('cuFile').onchange=async e=>{
+ const f=e.target.files[0];e.target.value='';if(!f)return;
+ if(!/^image\//.test(f.type))return note('avMsg','Elige un archivo de imagen.','err');
+ try{note('avMsg','');if(await saveAvatar(await cropSquare(f,256)))note('avMsg','Foto actualizada.','ok')}catch(err){note('avMsg',err.message,'err')}
+};
+$('cuDel').onclick=async()=>{if(await saveAvatar(null))note('avMsg','Foto eliminada.','ok')};
+
+/* ---------- Administrador ---------- */
+const ADMIN_EMAIL='jolivab@gmail.com';
+async function loadAdmin(){
+ const t=$('adTbl');t.innerHTML='';note('adMsg','');$('adSum').textContent='Cargando…';
+ const{data,error}=await sb.rpc('admin_resumen');
+ if(error){$('adSum').textContent='';return note('adMsg','No pude cargar los usuarios: '+error.message+'\n¿Ejecutaste admin.sql en Supabase?','err')}
+ const tot=data.reduce((a,r)=>a+(r.horas||0),0);
+ $('adSum').textContent=data.length+' usuarios · '+fmt(tot)+' horas en total';
+ const th=['Usuario','Correo','Vuelos','Horas','Último vuelo','Registro'].map((h,i)=>`<th${i>=2&&i<=3?' style="text-align:right"':''}>${h}</th>`).join('');
+ t.innerHTML='<thead><tr>'+th+'</tr></thead><tbody>'+data.map(r=>`<tr><td>${esc(r.nombre||'—')}</td><td>${esc(r.email||'')}</td><td style="text-align:right">${r.vuelos}</td><td style="text-align:right"><b>${fmt(r.horas)}</b></td><td>${esc(r.ultimo_vuelo||'—')}</td><td>${esc(String(r.registrado||'').slice(0,10))}</td></tr>`).join('')+'</tbody>';
+}
+
+/* ---------- Inicio ---------- */
+async function onSession(session){
+ if(!session){user=null;ALL=[];show('vAuth');return}
+ if(user&&user.id===session.user.id)return;
+ user=session.user;$('uName').textContent=(user.user_metadata&&user.user_metadata.nombre)||user.email;
+ show('vApp');paintAvatar();loadAvatar();
+ $('navAdmin').classList.toggle('hidden',String(user.email||'').toLowerCase()!==ADMIN_EMAIL);
+ try{await loadAll()}catch(e){alert('No pude cargar tus vuelos: '+hintDb(e.message)+'\n¿Ejecutaste supabase.sql (instalación nueva) o migracion_v2.sql?')}
+ st.y='Todo';st.a='Todas';resetForm();go('resumen');
+}
+if(!configured){show('vSetup')}
+else{
+ let base=cfg.url.trim();try{base=new URL(base).origin}catch(e){}
+ sb=supabase.createClient(base,cfg.key.trim());
+ let host='';try{host=new URL(base).host}catch(e){}
+ $('ver').textContent='v6 · servidor: '+(host||'URL no válida');
+ sb.from('vuelos').select('id,pic,previo',{head:true,count:'exact'}).then(r=>{if(r.error)note('aMsg','Falla de conexión con la base de datos: '+hintDb(r.error.message),'err')});
+ sb.auth.onAuthStateChange((ev,session)=>{if(ev==='TOKEN_REFRESHED')return;setTimeout(()=>onSession(session),0)});
+ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(user&&!$('s-resumen').classList.contains('hidden'))renderDash()});
+}
+</script></body></html>
