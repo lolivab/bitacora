@@ -179,6 +179,7 @@ body.ro [data-d],body.ro [data-e],body.ro #nav [data-v=nuevo],body.ro #nav [data
  </div></section>
 
   <section id="s-metricas" class="hidden">
+  <div class="filters" id="mxF"><label class="tog" for="mxGA"><input id="mxGA" type="checkbox" checked>Aviación General</label><label class="tog" for="mxCO"><input id="mxCO" type="checkbox" checked>Aviación Comercial (línea aérea)</label></div>
   <div id="mxEmpty" class="card empty hidden"><h2>Aún no hay datos</h2><p class="muted">Registra o importa vuelos para ver tus métricas.</p></div>
   <div id="mx" class="grid">
    <div class="card c12"><div class="kpis" id="mxK" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"></div></div>
@@ -186,7 +187,7 @@ body.ro [data-d],body.ro [data-e],body.ro #nav [data-v=nuevo],body.ro #nav [data
    <div class="card c6"><h2>Copilotos</h2><div class="hint" id="mxCopH"></div><div class="bars" id="mxCop"></div></div>
    <div class="card c6"><h2>Jefes de cabina</h2><div class="hint" id="mxJefH"></div><div class="bars" id="mxJef"></div></div>
    <div class="card c6"><h2>Pasajeros transportados</h2><div class="hint" id="mxPaxH"></div><div class="bars" id="mxPax"></div></div>
-   <div class="card c8"><h2>Horas por año y rol</h2><div class="hint">Al mando, copiloto, instrucción, etc.</div><div class="chart"><canvas id="mxY"></canvas></div></div>
+   <div class="card c8"><h2>Horas por año y rol</h2><div class="hint">Incluye experiencia previa y simulador</div><div class="chart"><canvas id="mxY"></canvas></div></div>
    <div class="card c4"><h2>Pasajeros por año</h2><div class="hint" id="mxPyH"></div><div class="bars" id="mxPy"></div></div>
    <div class="card c6"><h2>Alumnos</h2><div class="hint" id="mxAluH"></div><div class="bars" id="mxAlu"></div></div>
    <div class="card c6"><h2>Rutas más voladas</h2><div class="hint">Tramos entre aeródromos, sin importar el sentido</div><div class="bars" id="mxRt"></div></div>
@@ -801,10 +802,16 @@ function peopleBars(el,list,color,top){
  const l=list.slice(0,top||10),mx=Math.max(...l.map(o=>o.v),1);
  $(el).innerHTML=l.map(o=>`<div class="row" style="grid-template-columns:minmax(90px,150px) 1fr minmax(105px,130px)"><span>${esc(o.n)}</span><div class="track"><div class="fill" style="width:${o.v/mx*100}%;background:${color}"></div></div><span class="n">${o.v} ${o.v===1?'vuelo':'vuelos'} · ${hm(o.h)} h</span></div>`).join('');
 }
+const AIRLINER=/^(A\d{3}[A-Z]?|A\d{2}N|B7\d[0-9A-Z]|B3[0-9A-Z]{2}|E\d{3}|CRJ\w*|AT\d\w*|DH8\w|MD\w+)$/i;
+function isComm(r){const m=String(r.modelo||'').trim();if(AIRLINER.test(m))return true;return(!m||/^sin modelo$/i.test(m))&&/^[A-Z]{3}\d{1,4}\b/.test(String(r.comentarios||''))}
+$('mxGA').onchange=$('mxCO').onchange=()=>renderMetrics();
 function renderMetrics(){
- const R=ALL.filter(r=>!r.pv&&r.k!=='Simulador');
- $('mxEmpty').classList.toggle('hidden',R.length>0);$('mx').classList.toggle('hidden',!R.length);
- if(!R.length)return;
+ const AL=ALL.filter(r=>isComm(r)?$('mxCO').checked:$('mxGA').checked);
+ const R=AL.filter(r=>!r.pv&&r.k!=='Simulador');
+ $('mxF').classList.toggle('hidden',!ALL.length);
+ $('mxEmpty').classList.toggle('hidden',AL.length>0);$('mx').classList.toggle('hidden',!AL.length);
+ $('mxEmpty').querySelector('p').textContent=ALL.length?'Activa al menos un tipo de aviación para ver las métricas.':'Registra o importa vuelos para ver tus métricas.';
+ if(!AL.length)return;
  const cap=peopleStats(R,'capitan'),cop=peopleStats(R,'copiloto'),jef=peopleStats(R,'jefe_cabina');
  const none='<div class="hint">Sin datos todavía.</div>';
  const sec=(el,hEl,list,color,txt,miss)=>{if(list.length){$(hEl).textContent=txt(list);peopleBars(el,list,color)}else{$(hEl).textContent=miss;$(el).innerHTML=''}};
@@ -829,14 +836,14 @@ function renderMetrics(){
  }else{$('mxPaxH').textContent='Ningún vuelo tiene pasajeros registrados.';$('mxPax').innerHTML='';$('mxPyH').textContent='';$('mxPy').innerHTML=''}
  // KPIs
  const nCrew=R.filter(r=>r.capitan||r.copiloto).length;
- const k=[[R.length,'vuelos'],[fmt(sum(R,'tot'))+' h','horas totales'],[cap.length,'capitanes distintos'],[cop.length,'copilotos distintos'],[pt.toLocaleString('es-CL'),'pasajeros transportados']];
+ const k=[[R.length,'vuelos'],[fmt(sum(AL,'tot'))+' h','horas totales (incluye experiencia previa y simulador)'],[cap.length,'capitanes distintos'],[cop.length,'copilotos distintos'],[pt.toLocaleString('es-CL'),'pasajeros transportados']];
  if(nCrew)k.splice(2,0,[nCrew,'vuelos con tripulación registrada']);
  if(alu.length)k.push([alu.length,'alumnos']);
  $('mxK').innerHTML=k.map(x=>`<div class="kpi" style="border-left-color:var(--line)"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
  // horas por año y rol
- const ys=[...new Set(ALL.map(r=>r.y))].sort(),kinds=KORDER.filter(t=>t!=='Simulador'&&ALL.some(r=>r.k===t&&!r.pv));
- const all=ALL.filter(r=>!r.pv&&r.k!=='Simulador');
- mk('mxY',{type:'bar',data:{labels:ys,datasets:kinds.map(t=>({label:t,data:ys.map(y=>+all.filter(r=>r.y===y&&r.k===t).reduce((a,r)=>a+r.tot,0).toFixed(1)),backgroundColor:css(KC[t])}))},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:css('--line')},title:{display:true,text:'horas'}}}}});
+ const ys=[...new Set(AL.map(r=>r.y))].sort(),kinds=[...KORDER,'Previo'].filter(t=>AL.some(r=>r.k===t));
+ const all=AL;
+ mk('mxY',{type:'bar',data:{labels:ys,datasets:kinds.map(t=>({label:t,data:ys.map(y=>+all.filter(r=>r.y===y&&r.k===t).reduce((a,r)=>a+r.tot,0).toFixed(1)),backgroundColor:t==='Previo'?'#b9a77a':css(KC[t])}))},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:css('--line')},title:{display:true,text:'horas'}}}}});
  // rutas
  const segs={};
  R.forEach(r=>{const c=String(r.rt||'').toUpperCase().split(/[^A-Z0-9]+/).filter(x=>/^[A-Z]{4}$/.test(x));for(let i=1;i<c.length;i++){if(c[i]===c[i-1])continue;const kk=[c[i-1],c[i]].sort().join(' – ');segs[kk]=(segs[kk]||0)+1}});
