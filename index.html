@@ -189,6 +189,13 @@ body.ro [data-d],body.ro [data-e],body.ro #nav [data-v=nuevo],body.ro #nav [data
    <div class="card c6"><h2>Pasajeros transportados</h2><div class="hint" id="mxPaxH"></div><div class="bars" id="mxPax"></div></div>
    <div class="card c8"><h2>Horas por año y rol</h2><div class="hint">Incluye experiencia previa y simulador</div><div class="chart"><canvas id="mxY"></canvas></div></div>
    <div class="card c4"><h2>Pasajeros por año</h2><div class="hint" id="mxPyH"></div><div class="bars" id="mxPy"></div></div>
+   <div class="grid c12" id="mxPx" style="padding:0;gap:14px">
+    <div class="card c6"><h2>Pasajeros por ruta</h2><div class="hint">Tramos con más pasajeros transportados</div><div class="bars" id="mxPxR"></div></div>
+    <div class="card c6"><h2>Pasajeros por destino</h2><div class="hint">Pasajeros que llevaste a cada aeródromo</div><div class="bars" id="mxPxD"></div></div>
+    <div class="card c6"><h2>Pasajeros por aeronave</h2><div class="hint">Total y promedio por vuelo según tipo</div><div class="bars" id="mxPxT"></div></div>
+    <div class="card c6"><h2>Pasajeros por mes del año</h2><div class="hint">Estacionalidad: suma de todos los años</div><div class="chart"><canvas id="mxPM"></canvas></div></div>
+    <div class="card c12"><h2>Vuelos con más pasajeros</h2><div class="bars" id="mxPxF"></div></div>
+   </div>
    <div class="card c6"><h2>Alumnos</h2><div class="hint" id="mxAluH"></div><div class="bars" id="mxAlu"></div></div>
    <div class="card c6"><h2>Rutas más voladas</h2><div class="hint">Tramos entre aeródromos, sin importar el sentido</div><div class="bars" id="mxRt"></div></div>
    <div class="card c12"><h2>Vuelos por día de la semana</h2><div class="hint">Según la fecha de cada vuelo</div><div class="chart"><canvas id="mxD"></canvas></div></div>
@@ -834,6 +841,26 @@ function renderMetrics(){
   const ys=Object.keys(py).sort();$('mxPyH').textContent='Pasajeros por año';
   barList('mxPy',ys.map(y=>[y,py[y],'background:var(--pax)']),v=>v.toLocaleString('es-CL'));
  }else{$('mxPaxH').textContent='Ningún vuelo tiene pasajeros registrados.';$('mxPax').innerHTML='';$('mxPyH').textContent='';$('mxPy').innerHTML=''}
+ // pasajeros: análisis extendido
+ $('mxPx').classList.toggle('hidden',!pt);
+ if(pt){
+  const rowsBars=(el,items,color)=>{const mx=Math.max(...items.map(i=>i[1]),1);$(el).innerHTML=items.map(([a,v,t])=>`<div class="row" style="grid-template-columns:minmax(90px,170px) 1fr minmax(105px,150px)"><span>${esc(a)}</span><div class="track"><div class="fill" style="width:${v/mx*100}%;background:${color}"></div></div><span class="n">${esc(t)}</span></div>`).join('')};
+  const rt={},de={},ty={},mo=Array(12).fill(0);
+  pf.forEach(r=>{
+   const n=pcount(r),c=String(r.rt||'').toUpperCase().split(/[^A-Z0-9]+/).filter(x=>/^[A-Z]{4}$/.test(x));
+   for(let i=1;i<c.length;i++){if(c[i]===c[i-1])continue;const k=[c[i-1],c[i]].sort().join(' – ');rt[k]=(rt[k]||0)+n}
+   if(c.length>1&&c[c.length-1]!==c[0])de[c[c.length-1]]=(de[c[c.length-1]]||0)+n;
+   const m=String(r.m||'Sin modelo'),o=ty[m]||(ty[m]={n:0,v:0});o.n+=n;o.v++;
+   mo[+r.d.slice(5,7)-1]+=n});
+  const top=(o,k)=>Object.entries(o).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const L=v=>v.toLocaleString('es-CL');
+  const rl=top(rt),dl=top(de);
+  rl.length?rowsBars('mxPxR',rl.map(([a,n])=>[a,n,L(n)+' pax']),'var(--pax)'):$('mxPxR').innerHTML='<div class="hint">Sin rutas con pasajeros.</div>';
+  dl.length?rowsBars('mxPxD',dl.map(([a,n])=>[a,n,L(n)+' pax']),'var(--dual)'):$('mxPxD').innerHTML='<div class="hint">Sin destinos con pasajeros.</div>';
+  rowsBars('mxPxT',Object.entries(ty).sort((a,b)=>b[1].n-a[1].n).slice(0,10).map(([m,o])=>[m,o.n,L(o.n)+' · prom. '+fmt(o.n/o.v,0)]),'var(--ok)');
+  rowsBars('mxPxF',[...pf].sort((a,b)=>pcount(b)-pcount(a)||(b.d>a.d?1:-1)).slice(0,8).map(r=>[r.d+(r.rt?' · '+String(r.rt).split(/\s+/).filter(Boolean).join(' → '):''),pcount(r),pcount(r)+' pax'+(r.m?' · '+r.m:'')]),'var(--prp)');
+  mk('mxPM',{type:'bar',data:{labels:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],datasets:[{data:mo,backgroundColor:css('--pax')}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:css('--line')},title:{display:true,text:'pasajeros'}}}}});
+ }
  // KPIs
  const nCrew=R.filter(r=>r.capitan||r.copiloto).length;
  const k=[[R.length,'vuelos'],[fmt(sum(AL,'tot'))+' h','horas totales (incluye experiencia previa y simulador)'],[cap.length,'capitanes distintos'],[cop.length,'copilotos distintos'],[pt.toLocaleString('es-CL'),'pasajeros transportados']];
