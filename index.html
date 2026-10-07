@@ -186,7 +186,7 @@ body.ro [data-d],body.ro [data-e],body.ro #nav [data-v=nuevo],body.ro #nav [data
    <div class="card c6"><h2>Capitanes</h2><div class="hint" id="mxCapH"></div><div class="bars" id="mxCap"></div></div>
    <div class="card c6"><h2>Copilotos</h2><div class="hint" id="mxCopH"></div><div class="bars" id="mxCop"></div></div>
    <div class="card c6"><h2>Jefes de cabina</h2><div class="hint" id="mxJefH"></div><div class="bars" id="mxJef"></div></div>
-   <div class="card c6"><h2>Pasajeros transportados</h2><div class="hint" id="mxPaxH"></div><div class="bars" id="mxPax"></div></div>
+      <div class="card c6"><h2>Alumnos</h2><div class="hint" id="mxAluH"></div><div class="bars" id="mxAlu"></div></div>
    <div class="card c8"><h2>Horas por año y rol</h2><div class="hint">Incluye experiencia previa y simulador</div><div class="chart"><canvas id="mxY"></canvas></div></div>
    <div class="card c4"><h2>Pasajeros por año</h2><div class="hint" id="mxPyH"></div><div class="bars" id="mxPy"></div></div>
    <div class="grid c12" id="mxPx" style="padding:0;gap:14px">
@@ -194,11 +194,11 @@ body.ro [data-d],body.ro [data-e],body.ro #nav [data-v=nuevo],body.ro #nav [data
     <div class="card c6"><h2>Pasajeros por destino</h2><div class="hint">Pasajeros que llevaste a cada aeródromo</div><div class="bars" id="mxPxD"></div></div>
     <div class="card c6"><h2>Pasajeros por aeronave</h2><div class="hint">Total y promedio por vuelo según tipo</div><div class="bars" id="mxPxT"></div></div>
     <div class="card c6"><h2>Pasajeros por mes del año</h2><div class="hint">Estacionalidad: suma de todos los años</div><div class="chart"><canvas id="mxPM"></canvas></div></div>
-    <div class="card c12"><h2>Vuelos con más pasajeros</h2><div class="bars" id="mxPxF"></div></div>
+    <div class="card c6" id="mxPxFC"><h2>Vuelos con más pasajeros</h2><div class="bars" id="mxPxF"></div></div>
+    <div class="card c6 hidden" id="mxPaxC"><h2>Pasajeros frecuentes</h2><div class="hint" id="mxPaxH"></div><div class="bars" id="mxPax"></div></div>
    </div>
-   <div class="card c6"><h2>Alumnos</h2><div class="hint" id="mxAluH"></div><div class="bars" id="mxAlu"></div></div>
    <div class="card c6"><h2>Rutas más voladas</h2><div class="hint">Tramos entre aeródromos, sin importar el sentido</div><div class="bars" id="mxRt"></div></div>
-   <div class="card c12"><h2>Vuelos por día de la semana</h2><div class="hint">Según la fecha de cada vuelo</div><div class="chart"><canvas id="mxD"></canvas></div></div>
+   <div class="card c6"><h2>Vuelos por día de la semana</h2><div class="hint">Según la fecha de cada vuelo</div><div class="chart"><canvas id="mxD"></canvas></div></div>
   </div>
  </section>
  <section id="s-mapa" class="hidden"><div class="card">
@@ -835,12 +835,12 @@ function renderMetrics(){
  const pm={},py={};
  pf.forEach(r=>{names(r).forEach(n=>{const k=nkey(n),o=pm[k]||(pm[k]={n,v:0,h:0});o.v++;o.h+=r.tot});py[r.y]=(py[r.y]||0)+pcount(r)});
  const pl=Object.values(pm).sort((a,b)=>b.v-a.v||b.h-a.h),pmax=pf.reduce((a,r)=>Math.max(a,pcount(r)),0);
+ $('mxPaxC').classList.toggle('hidden',!pl.length);$('mxPxFC').classList.toggle('c12',!pl.length);$('mxPxFC').classList.toggle('c6',!!pl.length);
  if(pt){
-  $('mxPaxH').textContent=`${pt.toLocaleString('es-CL')} pasajeros en ${pf.length} vuelos · promedio ${fmt(pt/pf.length)} por vuelo · máximo ${pmax}`+(pl.length?` · ${pl.length} personas con nombre`:'');
-  if(pl.length)peopleBars('mxPax',pl,'var(--pax)');else $('mxPax').innerHTML='';
-  const ys=Object.keys(py).sort();$('mxPyH').textContent='Pasajeros por año';
+  if(pl.length){$('mxPaxH').textContent=`${pl.length} personas con nombre registrado`;peopleBars('mxPax',pl,'var(--pax)')}
+  const ys=Object.keys(py).sort();$('mxPyH').textContent=`${pt.toLocaleString('es-CL')} en total · promedio ${fmt(pt/pf.length)} por vuelo · máximo ${pmax}`;
   barList('mxPy',ys.map(y=>[y,py[y],'background:var(--pax)']),v=>v.toLocaleString('es-CL'));
- }else{$('mxPaxH').textContent='Ningún vuelo tiene pasajeros registrados.';$('mxPax').innerHTML='';$('mxPyH').textContent='';$('mxPy').innerHTML=''}
+ }else{$('mxPyH').textContent='Ningún vuelo tiene pasajeros registrados.';$('mxPy').innerHTML=''}
  // pasajeros: análisis extendido
  $('mxPx').classList.toggle('hidden',!pt);
  if(pt){
