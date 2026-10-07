@@ -185,8 +185,9 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
    <div class="card c6"><h2>Pasajeros transportados</h2><div class="hint" id="mxPaxH"></div><div class="bars" id="mxPax"></div></div>
    <div class="card c8"><h2>Horas por año y rol</h2><div class="hint">Al mando, copiloto, instrucción, etc.</div><div class="chart"><canvas id="mxY"></canvas></div></div>
    <div class="card c4"><h2>Pasajeros por año</h2><div class="hint" id="mxPyH"></div><div class="bars" id="mxPy"></div></div>
+   <div class="card c6"><h2>Alumnos</h2><div class="hint" id="mxAluH"></div><div class="bars" id="mxAlu"></div></div>
    <div class="card c6"><h2>Rutas más voladas</h2><div class="hint">Tramos entre aeródromos, sin importar el sentido</div><div class="bars" id="mxRt"></div></div>
-   <div class="card c6"><h2>Vuelos por día de la semana</h2><div class="hint">Según la fecha de cada vuelo</div><div class="chart"><canvas id="mxD"></canvas></div></div>
+   <div class="card c12"><h2>Vuelos por día de la semana</h2><div class="hint">Según la fecha de cada vuelo</div><div class="chart"><canvas id="mxD"></canvas></div></div>
   </div>
  </section>
  <section id="s-mapa" class="hidden"><div class="card">
@@ -218,6 +219,7 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
    <li>Excel (.xlsx) exportado desde el sitio del Club Aéreo de Santiago</li>
    <li>PDF "DGAC Chile" exportado desde LogTen Pro</li>
    <li>CSV o TXT exportado desde LogTen Pro (tabulado o con comas)</li>
+   <li>Reporte tabulado "Export Flights (Tab)" de LogTen Pro (el más completo: tripulación, jefe de cabina, pasajeros)</li>
    <li>Reporte de calendario (.ics) exportado desde LogTen Pro (incluye Capitán y Copiloto)</li>
    <li>CSV exportado desde MyFlightbook</li>
    <li>Cualquier otro CSV que tenga fecha, aeronave y tiempo</li>
@@ -788,7 +790,7 @@ function casDropDup(rows){
 const nkey=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 function peopleStats(R,key){
  const m={};
- R.forEach(r=>{const n=String(r[key]||'').trim();if(!n)return;const k=nkey(n),o=m[k]||(m[k]={n,v:0,h:0,last:''});o.v++;o.h+=r.tot;if(r.d>o.last)o.last=r.d});
+ R.forEach(r=>{const seen=new Set();String(r[key]||'').split(';').forEach(x=>{const n=x.trim();if(!n)return;const k=nkey(n);if(seen.has(k))return;seen.add(k);const o=m[k]||(m[k]={n,v:0,h:0,last:''});o.v++;o.h+=r.tot;if(r.d>o.last)o.last=r.d})});
  return Object.values(m).sort((a,b)=>b.v-a.v||b.h-a.h);
 }
 function peopleBars(el,list,color,top){
@@ -805,22 +807,27 @@ function renderMetrics(){
  sec('mxCap','mxCapH',cap,'var(--pax)',l=>`${l.length} capitanes distintos · con quién más has volado como copiloto`,'Aparece al importar un reporte que incluya Capitán y Copiloto (por ejemplo el .ics de LogTen).');
  sec('mxCop','mxCopH',cop,'var(--ok)',l=>`${l.length} copilotos distintos · con quién más has volado como capitán`,'Aparece al importar un reporte que incluya Capitán y Copiloto (por ejemplo el .ics de LogTen).');
  sec('mxJef','mxJefH',jef,'var(--prp)',l=>`${l.length} jefes de cabina distintos`,'Ningún vuelo tiene jefe de cabina registrado. El reporte .ics de LogTen no incluye ese dato.');
+ // alumnos
+ const alu=peopleStats(R,'alumno');
+ sec('mxAlu','mxAluH',alu,'var(--dual)',l=>`${l.length} alumnos distintos · instrucción dada`,'Sin datos todavía. Aparece al importar el reporte tabulado de LogTen (columna Student).');
  // pasajeros
  const names=r=>String(r.pasajeros||'').split(',').map(x=>x.trim()).filter(Boolean);
- const pf=R.filter(r=>names(r).length),pt=pf.reduce((a,r)=>a+names(r).length,0);
+ const pcount=r=>Math.max(names(r).length,+r.num_pax||0);
+ const pf=R.filter(r=>pcount(r)>0),pt=pf.reduce((a,r)=>a+pcount(r),0);
  const pm={},py={};
- pf.forEach(r=>{names(r).forEach(n=>{const k=nkey(n),o=pm[k]||(pm[k]={n,v:0,h:0});o.v++;o.h+=r.tot});py[r.y]=(py[r.y]||0)+names(r).length});
- const pl=Object.values(pm).sort((a,b)=>b.v-a.v||b.h-a.h);
+ pf.forEach(r=>{names(r).forEach(n=>{const k=nkey(n),o=pm[k]||(pm[k]={n,v:0,h:0});o.v++;o.h+=r.tot});py[r.y]=(py[r.y]||0)+pcount(r)});
+ const pl=Object.values(pm).sort((a,b)=>b.v-a.v||b.h-a.h),pmax=pf.reduce((a,r)=>Math.max(a,pcount(r)),0);
  if(pt){
-  $('mxPaxH').textContent=`${pt} pasajeros en ${pf.length} vuelos (promedio ${fmt(pt/pf.length)} por vuelo) · ${pl.length} personas distintas, según los nombres registrados`;
-  peopleBars('mxPax',pl,'var(--pax)');
+  $('mxPaxH').textContent=`${pt.toLocaleString('es-CL')} pasajeros en ${pf.length} vuelos · promedio ${fmt(pt/pf.length)} por vuelo · máximo ${pmax}`+(pl.length?` · ${pl.length} personas con nombre`:'');
+  if(pl.length)peopleBars('mxPax',pl,'var(--pax)');else $('mxPax').innerHTML='';
   const ys=Object.keys(py).sort();$('mxPyH').textContent='Pasajeros por año';
-  barList('mxPy',ys.map(y=>[y,py[y],'background:var(--pax)']),v=>v);
+  barList('mxPy',ys.map(y=>[y,py[y],'background:var(--pax)']),v=>v.toLocaleString('es-CL'));
  }else{$('mxPaxH').textContent='Ningún vuelo tiene pasajeros registrados.';$('mxPax').innerHTML='';$('mxPyH').textContent='';$('mxPy').innerHTML=''}
  // KPIs
  const nCrew=R.filter(r=>r.capitan||r.copiloto).length;
- const k=[[R.length,'vuelos'],[fmt(sum(R,'tot'))+' h','horas totales'],[cap.length,'capitanes distintos'],[cop.length,'copilotos distintos'],[pt,'pasajeros transportados']];
+ const k=[[R.length,'vuelos'],[fmt(sum(R,'tot'))+' h','horas totales'],[cap.length,'capitanes distintos'],[cop.length,'copilotos distintos'],[pt.toLocaleString('es-CL'),'pasajeros transportados']];
  if(nCrew)k.splice(2,0,[nCrew,'vuelos con tripulación registrada']);
+ if(alu.length)k.push([alu.length,'alumnos']);
  $('mxK').innerHTML=k.map(x=>`<div class="kpi" style="border-left-color:var(--line)"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
  // horas por año y rol
  const ys=[...new Set(ALL.map(r=>r.y))].sort(),kinds=KORDER.filter(t=>t!=='Simulador'&&ALL.some(r=>r.k===t&&!r.pv));
@@ -876,6 +883,41 @@ function icsRows(text){
  }
  return{rows,owner,skipped};
 }
+
+/* ---------- Reporte tabulado de LogTen (Export Flights Tab) ---------- */
+function lgRows(data){
+ const tt=v=>{const m=String(v||'').match(/^(\d+):(\d{2})/);return m?+m[1]+(+m[2])/60:0};
+ const cnt={};
+ data.forEach(r=>['PIC/P1 Crew','SIC/P2 Crew'].forEach(k=>{const n=(r[k]||'').trim();if(n)cnt[n]=(cnt[n]||0)+1}));
+ const owner=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||'';
+ const rows=[],seen={};let skipped=0;
+ for(const r of data){
+  const g=k=>String(r[k]||'').trim();
+  const fecha=g('Date').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){skipped++;continue}
+  const simT=tt(r['Simulator']),sim=simT>0;let total=tt(r['Total Time']);if(sim&&!total)total=simT;
+  if(!(total>0)){skipped++;continue}
+  const prev=!sim&&!g('Out')&&!g('To')&&!g('Aircraft ID');
+  const isP1=g('PIC/P1')==='1',isP2=g('SIC/P2')==='1'&&!isP1,dual=tt(r['Dual Given']);
+  const tipo=prev?'Previo':sim?'Simulador':isP2?'Copiloto':dual>0?'Como instructor':'Al mando';
+  const base=derived(tipo==='Previo'?'Al mando':tipo,total);
+  if(!sim&&tt(r['PIC'])>0&&!isP2)base.pic=Math.min(tt(r['PIC']),total);
+  if(prev){base.sic=isP2?total:0;base.dual=0;base.solo=0;base.inst_h=0}
+  const crew=(...ks)=>[...new Set(ks.map(g).filter(n=>n&&n!==owner))].join('; ')||null;
+  const fr=g('From').toUpperCase(),to=g('To').toUpperCase();
+  const ruta=[fr,to].filter(x=>/^[A-Z]{4}$/.test(x)).filter((x,i,a)=>i===0||x!==a[i-1]).join(' ');
+  const app=[g('Approach 1'),g('Approach 2')].reduce((a,x)=>a+(x?(parseInt(x)||1):0),0);
+  const key=['lt',fecha,g('Flight #'),g('Aircraft ID'),fr,to,g('Out'),Math.round(total*60)].join(':');
+  seen[key]=(seen[key]||0)+1;
+  rows.push(Object.assign({origen_id:key+':'+seen[key],fecha,modelo:g('Aircraft Type')||'Sin modelo',matricula:g('Aircraft ID')||null,tipo,total,
+   aterrizajes:parseInt(g('Day Ldg'))||0,aterr_noche:parseInt(g('Night Ldg'))||0,travesia:(!prev&&!sim&&fr&&to&&fr!==to)?total:0,ruta:ruta||null,
+   comentarios:[g('Flight #'),g('Remarks')].filter(Boolean).join(' · ')||null,instructor:null,pasajeros:null,
+   nocturno:sim?0:tt(r['Night']),ifr:sim?0:tt(r['IFR']),aproximaciones:app,previo:prev,
+   capitan:prev?null:crew('PIC/P1 Crew','PIC2 Crew'),copiloto:prev?null:crew('SIC/P2 Crew','SIC2 Crew'),jefe_cabina:g('Purser')||null,
+   num_pax:parseInt(g('Total Pax'))||null,alumno:g('Student')||null},base));
+ }
+ return{rows,owner,skipped};
+}
 async function loadXlsxLib(){if(window.XLSX)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('No pude cargar el lector de Excel'));document.head.appendChild(s)})}
 
 $('csv').onchange=async e=>{
@@ -921,13 +963,19 @@ $('csv').onchange=async e=>{
    const rows=mfbRows(res.data);
    return setImport(rows,rows.length?`Formato MyFlightbook: ${rows.length} vuelos, ${fmt(sum(rows,'total'))} horas.\nPresiona Importar para guardarlos.`:'No encontré vuelos válidos en el archivo.');
   }
+  if(['Date','Aircraft Type','Total Time','PIC/P1 Crew'].every(h=>headers.includes(h))){
+   const o=lgRows(res.data);
+   if(!o.rows.length)return setImport(null,'No encontré vuelos en el archivo.');
+   const np=o.rows.filter(r=>r.previo).length,ns=o.rows.filter(r=>r.tipo==='Simulador').length;
+   return setImport(o.rows,`Reporte tabulado de LogTen Pro (bitácora de ${o.owner||'¿?'}): ${o.rows.length-np-ns} vuelos${ns?`, ${ns} de simulador`:''}${np?` y ${np} filas de experiencia previa`:''}, ${fmt(sum(o.rows,'total'))} horas.\nIncluye aeronave, matrícula, tripulación, jefe de cabina (${o.rows.filter(r=>r.jefe_cabina).length} vuelos) y pasajeros (${o.rows.filter(r=>r.num_pax).length} vuelos).${o.skipped?`\nOmití ${o.skipped} filas sin tiempo total.`:''}\nSi ya importaste el .ics o el PDF DGAC de esta misma bitácora, no cargues también este archivo para no duplicar horas.\nPresiona Importar para guardarlos.`);
+  }
   importCtx={headers,data:res.data,map:autoMap(headers)};
   drawMap();previewGeneric();
  }catch(err){setImport(null,'No pude leer el archivo: '+err.message)}
 };
 $('iGo').onclick=async()=>{
  if(!importRows)return;$('iGo').disabled=true;let added=0;const fails=[];
- if(importRows.some(r=>'capitan' in r)){const p=await sb.from('vuelos').select('capitan,copiloto,jefe_cabina').limit(1);if(p.error){$('iGo').disabled=false;return note('iMsg','Falta actualizar la base de datos: ejecuta migracion_v3.sql en Supabase > SQL Editor y vuelve a presionar Importar.','err')}}
+ if(importRows.some(r=>'capitan' in r)){const p=await sb.from('vuelos').select('capitan,copiloto,jefe_cabina,num_pax,alumno').limit(1);if(p.error){$('iGo').disabled=false;return note('iMsg','Falta actualizar la base de datos: ejecuta migracion_v3.sql en Supabase > SQL Editor y vuelve a presionar Importar.','err')}}
  const up=rows=>sb.from('vuelos').upsert(rows,{onConflict:'user_id,origen_id',ignoreDuplicates:!$('iUpd').checked}).select('id');
  const N=importRows.length;
  for(let i=0;i<N;i+=100){

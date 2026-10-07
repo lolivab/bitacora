@@ -3,3 +3,5 @@
 alter table public.vuelos add column if not exists capitan text;
 alter table public.vuelos add column if not exists copiloto text;
 alter table public.vuelos add column if not exists jefe_cabina text;
+alter table public.vuelos add column if not exists num_pax integer;
+alter table public.vuelos add column if not exists alumno text;
