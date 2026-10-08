@@ -132,7 +132,7 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #nav [d
  <div class="nav" id="nav" style="margin-bottom:16px">
   <button data-v="resumen" class="on">Resumen</button><button data-v="vuelos" data-g="1">Bitácora</button><button data-v="metricas">Métricas</button><button data-v="mapa">Mapa</button><button data-v="importar">Importar</button><button data-v="cuenta">Mi cuenta</button><button data-v="admin" id="navAdmin" class="hidden">Administrador</button>
  </div>
- <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Chequeo de habilitaciones</button></div>
+ <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Chequeo de habilitaciones</button><button data-v="exportar">Exportar PDF</button></div>
 
  <section id="s-resumen">
   <div class="filters"><div class="seg" id="fy"></div><select id="fa" aria-label="Aeronave"></select><label class="tog" for="grp"><input id="grp" type="checkbox" checked>Agrupar variantes</label></div>
@@ -193,11 +193,16 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #nav [d
    <div class="card c12"><h2>Actividad por grupo (Manual 4.39–4.41)</h2><p class="hint" id="ckHrs"></p><div style="overflow-x:auto"><table id="ckG"></table></div></div>
    <div class="card c12"><h2>Regla de 360 días por modelo (4.41.7)</h2><div style="overflow-x:auto"><table id="ckM"></table></div></div>
    <div class="card c12"><h2>Último vuelo por avión</h2><div style="overflow-x:auto"><table id="ckT"></table></div></div>
+   <div class="card c12"><h2>Habilitaciones a las que puedes acceder</h2><p class="hint" id="ckHabH"></p><div id="ckHab"></div></div>
    <div class="card c12"><h2>Documentos y condición personal</h2>
     <div class="grid" style="gap:10px">
      <div class="field c4"><label>Vencimiento certificado médico</label><input type="date" id="ckMed"></div>
      <div class="field c4"><label>Vencimiento licencia</label><input type="date" id="ckLic"></div>
      <div class="field c4"><label>Último curso aprobado (Básico, Área Media, Mono Avanzados, IFR, Multi; vence Bienal a 2 años)</label><input type="date" id="ckBie"><p class="hint" id="ckBieAuto"></p></div>
+     <div class="field c4"><label>Fecha de obtención de la licencia de piloto</label><input type="date" id="ckLicF"><p class="hint" id="ckLicFA"></p></div>
+     <div class="field c4"><label>Fecha de aprobación del Curso de Área Media</label><input type="date" id="ckAmF"></div>
+     <div class="field c12"><label>Cursos y requisitos ya aprobados (se marcan solos si lo detecto en tus comentarios)</label>
+      <div class="filters" id="ckCur"><label class="tog"><input type="checkbox" data-c="fc">Inspección Fuera de Cancha</label><label class="tog"><input type="checkbox" data-c="am">Área Media</label><label class="tog"><input type="checkbox" data-c="g1000">Ramo/curso Garmin 1000</label><label class="tog"><input type="checkbox" data-c="charla">Charla paso variable e inyección</label><label class="tog"><input type="checkbox" data-c="ma">Monomotores Avanzados</label><label class="tog"><input type="checkbox" data-c="noc">VFR Nocturno</label><label class="tog"><input type="checkbox" data-c="ifr">Vuelo por Instrumentos (IFR)</label><label class="tog"><input type="checkbox" data-c="mm">Multimotores</label></div></div>
      <div class="field c4"><label><input type="checkbox" id="ckIns"> Soy instructor o instructor ayudante (360 días en todos los grupos)</label></div>
     </div>
     <button class="btn" id="ckSave">Guardar</button> <span class="hint" id="ckMsg"></span>
@@ -205,6 +210,17 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #nav [d
    </div>
   </div>
   </section>
+
+  <section id="s-exportar" class="hidden"><div class="card" style="max-width:520px">
+   <h2>Exportar bitácora a PDF</h2>
+   <p class="hint">Genera un documento con el resumen de tus horas y el listado completo de vuelos.</p>
+   <div class="field"><label for="pdfY">Período</label><select id="pdfY"></select></div>
+   <div class="field"><label for="pdfK">Tipo de vuelo</label><select id="pdfK"></select></div>
+   <label class="tog" for="pdfObs"><input id="pdfObs" type="checkbox" checked>Incluir observaciones, instructor y pasajeros</label>
+   <label class="tog" for="pdfPrev"><input id="pdfPrev" type="checkbox" checked>Incluir experiencia previa</label>
+   <label class="tog" for="pdfDesc"><input id="pdfDesc" type="checkbox" checked>Más recientes primero</label>
+   <p><button class="btn" id="pdfGo" type="button">Descargar PDF</button></p><div id="pdfMsg"></div>
+  </div></section>
 
   <section id="s-metricas" class="hidden">
   <div class="filters" id="mxF"><label class="tog" for="mxGA"><input id="mxGA" type="checkbox" checked>Aviación General</label><label class="tog" for="mxCO"><input id="mxCO" type="checkbox" checked>Aviación Comercial (línea aérea)</label></div>
@@ -416,6 +432,92 @@ function traduce(m){
 $('out').onclick=()=>sb.auth.signOut();
 
 
+/* ---------- Exportar a PDF ---------- */
+function pdfTxt(s){return String(s==null?'':s).replace(/[–—−]/g,'-').replace(/[·•]/g,'-').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,'...').replace(/[^\x20-\x7E -ÿ]/g,'')}
+function loadScriptOnce(src,test){return new Promise((res,rej)=>{if(test())return res();const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('No pude cargar la librería de PDF. Revisa tu conexión.'));document.head.appendChild(s)})}
+async function loadPdfLib(){
+ await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',()=>window.jspdf&&window.jspdf.jsPDF);
+ await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js',()=>window.jspdf&&window.jspdf.jsPDF.API.autoTable);
+}
+function buildLogPdf(jsPDF,rows,o){
+ const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+ const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=36;
+ const BLUE=[31,111,209],DEEP=[18,62,120],INK=[28,36,48],MUTE=[110,120,135],SOFT=[238,244,252];
+ const T=pdfTxt,h2=x=>hm(x||0);
+ const real=rows.filter(r=>!r.pv),prev=rows.filter(r=>r.pv);
+ const kp=[['Vuelos',String(real.length)],['Horas totales',hm(sum(rows,'tot'))],['Al mando',h2(sum(rows,'pic'))],['Instrucción',h2(sum(rows,'di'))],['Solo',h2(sum(rows,'so'))],['Travesía',h2(sum(rows,'xc'))],['Nocturno',h2(sum(rows,'ni'))],['IFR',h2(sum(rows,'ifr'))],['Aterrizajes',String(sum(rows,'l'))]];
+ // portada / encabezado
+ doc.setFillColor(...DEEP);doc.rect(0,0,W,104,'F');
+ doc.setFillColor(...BLUE);doc.rect(0,0,W*0.62,104,'F');
+ doc.setFillColor(64,168,235);doc.triangle(W*0.62,0,W*0.62+70,0,W*0.62,104,'F');
+ if(o.logo){try{doc.addImage(o.logo,'PNG',M,22,60,60)}catch(e){}}
+ const tx=o.logo?M+76:M;
+ doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(26);doc.text('Bitácora de vuelo',tx,52);
+ doc.setFont('helvetica','normal');doc.setFontSize(12.5);doc.text(T(o.name),tx,72);
+ doc.setFontSize(9.5);doc.setTextColor(210,228,250);doc.text(T(o.period),tx,88);
+ doc.setFontSize(9);doc.text('Generado el '+o.date,W-M,40,{align:'right'});
+ if(o.filter)doc.text(T(o.filter),W-M,54,{align:'right'});
+ // KPIs
+ const gap=8,bw=(W-2*M-gap*(kp.length-1))/kp.length;let y=124;
+ kp.forEach((k,i)=>{const x=M+i*(bw+gap);
+  doc.setFillColor(...SOFT);doc.roundedRect(x,y,bw,52,6,6,'F');
+  doc.setFillColor(...BLUE);doc.roundedRect(x,y,4,52,2,2,'F');
+  doc.setTextColor(...DEEP);doc.setFont('helvetica','bold');doc.setFontSize(k[1].length>6?13:16);doc.text(T(k[1]),x+14,y+24);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...MUTE);doc.text(T(k[0]).toUpperCase(),x+14,y+39)});
+ y+=70;
+ // por año y por aeronave
+ const ya={},ma={};real.forEach(r=>{const a=ya[r.y]||(ya[r.y]={n:0,h:0});a.n++;a.h+=r.tot;const b=ma[r.m]||(ma[r.m]={n:0,h:0});b.n++;b.h+=r.tot});
+ const yl=Object.entries(ya).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,10).map(([k,v])=>[k,v.n,hm(v.h)]);
+ const ml=Object.entries(ma).sort((a,b)=>b[1].h-a[1].h).slice(0,10).map(([k,v])=>[T(k),v.n,hm(v.h)]);
+ const half=(W-2*M-20)/2;
+ const sty={theme:'plain',styles:{font:'helvetica',fontSize:8.5,cellPadding:{top:3,bottom:3,left:6,right:6},textColor:INK},headStyles:{fillColor:DEEP,textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[247,250,254]},columnStyles:{1:{halign:'right'},2:{halign:'right'}},didParseCell:d=>{if(d.section==='head'&&d.column.index>0)d.cell.styles.halign='right'}};
+ doc.setTextColor(...DEEP);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('Horas por año',M,y);doc.text('Horas por aeronave',M+half+20,y);
+ doc.autoTable(Object.assign({startY:y+6,margin:{left:M,right:M+half+20},head:[['Año','Vuelos','Horas']],body:yl},sty));const f1=doc.lastAutoTable.finalY;
+ doc.autoTable(Object.assign({startY:y+6,margin:{left:M+half+20,right:M},head:[['Aeronave','Vuelos','Horas']],body:ml},sty));
+ // listado
+ const body=rows.map(r=>[r.pv?'Previo':r.d,T(r.m),T(r.t),T(r.rt),hm(r.tot),r.l||'',T(r.k),o.obs?T([r.c,r.instr&&'Instr.: '+r.instr,r.pn?'Pax: '+r.pn:(+r.num_pax>0?'Pax: '+r.num_pax:'')].filter(Boolean).join(' - ')):'']);
+ const head=['Fecha','Aeronave','Matrícula','Ruta','Tiempo','Aterr.','Tipo'];if(o.obs)head.push('Observaciones');
+ let f2=doc.lastAutoTable.finalY;const sy=Math.max(f1,f2)+30;
+ doc.setTextColor(...DEEP);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('Listado de vuelos',M,sy-8);
+ const TC={'Instrucción recibida':[31,111,209],'Solo':[22,140,90],'Al mando':[40,48,64],'Copiloto':[90,110,130],'Como instructor':[124,77,214],'Simulador':[200,120,20],'Previo':[120,120,120]};
+ const cs={0:{cellWidth:56},1:{cellWidth:124},2:{cellWidth:56},3:{cellWidth:o.obs?100:230},4:{cellWidth:42,halign:'right'},5:{cellWidth:36,halign:'right'},6:{cellWidth:86}};
+ doc.autoTable({startY:sy,margin:{left:M,right:M,top:56,bottom:40},head:[head],body,
+  foot:[[{content:'Totales',colSpan:4,styles:{halign:'right'}},hm(sum(rows,'tot')),String(sum(rows,'l')),'',...(o.obs?['']:[])]],showFoot:'lastPage',
+  theme:'plain',styles:{font:'helvetica',fontSize:8,cellPadding:{top:3.5,bottom:3.5,left:5,right:5},textColor:INK,overflow:'linebreak',lineColor:[225,232,242],lineWidth:{bottom:0.4}},
+  headStyles:{fillColor:DEEP,textColor:255,fontStyle:'bold'},footStyles:{fillColor:SOFT,textColor:DEEP,fontStyle:'bold'},alternateRowStyles:{fillColor:[247,250,254]},columnStyles:cs,
+  didParseCell:d=>{if(d.section==='body'&&d.column.index===6){const c=TC[d.cell.raw];if(c){d.cell.styles.textColor=c;d.cell.styles.fontStyle='bold'}}},
+  didDrawPage:()=>{if(doc.internal.getCurrentPageInfo().pageNumber===1)return;doc.setFillColor(...BLUE);doc.rect(0,0,W,6,'F');doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...DEEP);doc.text('Listado de vuelos',M,34);doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...MUTE);doc.text(T(o.name),W-M,34,{align:'right'})}});
+ const n=doc.getNumberOfPages();
+ for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...MUTE);doc.text(T(o.name)+' - Bitácora de vuelo',M,H-18);doc.text('Página '+i+' de '+n,W-M,H-18,{align:'right'})}
+ return doc;
+}
+
+function prepPdf(){
+ const ys=[...new Set(ALL.filter(r=>!r.pv).map(r=>r.y))].sort().reverse();
+ const cy=$('pdfY').value,ck=$('pdfK').value;
+ $('pdfY').innerHTML='<option value="">Todos los vuelos</option>'+ys.map(y=>`<option value="${y}">${y}</option>`).join('');
+ $('pdfK').innerHTML='<option value="">Todos los tipos</option>'+KORDER.filter(k=>ALL.some(r=>r.k===k)).map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('');
+ if(ys.includes(cy))$('pdfY').value=cy;$('pdfK').value=ck;note('pdfMsg','');
+}
+$('pdfGo').onclick=async()=>{
+ const y=$('pdfY').value,k=$('pdfK').value;
+ let rows=ALL.filter(r=>(!y||(!r.pv&&r.y===y))&&(!k||r.k===k)&&($('pdfPrev').checked||!r.pv));
+ if(!rows.length)return note('pdfMsg','No hay vuelos con ese filtro.','err');
+ rows=rows.slice().sort((a,b)=>(a.pv?-1:0)-(b.pv?-1:0)||(a.d<b.d?-1:a.d>b.d?1:0));
+ if($('pdfDesc').checked){const pv=rows.filter(r=>r.pv),rest=rows.filter(r=>!r.pv).reverse();rows=rest.concat(pv)}
+ $('pdfGo').disabled=true;note('pdfMsg','Generando PDF…');
+ try{
+  await loadPdfLib();
+  let logo=null;try{const b=await(await fetch('icon-192.png')).blob();logo=await new Promise(res=>{const f=new FileReader();f.onload=()=>res(f.result);f.readAsDataURL(b)})}catch(e){}
+  const name=viewing?viewing.name:((user.user_metadata&&user.user_metadata.nombre)||user.email||'');
+  const now=new Date(),ds=String(now.getDate()).padStart(2,'0')+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+now.getFullYear();
+  const doc=buildLogPdf(window.jspdf.jsPDF,rows,{name,period:y?('Año '+y):'Todos los vuelos',filter:k?('Tipo: '+k):'',date:ds,obs:$('pdfObs').checked,logo});
+  doc.save('Bitacora-'+pdfTxt(name).replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+now.toISOString().slice(0,10)+'.pdf');
+  note('pdfMsg','PDF descargado ('+rows.length+' filas).','ok');
+ }catch(e){note('pdfMsg',e.message,'err')}
+ $('pdfGo').disabled=false;
+};
+
 /* ---------- Chequeo de vigencia (Manual Club Aéreo de Santiago) ---------- */
 function acType(m){
  m=String(m||'').toUpperCase().replace(/\s+/g,' ');
@@ -443,6 +545,78 @@ function winDays(g,tot,hA,inst){
 function ckStat(left,warn){return left<0?['bad','VENCIDO']:left<=warn?['warn','POR VENCER']:['ok','VIGENTE']}
 const CK_COL={ok:'var(--ok)',warn:'#e0a100',bad:'var(--bad)'};
 const ckDot=k=>`<span class="tag" style="background:${CK_COL[k]}">${k==='ok'?'Verde':k==='warn'?'Amarillo':'Rojo'}</span>`;
+
+/* ---------- Habilitaciones disponibles (Manual 4.37 y 4.38) ---------- */
+function acKey(m){
+ m=String(m||'').toUpperCase().replace(/\s+/g,' ');
+ if(/PA-?18/.test(m))return'PA18';if(/DECATHLON|BL-?30|8KCAB|DECA\b/.test(m))return'BL30';
+ if(/DA-?20|DIAMOND/.test(m))return'DA20';if(/TOMAHAWK|PA-?38/.test(m))return'TOMA';
+ if(/RV-?9/.test(m))return'RV9';if(/RV-?10/.test(m))return'RV10';
+ if(/MENTOR|A-?45|T-?34/.test(m))return'MENTOR';if(/SENECA|PA-?34/.test(m))return'SENECA';
+ if(/182T|C182\b/.test(m)&&!/R182|182R|C82R/.test(m))return'C182T';if(/182|C82R/.test(m))return'C182RG';
+ if(/ARCHER/.test(m))return'ARCHER';if(/PA-?28|P28A|CHEROKEE/.test(m))return'CHER180';
+ if(/172\s*-?S\b|172S/.test(m))return'C172S';if(/172/.test(m))return'C172N';
+ return null}
+const HAB_CUR=['fc','am','g1000','charla','ma','noc','ifr','mm'];
+function detectCursos(R){
+ const nrm=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+ const out={cur:{},lic:'',am:''};
+ R.slice().sort((a,b)=>a.d<b.d?-1:1).forEach(r=>{const c=nrm(r.c);if(/pre[\s-]*(pre[\s-]*)?examen/.test(c))return;
+  if(/examen.*piloto privado/.test(c)&&!out.lic)out.lic=r.d;
+  if(/examen.*area media/.test(c)){out.cur.am=true;if(!out.am)out.am=r.d}
+  if(/fuera de cancha/.test(c))out.cur.fc=true;
+  if(/examen.*monomotor|monomotores avanzados.*(aprob|examen)/.test(c))out.cur.ma=true;
+  if(/examen.*nocturno/.test(c))out.cur.noc=true;
+  if(/examen.*(ifr|instrumentos)/.test(c))out.cur.ifr=true;
+  if(/examen.*multi/.test(c))out.cur.mm=true});
+ return out}
+function evalHab(R,tot,C,licD,amD){
+ const H={},F={};
+ R.forEach(r=>{const k=acKey(r.m);if(k){H[k]=(H[k]||0)+r.tot;F[k]=true}});
+ const casH=sum(R.filter(r=>acKey(r.m)),'tot');
+ const aft=(d,key)=>d?sum(R.filter(r=>r.d>=d),key):null;
+ const hLic=licD?aft(licD,'tot'):tot,xLic=licD?aft(licD,'xc'):sum(R,'xc');
+ const hAm=amD?aft(amD,'tot'):0,xAm=amD?aft(amD,'xc'):0;
+ const bip=['DA20','TOMA','RV9','PA18','BL30'].filter(k=>F[k]).length;
+ const hc=k=>H[k]||0,h182=hc('C182T')+hc('C182RG');
+ const lic=!!(licD||C.lic);
+ const need=(ok,txt)=>ok?null:txt;
+ const A=[ // [nombre, norma, realizado?, requisitos[]]
+ ['Inspección de Vuelo Fuera de Cancha','4.37.3',!!C.fc,[need(lic,'Licencia de piloto')]],
+ ['Inspección opcional pistas costeras','4.37.4',false,[need(lic,'Licencia de piloto')]],
+ ['Instrucción en Diamond DA-20 / Tomahawk','4.37.1-2',!!(F.DA20||F.TOMA),[need(lic,'Licencia de piloto')]],
+ ['Instrucción en RV-9A I','4.37.5',!!F.RV9,[need(lic,'Licencia de piloto')]],
+ ['Curso de Área Media (C172N o Cherokee 180)','4.37.8',!!C.am,[need(lic,'Licencia de piloto'),need(hLic>=25,`25 h después de la licencia (llevas ${fmt(hLic)})`),need(xLic>=15,`15 h de travesía (llevas ${fmt(xLic)})`),need(bip>=2,`Estar autorizado en 2 biplazas (llevas ${bip})`),need(C.fc,'Inspección Fuera de Cancha aprobada')]],
+ ['Instrucción en RV-9A II','4.37.6',false,[need(C.am,'Curso de Área Media'),need(F.RV9,'Estar autorizado en RV-9A I'),need(hc('RV9')>=10,`10 h en RV-9A I (llevas ${fmt(hc('RV9'))})`)]],
+ ['Instrucción en Cherokee 180 / Cessna 172N','4.37.9',!!(F.CHER180&&F.C172N),[need(C.am,'Curso de Área Media')]],
+ ['Instrucción en Cessna 172S G1000 (VFR Básico)','4.37.10',!!F.C172S,[need(C.am,'Curso de Área Media'),need(F.C172N,'Estar autorizado en Cessna 172N')]],
+ ['Instrucción en Cessna 172S G1000 (VFR Avanzado)','4.37.11',false,[need(C.am,'Curso de Área Media'),need(F.C172N,'Estar autorizado en Cessna 172N'),need(C.g1000,'Ramo de Garmin 1000')]],
+ ['Instrucción en Piper Archer II y III','4.37.12',!!F.ARCHER,[need(C.am,'Curso de Área Media'),need(F.C172N||F.C172S||F.CHER180,'Estar autorizado en Cessna 172 o Cherokee 180')]],
+ ['Instrucción en Super Decathlon BL-30','4.37.13',!!F.BL30,[need(C.am,'Curso de Área Media'),need(C.charla,'Charla de paso variable e inyección')]],
+ ['Instrucción en Piper PA-18','4.37.7',!!F.PA18,[need(C.am,'Curso de Área Media'),need(F.BL30,'Estar autorizado en Super Decathlon')]],
+ ['Curso de Monomotores Avanzados (C182)','4.37.14',!!C.ma,[need(C.am,'Curso de Área Media'),need(hAm>=25||(!amD&&tot>=25),`25 h después del Área Media (llevas ${fmt(hAm)})`),need(xAm>=15||(!amD&&sum(R,'xc')>=15),`15 h de travesía (llevas ${fmt(xAm)})`),need(F.C172N||F.C172S,'Habilitado en ala alta (C172N o C172S)')]],
+ ['Instrucción en Cessna 182RG','4.37.16',!!F.C182RG,[need(C.ma,'Monomotores Avanzados aprobado'),need(h182>=5,`5 h en el material del curso (llevas ${fmt(h182)})`)]],
+ ['Instrucción en Cessna 182T G1000','4.37.17',!!F.C182T,[need(C.ma,'Monomotores Avanzados aprobado'),need(h182>=5,`5 h en el material del curso (llevas ${fmt(h182)})`),need(C.g1000,'Ramo de Garmin 1000')]],
+ ['Instrucción en Mentor A-45','4.37.15',!!F.MENTOR,[need(C.ma,'Monomotores Avanzados aprobado'),need(casH>=180,`180 h en el Club (llevas ${fmt(casH)})`)]],
+ ['Instrucción en Vans RV-10','4.37.18',!!F.RV10,[need(C.ma,'Monomotores Avanzados aprobado'),need(C.g1000,'Curso formal de G-1000'),need(h182>=10,`10 h en C182 (llevas ${fmt(h182)})`),need(hc('RV9')>0,'Estar habilitado y en vuelo en RV-9A II'),need(tot>=200,`200 h totales (llevas ${fmt(tot)})`)]],
+ ['Curso de Vuelo VFR Nocturno','4.37.19',!!C.noc,[need(tot>=150,`150 h de vuelo (llevas ${fmt(tot)})`),need(C.am,'Curso de Área Media')]],
+ ['Curso de Multimotores','4.38.1',!!C.mm,[need(C.ma,'Monomotores Avanzados aprobado'),need(tot>=180,`180 h de vuelo (llevas ${fmt(tot)})`)]],
+ ['Curso de Vuelo por Instrumentos (IFR)','4.38.2',!!C.ifr,[need(C.am,'Curso de Área Media'),need(tot>=100,`100 h de vuelo (llevas ${fmt(tot)})`),need(sum(R,'xc')>=50,`50 h de travesía (llevas ${fmt(sum(R,'xc'))})`)]],
+ ['Curso de Acrobacia','4.38.4',false,[need(F.MENTOR||F.BL30,'Estar habilitado en Mentor A-45 o Super Decathlon')]],
+ ['Aviónica Garmin 1000 para IFR','4.38.3',false,[need(C.ifr,'Habilitación IFR en el Club'),need(C.g1000,'Curso de Garmin 1000 de transición')]]
+ ];
+ return A.map(([n,ref,done,req])=>{const miss=req.filter(Boolean);return{n,ref,done,miss,ok:!miss.length}});
+}
+function paintHab(R,tot,C,licD,amD){
+ const L=evalHab(R,tot,C,licD,amD);
+ const ok=L.filter(a=>a.ok&&!a.done),dn=L.filter(a=>a.done),no=L.filter(a=>!a.ok&&!a.done);
+ const li=(a,t)=>`<li><b>${esc(a.n)}</b> <span class="hint">(Manual ${a.ref})</span>${t||''}</li>`;
+ $('ckHabH').textContent=`${ok.length} disponibles, ${dn.length} ya realizadas, ${no.length} con requisitos pendientes. Es una estimación: "autorizado" se deduce de que hayas volado ese modelo.`;
+ $('ckHab').innerHTML=(ok.length?'<h3 style="margin:6px 0">Disponibles para ti</h3><ul style="margin:0 0 12px 18px">'+ok.map(a=>li(a,' '+'<span class="tag" style="background:var(--ok)">Cumples</span>')).join('')+'</ul>':'<p class="hint">Por ahora no hay habilitaciones nuevas disponibles con los datos registrados.</p>')
+ +(dn.length?'<details style="margin-bottom:10px"><summary>Ya realizadas ('+dn.length+')</summary><ul style="margin:6px 0 0 18px">'+dn.map(a=>li(a)).join('')+'</ul></details>':'')
+ +(no.length?'<details><summary>Aún no cumples los requisitos ('+no.length+')</summary><ul style="margin:6px 0 0 18px">'+no.map(a=>li(a,'<div class="hint">Falta: '+a.miss.map(esc).join('; ')+'</div>')).join('')+'</ul></details>':'');
+}
+
 let CK={};
 function loadChk(){if(viewing){CK={};return}try{CK=JSON.parse(localStorage.getItem('chk_'+user.id)||'{}')}catch(e){CK={}}}
 let ckTok=0;
@@ -461,7 +635,7 @@ function renderChequeo(){
 function paintChk(){
  const T=todayS(),R=ALL.filter(r=>!r.pv&&r.k!=='Simulador'&&r.d<=T);
  const tot=sum(ALL.filter(r=>r.k!=='Simulador'),'tot');
- ['ckMed','ckLic','ckBie','ckIns','ckSave'].forEach(i=>$(i).disabled=!!viewing);$('ckSave').style.display=viewing?'none':'';
+ ['ckMed','ckLic','ckBie','ckIns','ckSave','ckLicF','ckAmF'].forEach(i=>$(i).disabled=!!viewing);$('ckSave').style.display=viewing?'none':'';
  $('ckMed').value=CK.med||'';$('ckMsg').textContent=viewing?(CK.med||CK.lic||CK.bie||CK.ins?'Fechas cargadas por '+(viewing.name||viewing.email)+' (solo lectura).':(viewing.name||viewing.email)+' aún no ha cargado fechas.'):'';$('ckLic').value=CK.lic||'';$('ckBie').value=CK.bie||'';$('ckIns').checked=!!CK.ins;
  const last={},lastF={},lastT={},cnt={},h12={};
  R.forEach(r=>{const a=acType(r.m);if(!a)return;
@@ -499,6 +673,11 @@ function paintChk(){
   h+=`<tr><td><b>${esc(o.t)}</b></td><td>${esc(o.m||'')}</td><td>${o.d}</td><td>${dayDiff(o.d,T)} d</td><td>${cnt[k]}</td><td>${fmt(h12[k]||0)}</td></tr>`});
  $('ckT').innerHTML=h;
  // documentos
+ const dc=detectCursos(R),C=Object.assign({},dc.cur,CK.cur||{}),licD=CK.licF||dc.lic,amD=CK.amF||dc.am;
+ $('ckLicF').value=CK.licF||'';$('ckAmF').value=CK.amF||'';
+ $('ckLicFA').textContent=dc.lic?'Detectada en tus comentarios: '+dc.lic+'.':'';
+ document.querySelectorAll('#ckCur input').forEach(i=>{i.checked=!!C[i.dataset.c];i.disabled=!!viewing});
+ paintHab(R,tot,C,licD,amD);
  let det=null;
  R.forEach(r=>{const c=String(r.c||'');
   if(/pre[\s-]*(pre[\s-]*)?examen/i.test(c))return;
@@ -519,7 +698,7 @@ function paintChk(){
 function bad(i){return i.length>0}
 $('ckSave').onclick=async()=>{
  if(viewing)return;
- CK={med:$('ckMed').value,lic:$('ckLic').value,bie:$('ckBie').value,ins:$('ckIns').checked};
+ CK={med:$('ckMed').value,lic:$('ckLic').value,bie:$('ckBie').value,ins:$('ckIns').checked,licF:$('ckLicF').value,amF:$('ckAmF').value,cur:{}};document.querySelectorAll('#ckCur input').forEach(i=>{if(i.checked)CK.cur[i.dataset.c]=true});
  try{localStorage.setItem('chk_'+user.id,JSON.stringify(CK))}catch(e){}
  paintChk();
  const{error}=await sb.from('perfiles').upsert({user_id:user.id,chequeo:CK,updated_at:new Date().toISOString()});
@@ -528,8 +707,8 @@ $('ckSave').onclick=async()=>{
 
 /* ---------- Navegación ---------- */
 function go(v){
- ['resumen','vuelos','metricas','chequeo','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
- {const G=['vuelos','nuevo','chequeo'].includes(v);document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g?G:b.dataset.v===v));document.querySelectorAll('#subnav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G)}
+ ['resumen','vuelos','metricas','chequeo','exportar','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
+ {const G=['vuelos','nuevo','chequeo','exportar'].includes(v);document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g?G:b.dataset.v===v));document.querySelectorAll('#subnav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G)}
  {const nb=document.querySelector('#nav button.on');if(nb)$('burgerT').textContent=nb.textContent;$('nav').classList.remove('open')}
  if(v==='resumen')renderDash();
  if(v==='vuelos')table();
@@ -538,6 +717,7 @@ function go(v){
  if(v==='mapa')renderMap();
  if(v==='metricas')renderMetrics();
  if(v==='chequeo')renderChequeo();
+ if(v==='exportar')prepPdf();
  if(v==='cuenta'){note('avMsg','');paintAvatar();$('cuMail').textContent=user.email||'';$('cuP1').value=$('cuP2').value='';note('cuMsg','')}
 }
 $('burger').onclick=()=>$('nav').classList.toggle('open');
