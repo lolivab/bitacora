@@ -574,7 +574,9 @@ function detectCursos(R){
  return out}
 function evalHab(R,tot,C,licD,amD){
  const H={},F={};
- R.forEach(r=>{const k=acKey(r.m);if(k){H[k]=(H[k]||0)+r.tot;F[k]=true}});
+ const RV2=/^CC-?(AYD|AYE)$/i;
+ R.forEach(r=>{let k=acKey(r.m);if(k==='RV9'&&RV2.test(String(r.t||'').trim()))k='RV9B';if(k){H[k]=(H[k]||0)+r.tot;F[k]=true}});
+ if(F.RV9B)F.RV9=true;
  const casH=sum(R.filter(r=>acKey(r.m)),'tot');
  const aft=(d,key)=>d?sum(R.filter(r=>r.d>=d),key):null;
  const hLic=licD?aft(licD,'tot'):tot,xLic=licD?aft(licD,'xc'):sum(R,'xc');
@@ -589,7 +591,7 @@ function evalHab(R,tot,C,licD,amD){
  ['Instrucción en Diamond DA-20 / Tomahawk','4.37.1-2',!!(F.DA20||F.TOMA),[need(lic,'Licencia de piloto')]],
  ['Instrucción en RV-9A I','4.37.5',!!F.RV9,[need(lic,'Licencia de piloto')]],
  ['Curso de Área Media (C172N o Cherokee 180)','4.37.8',!!C.am,[need(lic,'Licencia de piloto'),need(hLic>=25,`25 h después de la licencia (llevas ${fmt(hLic)})`),need(xLic>=15,`15 h de travesía (llevas ${fmt(xLic)})`),need(bip>=2,`Estar autorizado en 2 biplazas (llevas ${bip})`),need(C.fc,'Inspección Fuera de Cancha aprobada')]],
- ['Instrucción en RV-9A II','4.37.6',!!C.rv2,[need(C.am,'Curso de Área Media'),need(F.RV9,'Estar autorizado en RV-9A I'),need(hc('RV9')>=10,`10 h en RV-9A I (llevas ${fmt(hc('RV9'))})`)]],
+ ['Instrucción en RV-9A II','4.37.6',!!(C.rv2||F.RV9B),[need(C.am,'Curso de Área Media'),need(F.RV9,'Estar autorizado en RV-9A I'),need(hc('RV9')>=10,`10 h en RV-9A I (llevas ${fmt(hc('RV9'))})`)]],
  ['Instrucción en Cherokee 180 / Cessna 172N','4.37.9',!!(F.CHER180&&F.C172N),[need(C.am,'Curso de Área Media')]],
  ['Instrucción en Cessna 172S G1000 (VFR Básico)','4.37.10',!!F.C172S,[need(C.am,'Curso de Área Media'),need(F.C172N,'Estar autorizado en Cessna 172N')]],
  ['Instrucción en Cessna 172S G1000 (VFR Avanzado)','4.37.11',false,[need(C.am,'Curso de Área Media'),need(F.C172N,'Estar autorizado en Cessna 172N'),need(C.g1000,'Ramo de Garmin 1000')]],
