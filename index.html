@@ -438,19 +438,24 @@ const CK_COL={ok:'var(--ok)',warn:'#e0a100',bad:'var(--bad)'};
 const ckDot=k=>`<span class="tag" style="background:${CK_COL[k]}">${k==='ok'?'Verde':k==='warn'?'Amarillo':'Rojo'}</span>`;
 let CK={};
 function loadChk(){if(viewing){CK={};return}try{CK=JSON.parse(localStorage.getItem('chk_'+user.id)||'{}')}catch(e){CK={}}}
+let ckTok=0;
 async function loadChkDb(){
- try{const{data,error}=await sb.from('perfiles').select('chequeo').eq('user_id',viewing?viewing.id:user.id).maybeSingle();
-  if(!error&&data&&data.chequeo)CK=data.chequeo}catch(e){}
-}
+ const tok=++ckTok,vid=viewing&&viewing.id;
+ try{const{data,error}=await sb.from('perfiles').select('chequeo').eq('user_id',vid||user.id).maybeSingle();
+  if(tok!==ckTok||(viewing&&viewing.id)!==vid)return false;
+  if(error){if(vid)CK={};return false}
+  if(data&&data.chequeo)CK=data.chequeo;else if(vid)CK={};
+ }catch(e){}
+ return true}
 function renderChequeo(){
  loadChk();paintChk();
- loadChkDb().then(paintChk);
+ loadChkDb().then(ok=>{if(ok!==false)paintChk()});
 }
 function paintChk(){
  const T=todayS(),R=ALL.filter(r=>!r.pv&&r.k!=='Simulador'&&r.d<=T);
  const tot=sum(ALL.filter(r=>r.k!=='Simulador'),'tot');
  ['ckMed','ckLic','ckBie','ckIns','ckSave'].forEach(i=>$(i).disabled=!!viewing);$('ckSave').style.display=viewing?'none':'';
- $('ckMed').value=CK.med||'';$('ckLic').value=CK.lic||'';$('ckBie').value=CK.bie||'';$('ckIns').checked=!!CK.ins;
+ $('ckMed').value=CK.med||'';$('ckMsg').textContent=viewing?(CK.med||CK.lic||CK.bie||CK.ins?'Fechas cargadas por '+(viewing.name||viewing.email)+' (solo lectura).':(viewing.name||viewing.email)+' aún no ha cargado fechas.'):'';$('ckLic').value=CK.lic||'';$('ckBie').value=CK.bie||'';$('ckIns').checked=!!CK.ins;
  const last={},lastF={},lastT={},cnt={},h12={};
  R.forEach(r=>{const a=acType(r.m);if(!a)return;
   if(!last[a.g]||r.d>last[a.g])last[a.g]=r.d;
