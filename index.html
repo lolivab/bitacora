@@ -410,16 +410,16 @@ $('out').onclick=()=>sb.auth.signOut();
 /* ---------- Chequeo de vigencia (Manual Club Aéreo de Santiago) ---------- */
 function acType(m){
  m=String(m||'').toUpperCase().replace(/\s+/g,' ');
- if(/PA-?18|DECATHLON|BL-?30|8KCAB/.test(m))return{g:'A',f:/PA-?18/.test(m)?'PA-18':'Super Decathlon'};
+ if(/PA-?18|DECATHLON|DECA\b|BL-?30|8KCAB/.test(m))return{g:'A',f:/PA-?18/.test(m)?'PA-18':'Super Decathlon'};
  if(/DA-?20|DIAMOND/.test(m))return{g:'B',f:'DA-20'};
  if(/RV-?9/.test(m))return{g:'B',f:'RV-9A'};
  if(/RV-?10/.test(m))return{g:'D',f:'RV-10'};
  if(/MENTOR|A-?45|T-?34/.test(m))return{g:'D',f:'Mentor A-45'};
- if(/182/.test(m))return{g:'D',f:'Cessna 182'};
+ if(/182|C82R|C82S/.test(m))return{g:'D',f:'Cessna 182'};
  if(/SENECA|PA-?34/.test(m))return{g:'E',f:'Seneca'};
  if(/TOMAHAWK|PA-?38/.test(m))return{g:'C',f:'Piper (Grupo C)'};
- if(/PA-?28|CHEROKEE|ARCHER/.test(m))return{g:'C',f:'Piper (Grupo C)'};
- if(/172/.test(m))return{g:'C',f:'Cessna C172'};
+ if(/PA-?28|P28[AB]|CHEROKEE|ARCHER/.test(m))return{g:'C',f:'Piper (Grupo C)'};
+ if(/172|C172/.test(m))return{g:'C',f:'Cessna C172'};
  return null}
 const CK_COVER={A:['A'],B:['B'],C:['C','D','E'],D:['D','E'],E:['E']};
 const dayMs=864e5;
