@@ -122,7 +122,7 @@ body.ro [data-d],body.ro [data-e],body.ro #nav [data-v=nuevo],body.ro #nav [data
  <div id="roBar" class="hidden"><span id="roTxt"></span><button class="btn small" id="roExit" type="button">Volver a mi cuenta</button></div>
  <button type="button" id="burger" aria-label="Menú"><span id="burgerT">Resumen</span><span class="ic">☰</span></button>
  <div class="nav" id="nav" style="margin-bottom:16px">
-  <button data-v="resumen" class="on">Resumen</button><button data-v="vuelos">Mis vuelos</button><button data-v="metricas">Métricas</button><button data-v="mapa">Mapa</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="importar">Importar</button><button data-v="cuenta">Mi cuenta</button><button data-v="admin" id="navAdmin" class="hidden">Administrador</button>
+  <button data-v="resumen" class="on">Resumen</button><button data-v="vuelos">Mis vuelos</button><button data-v="metricas">Métricas</button><button data-v="chequeo">Chequeo</button><button data-v="mapa">Mapa</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="importar">Importar</button><button data-v="cuenta">Mi cuenta</button><button data-v="admin" id="navAdmin" class="hidden">Administrador</button>
  </div>
 
  <section id="s-resumen">
@@ -177,6 +177,25 @@ body.ro [data-d],body.ro [data-e],body.ro #nav [data-v=nuevo],body.ro #nav [data
    <div class="full"><button class="btn" id="fSave" type="button">Guardar vuelo</button> <button class="btn ghost hidden" id="fCancel" type="button">Cancelar edición</button><div id="fMsg"></div></div>
   </div>
  </div></section>
+
+  <section id="s-chequeo" class="hidden">
+  <div id="ckBanner" class="card" style="margin-bottom:14px"></div>
+  <div class="grid">
+   <div class="card c12"><h2>Actividad por grupo (Manual 4.39–4.41)</h2><p class="hint" id="ckHrs"></p><div style="overflow-x:auto"><table id="ckG"></table></div></div>
+   <div class="card c12"><h2>Regla de 360 días por modelo (4.41.7)</h2><div style="overflow-x:auto"><table id="ckM"></table></div></div>
+   <div class="card c12"><h2>Último vuelo por avión</h2><div style="overflow-x:auto"><table id="ckT"></table></div></div>
+   <div class="card c12"><h2>Documentos y condición personal</h2>
+    <div class="grid" style="gap:10px">
+     <div class="field c4"><label>Vencimiento certificado médico</label><input type="date" id="ckMed"></div>
+     <div class="field c4"><label>Vencimiento licencia</label><input type="date" id="ckLic"></div>
+     <div class="field c4"><label>Último Bienal / curso de repaso (vence a 2 años)</label><input type="date" id="ckBie"></div>
+     <div class="field c4"><label><input type="checkbox" id="ckIns"> Soy instructor o instructor ayudante (360 días en todos los grupos)</label></div>
+    </div>
+    <button class="btn" id="ckSave">Guardar</button> <span class="hint" id="ckMsg"></span>
+    <p class="hint">Referencia basada en el Manual de Normas y Procedimientos (nov. 2025). Considera todos tus vuelos en estos modelos como vuelos en material del Club. No reemplaza la verificación del Club ni de la DGAC.</p>
+   </div>
+  </div>
+  </section>
 
   <section id="s-metricas" class="hidden">
   <div class="filters" id="mxF"><label class="tog" for="mxGA"><input id="mxGA" type="checkbox" checked>Aviación General</label><label class="tog" for="mxCO"><input id="mxCO" type="checkbox" checked>Aviación Comercial (línea aérea)</label></div>
@@ -387,9 +406,108 @@ function traduce(m){
 }
 $('out').onclick=()=>sb.auth.signOut();
 
+
+/* ---------- Chequeo de vigencia (Manual Club Aéreo de Santiago) ---------- */
+function acType(m){
+ m=String(m||'').toUpperCase().replace(/\s+/g,' ');
+ if(/PA-?18|DECATHLON|BL-?30|8KCAB/.test(m))return{g:'A',f:/PA-?18/.test(m)?'PA-18':'Super Decathlon'};
+ if(/DA-?20|DIAMOND/.test(m))return{g:'B',f:'DA-20'};
+ if(/RV-?9/.test(m))return{g:'B',f:'RV-9A'};
+ if(/RV-?10/.test(m))return{g:'D',f:'RV-10'};
+ if(/MENTOR|A-?45|T-?34/.test(m))return{g:'D',f:'Mentor A-45'};
+ if(/182/.test(m))return{g:'D',f:'Cessna 182'};
+ if(/SENECA|PA-?34/.test(m))return{g:'E',f:'Seneca'};
+ if(/TOMAHAWK|PA-?38/.test(m))return{g:'C',f:'Piper (Grupo C)'};
+ if(/PA-?28|CHEROKEE|ARCHER/.test(m))return{g:'C',f:'Piper (Grupo C)'};
+ if(/172/.test(m))return{g:'C',f:'Cessna (Grupo C)'};
+ return null}
+const CK_COVER={A:['A'],B:['B'],C:['C','D','E'],D:['D','E'],E:['E']};
+const dayMs=864e5;
+const dayDiff=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/dayMs);
+const addDays=(d,n)=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
+const todayS=()=>{const x=new Date();return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+function winDays(g,tot,hA,inst){
+ if(inst)return 360;
+ if(g==='E')return 90;
+ if(g==='A')return (hA>=20||tot>250)?90:(tot<150?30:60);
+ return tot<100?30:(tot<=200?60:90)}
+function ckStat(left,warn){return left<0?['bad','VENCIDO']:left<=warn?['warn','POR VENCER']:['ok','VIGENTE']}
+const CK_COL={ok:'var(--ok)',warn:'#e0a100',bad:'var(--bad)'};
+const ckDot=k=>`<span class="tag" style="background:${CK_COL[k]}">${k==='ok'?'Verde':k==='warn'?'Amarillo':'Rojo'}</span>`;
+let CK={};
+function loadChk(){try{CK=JSON.parse(localStorage.getItem('chk_'+user.id)||'{}')}catch(e){CK={}}}
+async function loadChkDb(){
+ if(viewing)return;
+ try{const{data,error}=await sb.from('perfiles').select('chequeo').eq('user_id',user.id).maybeSingle();
+  if(!error&&data&&data.chequeo)CK=data.chequeo}catch(e){}
+}
+function renderChequeo(){
+ loadChk();paintChk();
+ loadChkDb().then(paintChk);
+}
+function paintChk(){
+ const T=todayS(),R=ALL.filter(r=>!r.pv&&r.k!=='Simulador'&&r.d<=T);
+ const tot=sum(ALL.filter(r=>r.k!=='Simulador'),'tot');
+ $('ckMed').value=CK.med||'';$('ckLic').value=CK.lic||'';$('ckBie').value=CK.bie||'';$('ckIns').checked=!!CK.ins;
+ const last={},lastF={},lastT={},cnt={},h12={};
+ R.forEach(r=>{const a=acType(r.m);if(!a)return;
+  if(!last[a.g]||r.d>last[a.g])last[a.g]=r.d;
+  if(!lastF[a.f]||r.d>lastF[a.f].d)lastF[a.f]={d:r.d,g:a.g,m:r.m};
+  const t=r.t||'(sin matrícula)',k=t+'|'+a.f;
+  if(!lastT[k]||r.d>lastT[k].d)lastT[k]={d:r.d,t,m:r.m,f:a.f};
+  cnt[k]=(cnt[k]||0)+1;if(dayDiff(r.d,T)<=365)h12[k]=(h12[k]||0)+r.tot});
+ const hA=sum(R.filter(r=>(acType(r.m)||{}).g==='A'),'tot');
+ $('ckHrs').textContent=`Horas totales: ${fmt(tot)} h · Horas en Grupo A: ${fmt(hA)} h`+(CK.ins?' · Instructor: ventana de 360 días':'');
+ const issues=[];let worst='ok';const bump=k=>{if(k==='bad'||(k==='warn'&&worst==='ok'))worst=k};
+ // grupos
+ let h='<tr><th>Grupo</th><th>Material</th><th>Último vuelo (cubre)</th><th>Hace</th><th>Ventana</th><th>Días restantes</th><th>Estado</th></tr>';
+ const GM={A:'PA-18, Super Decathlon',B:'DA-20, RV-9A',C:'Tomahawk, Cessna 172, Cherokee, Archer',D:'C-182, Mentor, RV-10',E:'Seneca'};
+ let any=false;
+ 'ABCDE'.split('').forEach(g=>{
+  const cov=CK_COVER[g],ds=cov.map(x=>last[x]).filter(Boolean),ld=ds.sort().pop();
+  const own=last[g];if(!own&&!ld)return;any=true;
+  const w=winDays(g,tot,hA,CK.ins),exp=addDays(ld,w),left=dayDiff(T,exp),[k,lbl]=ckStat(left,Math.min(15,Math.round(w/4)));
+  const via=ld!==own&&cov.some(x=>last[x]===ld)?` (vía Grupo ${cov.find(x=>last[x]===ld)})`:'';
+  bump(k);if(k!=='ok')issues.push(`Grupo ${g}: ${lbl.toLowerCase()} ${left<0?'hace '+(-left)+' d':'en '+left+' d'}`);
+  h+=`<tr><td><b>${g}</b></td><td>${GM[g]}</td><td>${ld}${via}</td><td>${dayDiff(ld,T)} d</td><td>${w} d</td><td><b>${left<0?'−'+(-left):left}</b> d <span class="hint">(${exp})</span></td><td>${ckDot(k)} ${lbl}</td></tr>`});
+ if(!any)h+='<tr><td colspan="7" class="hint">No hay vuelos en modelos del Club registrados.</td></tr>';
+ $('ckG').innerHTML=h;
+ // 360 días
+ h='<tr><th>Modelo</th><th>Grupo</th><th>Último vuelo</th><th>Hace</th><th>Días restantes</th><th>Estado</th></tr>';
+ Object.entries(lastF).sort((a,b)=>a[1].d<b[1].d?-1:1).forEach(([f,o])=>{
+  const exp=addDays(o.d,360),left=dayDiff(T,exp),[k,lbl]=ckStat(left,30);bump(k);
+  if(k!=='ok')issues.push(`Modelo ${f}: ${lbl.toLowerCase()} (360 d), ${left<0?'inspección previa necesaria':'quedan '+left+' d'}`);
+  h+=`<tr><td>${esc(f)}</td><td>${o.g}</td><td>${o.d}</td><td>${dayDiff(o.d,T)} d</td><td><b>${left<0?'−'+(-left):left}</b> d <span class="hint">(${exp})</span></td><td>${ckDot(k)} ${lbl}</td></tr>`});
+ $('ckM').innerHTML=h;
+ // por matrícula
+ h='<tr><th>Matrícula</th><th>Modelo</th><th>Último vuelo</th><th>Hace</th><th>Vuelos</th><th>Horas 12 m</th></tr>';
+ Object.keys(lastT).sort((a,b)=>lastT[a].d<lastT[b].d?1:-1).forEach(k=>{const o=lastT[k];
+  h+=`<tr><td><b>${esc(o.t)}</b></td><td>${esc(o.m||'')}</td><td>${o.d}</td><td>${dayDiff(o.d,T)} d</td><td>${cnt[k]}</td><td>${fmt(h12[k]||0)}</td></tr>`});
+ $('ckT').innerHTML=h;
+ // documentos
+ const docs=[['Certificado médico',CK.med],['Licencia',CK.lic],['Bienal / repaso',CK.bie?addDays(CK.bie,730):'']];
+ const dl=[];
+ docs.forEach(([n,d])=>{if(!d)return;const left=dayDiff(T,d),[k,lbl]=ckStat(left,60);bump(k);
+  if(k!=='ok')issues.push(`${n}: ${lbl.toLowerCase()} (${left<0?'hace '+(-left):'en '+left} d)`);
+  dl.push(`${n}: vence ${d} (${left} d) ${ckDot(k)}`)});
+ const msg={ok:['VOLAR OK','var(--ok)'],warn:['ATENCIÓN: algo está por vencer','#e0a100'],bad:['FUERA DE VUELO en al menos una regla','var(--bad)']}[worst];
+ $('ckBanner').innerHTML=`<div style="display:flex;align-items:center;gap:12px"><span style="width:18px;height:18px;border-radius:50%;background:${msg[1]};flex:none"></span><h2 style="margin:0">${msg[0]}</h2></div>`
+  +(issues.length?'<ul style="margin:10px 0 0 18px">'+issues.map(i=>`<li>${esc(i)}</li>`).join('')+'</ul>':'')
+  +(dl.length?'<p class="hint" style="margin-top:10px">'+dl.join(' · ')+'</p>':'')
+  +(bad(issues)?'<p class="hint">Si estás fuera de actividad puedes pedir una inspección al Instructor de Turno (mín. 30 min/1 aterrizaje; 45 min/2 aterrizajes; 1 h/3 aterrizajes según la inactividad, 4.41.10).</p>':'');
+}
+function bad(i){return i.length>0}
+$('ckSave').onclick=async()=>{
+ CK={med:$('ckMed').value,lic:$('ckLic').value,bie:$('ckBie').value,ins:$('ckIns').checked};
+ try{localStorage.setItem('chk_'+user.id,JSON.stringify(CK))}catch(e){}
+ paintChk();
+ const{error}=await sb.from('perfiles').upsert({user_id:user.id,chequeo:CK,updated_at:new Date().toISOString()});
+ note('ckMsg',error?(/chequeo/.test(error.message)?'Guardado solo en este dispositivo (falta ejecutar migracion_v4.sql).':error.message):'Guardado.',error?'err':'ok');
+};
+
 /* ---------- Navegación ---------- */
 function go(v){
- ['resumen','vuelos','metricas','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
+ ['resumen','vuelos','metricas','chequeo','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
  {const nb=document.querySelector('#nav button.on');if(nb)$('burgerT').textContent=nb.textContent;$('nav').classList.remove('open')}
  if(v==='resumen')renderDash();
@@ -398,6 +516,7 @@ function go(v){
  if(v==='admin')loadAdmin();
  if(v==='mapa')renderMap();
  if(v==='metricas')renderMetrics();
+ if(v==='chequeo')renderChequeo();
  if(v==='cuenta'){note('avMsg','');paintAvatar();$('cuMail').textContent=user.email||'';$('cuP1').value=$('cuP2').value='';note('cuMsg','')}
 }
 $('burger').onclick=()=>$('nav').classList.toggle('open');
