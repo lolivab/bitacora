@@ -188,7 +188,7 @@ body.ro [data-d],body.ro [data-e],body.ro #nav [data-v=nuevo],body.ro #nav [data
     <div class="grid" style="gap:10px">
      <div class="field c4"><label>Vencimiento certificado médico</label><input type="date" id="ckMed"></div>
      <div class="field c4"><label>Vencimiento licencia</label><input type="date" id="ckLic"></div>
-     <div class="field c4"><label>Último Bienal / curso de repaso (vence a 2 años)</label><input type="date" id="ckBie"></div>
+     <div class="field c4"><label>Último curso aprobado (Básico, Área Media, Mono Avanzados, IFR, Multi; vence Bienal a 2 años)</label><input type="date" id="ckBie"><p class="hint" id="ckBieAuto"></p></div>
      <div class="field c4"><label><input type="checkbox" id="ckIns"> Soy instructor o instructor ayudante (360 días en todos los grupos)</label></div>
     </div>
     <button class="btn" id="ckSave">Guardar</button> <span class="hint" id="ckMsg"></span>
@@ -485,7 +485,13 @@ function paintChk(){
   h+=`<tr><td><b>${esc(o.t)}</b></td><td>${esc(o.m||'')}</td><td>${o.d}</td><td>${dayDiff(o.d,T)} d</td><td>${cnt[k]}</td><td>${fmt(h12[k]||0)}</td></tr>`});
  $('ckT').innerHTML=h;
  // documentos
- const docs=[['Certificado médico',CK.med],['Licencia',CK.lic],['Bienal / repaso',CK.bie?addDays(CK.bie,730):'']];
+ let det=null;
+ R.forEach(r=>{const c=String(r.c||'');
+  if(/pre[\s-]*(pre[\s-]*)?examen/i.test(c))return;
+  if(/examen\s+(final\s+)?(de\s+)?(piloto|[aá]rea|monomotor|multi|instrumento|ifr|comercial|b[aá]sico|vuelo)|calificaci[oó]n\s+final|curso\s+\w+\s+aprobado|curso\s+aprobado/i.test(c)&&(!det||r.d>det.d))det={d:r.d,c}});
+ const bieD=[CK.bie,det&&det.d].filter(Boolean).sort().pop()||'';
+ $('ckBieAuto').textContent=det?`Detectado en tu bitácora: ${det.d} ("${det.c.slice(0,40)}"). Se usa la fecha más reciente entre esta y la manual.`:'No se detectó un examen de curso en tus comentarios (ej. "EXAMEN AREA MEDIA", "CALIFICACIÓN FINAL"); ingrésala a mano.';
+ const docs=[['Certificado médico',CK.med],['Licencia',CK.lic],['Bienal / repaso',bieD?addDays(bieD,730):'']];
  const dl=[];
  docs.forEach(([n,d])=>{if(!d)return;const left=dayDiff(T,d),[k,lbl]=ckStat(left,60);bump(k);
   if(k!=='ok')issues.push(`${n}: ${lbl.toLowerCase()} (${left<0?'hace '+(-left):'en '+left} d)`);
