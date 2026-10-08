@@ -657,8 +657,8 @@ function renderDash(){
  });
  ms.sort((a,b)=>a[0].localeCompare(b[0]));
  $('ms').innerHTML=ms.slice(-12).map(m=>`<li><b>${esc(m[1])}</b><span>${esc(m[0])}${m[2]?' · '+esc(m[2]):''}</span></li>`).join('')||'<span class="muted">Sin hitos en este filtro.</span>';
- const pc={};real.forEach(r=>(r.pn||'').split(',').forEach(p=>{p=p.trim();if(p)pc[p]=(pc[p]||0)+1}));
- const pr=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+ const pc={},pnm={};real.forEach(r=>{const seen=new Set();(r.pn||'').split(',').forEach(p=>{p=p.trim();if(!p)return;const k=nkey(p);if(seen.has(k))return;seen.add(k);pnm[k]=pnm[k]||p;pc[k]=(pc[k]||0)+1})});
+ const pr=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,n])=>[pnm[k],n]);
  const cap=s=>s.toLowerCase().replace(/(^|\s)\S/g,x=>x.toUpperCase());
  const ic={};real.forEach(r=>{const n=String(r.instructor||'').trim();if(!n)return;const o=ic[n]||(ic[n]={v:0,h:0});o.v++;o.h+=r.tot});
  const il=Object.entries(ic).sort((a,b)=>b[1].h-a[1].h).slice(0,10);
