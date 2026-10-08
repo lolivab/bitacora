@@ -1286,6 +1286,9 @@ function paintAvatar(){
   if(avatar){el.style.background='url('+avatar+') center/cover no-repeat'}else{el.style.background='';el.textContent=initials()}});
  const d=$('cuDel');if(d)d.classList.toggle('hidden',!avatar);
 }
+async function touchAcceso(){
+ try{await sb.from('perfiles').upsert({user_id:user.id,ultimo_acceso:new Date().toISOString()})}catch(e){}
+}
 async function loadAvatar(){
  avatar=null;paintAvatar();
  const{data,error}=await sb.from('perfiles').select('avatar').eq('user_id',user.id).maybeSingle();
@@ -1316,8 +1319,8 @@ async function loadAdmin(){
  if(error){$('adSum').textContent='';return note('adMsg','No pude cargar los usuarios: '+error.message+'\n¿Ejecutaste admin.sql en Supabase?','err')}
  const tot=data.reduce((a,r)=>a+(r.horas||0),0);
  $('adSum').textContent=data.length+' usuarios · '+fmt(tot)+' horas en total';
- const th=['Usuario','Correo','Vuelos','Horas','Último vuelo','Último login','Registro',''].map((h,i)=>`<th${i>=2&&i<=3?' style="text-align:right"':''}>${h}</th>`).join('');
- t.innerHTML='<thead><tr>'+th+'</tr></thead><tbody>'+data.map(r=>`<tr><td>${esc(r.nombre||'—')}</td><td>${esc(r.email||'')}</td><td style="text-align:right">${r.vuelos}</td><td style="text-align:right"><b>${fmt(r.horas)}</b></td><td>${esc(r.ultimo_vuelo||'—')}</td><td>${r.ultimo_login?esc(new Date(r.ultimo_login).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})):'—'}</td><td>${esc(String(r.registrado||'').slice(0,10))}</td><td><button class="btn ghost small" data-u="${esc(r.user_id)}" data-n="${esc(r.nombre||r.email)}" data-m="${esc(r.email)}" type="button">Ver bitácora</button></td></tr>`).join('')+'</tbody>';
+ const th=['Usuario','Correo','Vuelos','Horas','Último vuelo','Último acceso','Registro',''].map((h,i)=>`<th${i>=2&&i<=3?' style="text-align:right"':''}>${h}</th>`).join('');
+ t.innerHTML='<thead><tr>'+th+'</tr></thead><tbody>'+data.map(r=>`<tr><td>${esc(r.nombre||'—')}</td><td>${esc(r.email||'')}</td><td style="text-align:right">${r.vuelos}</td><td style="text-align:right"><b>${fmt(r.horas)}</b></td><td>${esc(r.ultimo_vuelo||'—')}</td><td>${(r.ultimo_acceso||r.ultimo_login)?esc(new Date([r.ultimo_acceso,r.ultimo_login].filter(Boolean).sort().pop()).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})):'—'}</td><td>${esc(String(r.registrado||'').slice(0,10))}</td><td><button class="btn ghost small" data-u="${esc(r.user_id)}" data-n="${esc(r.nombre||r.email)}" data-m="${esc(r.email)}" type="button">Ver bitácora</button></td></tr>`).join('')+'</tbody>';
 }
 
 
@@ -1343,7 +1346,7 @@ async function onSession(session){
  if(!session){user=null;ALL=[];viewing=null;document.body.classList.remove('ro');$('roBar').classList.add('hidden');show('vAuth');return}
  if(user&&user.id===session.user.id)return;
  user=session.user;$('uName').textContent=(user.user_metadata&&user.user_metadata.nombre)||user.email;
- show('vApp');paintAvatar();loadAvatar();
+ show('vApp');paintAvatar();loadAvatar();touchAcceso();
  $('navAdmin').classList.toggle('hidden',String(user.email||'').toLowerCase()!==ADMIN_EMAIL);
  try{await loadAll()}catch(e){alert('No pude cargar tus vuelos: '+hintDb(e.message)+'\n¿Ejecutaste supabase.sql (instalación nueva) o migracion_v2.sql?')}
  st.y='Todo';st.a='Todas';resetForm();go('resumen');
