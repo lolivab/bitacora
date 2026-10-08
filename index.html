@@ -139,7 +139,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  <div class="nav" id="nav" style="margin-bottom:16px">
   <button data-v="resumen" class="on">Resumen</button><button data-v="vuelos" data-g="1">Bitácora</button><button data-v="metricas">Métricas</button><button data-v="mapa">Mapa</button><button data-v="importar">Importar</button><button data-v="briefing" data-g="h">Herramientas</button><button data-v="cuenta">Mi cuenta</button><button data-v="admin" id="navAdmin" class="hidden">Administrador</button>
  </div>
- <div id="subnav2" class="hidden"><button data-v="briefing">Briefing meteorológico</button></div>
+ <div id="subnav2" class="hidden"><button data-v="briefing">Briefing meteorológico</button><button data-v="liveatc">LiveATC</button></div>
  <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Chequeo de habilitaciones</button><button data-v="exportar">Exportar PDF</button></div>
 
  <section id="s-resumen">
@@ -230,6 +230,20 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
    <p><button class="btn" id="pdfGo" type="button">Descargar PDF</button></p><div id="pdfMsg"></div>
   </div></section>
 
+  <section id="s-liveatc" class="hidden">
+  <div class="card" style="max-width:760px">
+   <h2>LiveATC · Santiago (SCEL)</h2>
+   <p class="hint">Audio en vivo de las comunicaciones ATC, transmitido por LiveATC.net. Presiona reproducir; en el celular puede tardar unos segundos en partir.</p>
+   <audio id="laAudio" controls preload="none" style="width:100%;margin:8px 0"></audio>
+   <p><button class="btn" id="laPlay" type="button">▶ Escuchar SCL en vivo</button> <button class="btn ghost" id="laStop" type="button">■ Detener</button></p>
+   <div id="laMsg" class="hint"></div>
+   <details style="margin:10px 0"><summary>Si no suena</summary>
+    <div class="field" style="margin-top:8px"><label for="laMount">Nombre del feed en LiveATC</label><input id="laMount" value="scel" maxlength="30"></div>
+    <p class="hint">Si el feed cambió de nombre, búscalo en LiveATC y escribe aquí el nombre que aparece al final del enlace del stream (se guarda en este dispositivo).</p>
+   </details>
+   <p><a href="https://www.liveatc.net/search/?icao=SCEL" target="_blank" rel="noopener">Abrir SCEL en LiveATC.net ↗</a></p>
+  </div>
+  </section>
   <section id="s-briefing" class="hidden">
   <div class="card" style="max-width:760px">
    <h2>Briefing meteorológico</h2>
@@ -932,8 +946,8 @@ $('brAsave').onclick=()=>{
 
 /* ---------- Navegación ---------- */
 function go(v){
- ['resumen','vuelos','metricas','chequeo','exportar','briefing','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
- {const G=['vuelos','nuevo','chequeo','exportar'].includes(v),Hh=v==='briefing';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g==='1'?G:b.dataset.g==='h'?Hh:b.dataset.v===v));document.querySelectorAll('#subnav button,#subnav2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G);$('subnav2').classList.toggle('hidden',!Hh)}
+ ['resumen','vuelos','metricas','chequeo','exportar','briefing','liveatc','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
+ {const G=['vuelos','nuevo','chequeo','exportar'].includes(v),Hh=v==='briefing'||v==='liveatc';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g==='1'?G:b.dataset.g==='h'?Hh:b.dataset.v===v));document.querySelectorAll('#subnav button,#subnav2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G);$('subnav2').classList.toggle('hidden',!Hh)}
  {const nb=document.querySelector('#nav button.on');if(nb)$('burgerT').textContent=nb.textContent;$('nav').classList.remove('open')}
  if(v==='resumen')renderDash();
  if(v==='vuelos')table();
@@ -947,6 +961,11 @@ function go(v){
  if(v==='cuenta'){note('avMsg','');paintAvatar();$('cuMail').textContent=user.email||'';$('cuP1').value=$('cuP2').value='';note('cuMsg','')}
 }
 document.addEventListener('input',e=>{const t=e.target;if(!t.classList||!t.classList.contains('dti'))return;if(e.inputType&&e.inputType.startsWith('delete'))return;let v=t.value.replace(/[^\d]/g,'').slice(0,8);if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);else if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);t.value=v});
+(()=>{const a=$('laAudio'),m=$('laMount'),msg=$('laMsg');try{m.value=localStorage.getItem('la_mount')||'scel'}catch(e){}
+$('laPlay').onclick=()=>{const k=(m.value||'scel').trim().toLowerCase().replace(/[^a-z0-9_\-]/g,'');try{localStorage.setItem('la_mount',k)}catch(e){}msg.textContent='Conectando…';a.src='https://d.liveatc.net/'+k;a.play().then(()=>msg.textContent='Reproduciendo en vivo.').catch(()=>msg.textContent='No se pudo reproducir. Prueba el enlace de abajo para abrirlo en LiveATC.')};
+$('laStop').onclick=()=>{a.pause();a.removeAttribute('src');a.load();msg.textContent='Detenido.'};
+a.onerror=()=>{if(a.getAttribute('src'))msg.textContent='El feed no responde o no existe con ese nombre. Revisa "Si no suena".'};
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#nav,#subnav,#subnav2')&&!$('s-liveatc').classList.contains('hidden')===false){}})})();
 $('burger').onclick=()=>$('nav').classList.toggle('open');
 $('nav').onclick=$('subnav').onclick=$('subnav2').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
