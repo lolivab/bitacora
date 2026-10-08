@@ -92,6 +92,7 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 #roBar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--pax);color:#1b1b1b;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-weight:600}#roBar.hidden{display:none}
 body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #nav [data-v=importar],body.ro #nav [data-v=cuenta]{display:none!important}
 #burger{display:none}
+#sunBar{font-size:13px;margin:-8px 0 12px}#sunBar b{color:var(--ink)}
 #subnav{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 16px}#subnav.hidden{display:none}#subnav button{border:1px solid var(--line);background:var(--panel);color:var(--mute);padding:7px 12px;border-radius:99px;cursor:pointer;font-weight:500;font-size:14px;font-family:inherit}#subnav button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 @media(max-width:700px){#burger{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:8px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-weight:600;font-size:15px;font-family:inherit;cursor:pointer}#burger .ic{font-size:22px;line-height:1}.nav{display:none;flex-direction:column;overflow:visible;margin-bottom:16px}.nav.open{display:flex}.nav button{text-align:left;padding:12px 14px;font-size:15px}}
 @media(max-width:560px){.wrap{padding:14px 12px 40px}.top{flex-wrap:nowrap}.top h1{font-size:22px;min-width:0}.who{flex-shrink:0;gap:8px}#uName{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nav{max-width:100%}.hero{padding:16px}.kpis{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr}.bars .row{grid-template-columns:100px 1fr 56px}}
@@ -127,6 +128,7 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #nav [d
 
 <div id="vApp" class="hidden">
  <div class="top"><h1>Bitácora de vuelo</h1><div class="who"><span id="uAv" class="av"></span><span id="uName" class="muted"></span><button class="btn ghost small" id="out" type="button">Salir</button></div></div>
+ <div id="sunBar" class="muted" title="Calculado para SCTB (Eulogio Sánchez, Tobalaba). Referencia: confirma con las tablas oficiales."></div>
  <div id="roBar" class="hidden"><span id="roTxt"></span><button class="btn small" id="roExit" type="button">Volver a mi cuenta</button></div>
  <button type="button" id="burger" aria-label="Menú"><span id="burgerT">Resumen</span><span class="ic">☰</span></button>
  <div class="nav" id="nav" style="margin-bottom:16px">
@@ -709,6 +711,36 @@ $('ckSave').onclick=async()=>{
  const{error}=await sb.from('perfiles').upsert({user_id:user.id,chequeo:CK,updated_at:new Date().toISOString()});
  note('ckMsg',error?(/chequeo/.test(error.message)?'Guardado solo en este dispositivo (falta ejecutar migracion_v4.sql).':error.message):'Guardado.',error?'err':'ok');
 };
+
+
+/* ---------- Puesta de sol y FCCV (SCTB) ---------- */
+function sunTime(date,lat,lon,zen,rise){
+ const R=Math.PI/180,start=Date.UTC(date.getFullYear(),0,0),N=Math.floor((Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())-start)/864e5);
+ const lh=lon/15,t=N+((rise?6:18)-lh)/24;
+ const M=0.9856*t-3.289;
+ let L=M+1.916*Math.sin(M*R)+0.020*Math.sin(2*M*R)+282.634;L=((L%360)+360)%360;
+ let RA=Math.atan(0.91764*Math.tan(L*R))/R;RA=((RA%360)+360)%360;RA+=Math.floor(L/90)*90-Math.floor(RA/90)*90;RA/=15;
+ const sd=0.39782*Math.sin(L*R),cd=Math.cos(Math.asin(sd));
+ const cH=(Math.cos(zen*R)-sd*Math.sin(lat*R))/(cd*Math.cos(lat*R));
+ if(cH>1||cH<-1)return null;
+ let H=rise?360-Math.acos(cH)/R:Math.acos(cH)/R;H/=15;
+ const T=H+RA-0.06571*t-6.622;let UT=((T-lh)%24+24)%24;
+ return Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())+UT*36e5}
+function paintSun(){
+ const el=$('sunBar');if(!el)return;
+ try{
+  const LAT=-33.4555,LON=-70.5442,now=new Date();
+  const tz=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santiago',year:'numeric',month:'2-digit',day:'2-digit'}).format(now).split('-').map(Number);
+  const d=new Date(tz[0],tz[1]-1,tz[2]);
+  let ss=sunTime(d,LAT,LON,90.833,false),fc=sunTime(d,LAT,LON,96,false),cm=sunTime(d,LAT,LON,96,true);
+  const f=ms=>ms==null?'-':new Intl.DateTimeFormat('es-CL',{timeZone:'America/Santiago',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ms));
+  // el algoritmo puede devolver el día UTC siguiente/anterior: ajustar por día local
+  const fix=ms=>{if(ms==null)return ms;const dl=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santiago'}).format(new Date(ms));const want=tz.join('-').replace(/-(\d)(?!\d)/g,'-0$1');return dl===want?ms:(dl<want?ms+864e5:ms-864e5)};
+  ss=fix(ss);fc=fix(fc);cm=fix(cm);
+  el.innerHTML=`SCTB hoy: <b>FCCV ${f(fc)}</b> · Puesta de sol ${f(ss)} · CCCM ${f(cm)}`;
+ }catch(e){el.textContent=''}
+}
+paintSun();setInterval(paintSun,30*60*1000);
 
 /* ---------- Navegación ---------- */
 function go(v){
