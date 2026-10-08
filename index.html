@@ -93,7 +93,7 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #nav [data-v=importar],body.ro #nav [data-v=cuenta]{display:none!important}
 #burger{display:none}
 #sunBar{font-size:13px;margin:-8px 0 12px}#sunBar b{color:var(--ink)}
-#subnav{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 16px}#subnav.hidden{display:none}#subnav button{border:1px solid var(--line);background:var(--panel);color:var(--mute);padding:7px 12px;border-radius:99px;cursor:pointer;font-weight:500;font-size:14px;font-family:inherit}#subnav button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#subnav,#subnav2{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 16px}#subnav.hidden,#subnav2.hidden{display:none}#subnav button,#subnav2 button{border:1px solid var(--line);background:var(--panel);color:var(--mute);padding:7px 12px;border-radius:99px;cursor:pointer;font-weight:500;font-size:14px;font-family:inherit}#subnav button.on,#subnav2 button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 @media(max-width:700px){#burger{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:8px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-weight:600;font-size:15px;font-family:inherit;cursor:pointer}#burger .ic{font-size:22px;line-height:1}.nav{display:none;flex-direction:column;overflow:visible;margin-bottom:16px}.nav.open{display:flex}.nav button{text-align:left;padding:12px 14px;font-size:15px}}
 @media(max-width:560px){.wrap{padding:14px 12px 40px}.top{flex-wrap:nowrap}.top h1{font-size:22px;min-width:0}.who{flex-shrink:0;gap:8px}#uName{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nav{max-width:100%}.hero{padding:16px}.kpis{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr}.bars .row{grid-template-columns:100px 1fr 56px}}
 
@@ -132,8 +132,9 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #nav [d
  <div id="roBar" class="hidden"><span id="roTxt"></span><button class="btn small" id="roExit" type="button">Volver a mi cuenta</button></div>
  <button type="button" id="burger" aria-label="Menú"><span id="burgerT">Resumen</span><span class="ic">☰</span></button>
  <div class="nav" id="nav" style="margin-bottom:16px">
-  <button data-v="resumen" class="on">Resumen</button><button data-v="vuelos" data-g="1">Bitácora</button><button data-v="metricas">Métricas</button><button data-v="mapa">Mapa</button><button data-v="importar">Importar</button><button data-v="cuenta">Mi cuenta</button><button data-v="admin" id="navAdmin" class="hidden">Administrador</button>
+  <button data-v="resumen" class="on">Resumen</button><button data-v="vuelos" data-g="1">Bitácora</button><button data-v="metricas">Métricas</button><button data-v="mapa">Mapa</button><button data-v="importar">Importar</button><button data-v="briefing" data-g="h">Herramientas</button><button data-v="cuenta">Mi cuenta</button><button data-v="admin" id="navAdmin" class="hidden">Administrador</button>
  </div>
+ <div id="subnav2" class="hidden"><button data-v="briefing">Briefing meteorológico</button></div>
  <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Chequeo de habilitaciones</button><button data-v="exportar">Exportar PDF</button></div>
 
  <section id="s-resumen">
@@ -223,6 +224,42 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #nav [d
    <label class="tog" for="pdfDesc"><input id="pdfDesc" type="checkbox" checked>Más recientes primero</label>
    <p><button class="btn" id="pdfGo" type="button">Descargar PDF</button></p><div id="pdfMsg"></div>
   </div></section>
+
+  <section id="s-briefing" class="hidden">
+  <div class="card" style="max-width:760px">
+   <h2>Briefing meteorológico</h2>
+   <p class="hint">Indica tu vuelo y te doy una apreciación del tiempo en la salida, la ruta y la llegada, comparada con tus mínimos personales. Es orientativo (pronóstico de modelo): confirma siempre con las fuentes oficiales.</p>
+   <div class="grid" style="gap:10px">
+    <div class="field c6"><label for="brO">Origen</label><select id="brO"></select></div>
+    <div class="field c6"><label for="brD">Destino</label><select id="brD"></select></div>
+    <div class="field c4"><label for="brDate">Fecha</label><input type="date" id="brDate"></div>
+    <div class="field c4"><label for="brTime">Hora de salida (local)</label><input type="time" id="brTime"></div>
+    <div class="field c4"><label for="brAlt">Altitud de crucero (ft)</label><input type="number" id="brAlt" value="5500" step="500" min="500"></div>
+    <div class="field c4"><label for="brTAS">Velocidad en crucero (kt)</label><input type="number" id="brTAS" value="110" min="40" max="300"></div>
+    <div class="field c4"><label for="brRwO">Rumbo de pista en origen (°, opcional)</label><input type="number" id="brRwO" min="0" max="360" placeholder="ej. 10"></div>
+    <div class="field c4"><label for="brRwD">Rumbo de pista en destino (°, opcional)</label><input type="number" id="brRwD" min="0" max="360" placeholder="ej. 180"></div>
+   </div>
+   <details style="margin:10px 0"><summary>Mis mínimos personales</summary>
+    <div class="grid" style="gap:10px;margin-top:8px">
+     <div class="field c4"><label for="brMW">Viento máx. (kt)</label><input type="number" id="brMW"></div>
+     <div class="field c4"><label for="brMG">Ráfagas máx. (kt)</label><input type="number" id="brMG"></div>
+     <div class="field c4"><label for="brMX">Viento cruzado máx. (kt)</label><input type="number" id="brMX"></div>
+     <div class="field c4"><label for="brMV">Visibilidad mín. (km)</label><input type="number" id="brMV"></div>
+     <div class="field c4"><label for="brMC">Techo mín. (ft sobre el terreno)</label><input type="number" id="brMC"></div>
+    </div></details>
+   <details style="margin:10px 0"><summary id="brAddT">Agregar un aeródromo que no está en la lista</summary>
+    <div id="brAdd" class="grid" style="gap:10px;margin-top:8px">
+     <div class="field c4"><label for="brAc">Código (ej. SCRM)</label><input id="brAc" maxlength="6"></div>
+     <div class="field c8"><label for="brAn">Nombre</label><input id="brAn"></div>
+     <div class="field c4"><label for="brAlat">Latitud (ej. -33.45)</label><input id="brAlat" inputmode="decimal"></div>
+     <div class="field c4"><label for="brAlon">Longitud (ej. -70.54)</label><input id="brAlon" inputmode="decimal"></div>
+     <div class="field c4"><label for="brArw">Rumbo de pista (°, opcional)</label><input type="number" id="brArw" min="0" max="360"></div>
+     <div class="c12"><button class="btn ghost small" id="brAsave" type="button">Guardar aeródromo</button> <span id="brAmsg"></span></div>
+    </div></details>
+   <p><button class="btn" id="brGo" type="button">Generar briefing</button></p><div id="brMsg"></div>
+  </div>
+  <div id="brOut"></div>
+  </section>
 
   <section id="s-metricas" class="hidden">
   <div class="filters" id="mxF"><label class="tog" for="mxGA"><input id="mxGA" type="checkbox" checked>Aviación General</label><label class="tog" for="mxCO"><input id="mxCO" type="checkbox" checked>Aviación Comercial (línea aérea)</label></div>
@@ -742,10 +779,151 @@ function paintSun(){
 }
 paintSun();setInterval(paintSun,30*60*1000);
 
+/* ---------- Herramientas: Briefing meteorológico (orientativo) ---------- */
+const BR_AD=[
+ {c:'SCTB',n:'Tobalaba (Eulogio Sánchez)',lat:-33.4555,lon:-70.5442,rw:10},
+ {c:'SCEL',n:'Santiago (A. Merino Benítez)',lat:-33.393,lon:-70.786},
+ {c:'SCPD',n:'Peldehue',lat:-33.15,lon:-70.65},
+ {c:'SCVH',n:'La Victoria de Chacabuco',lat:-33.03,lon:-70.75},
+ {c:'SCSF',n:'San Felipe',lat:-32.75,lon:-70.68},
+ {c:'SCAN',n:'Los Andes',lat:-32.85,lon:-70.63},
+ {c:'SCCV',n:'Curacaví',lat:-33.38,lon:-71.12},
+ {c:'SCSN',n:'Santo Domingo',lat:-33.656,lon:-71.614},
+ {c:'SCVM',n:'Viña del Mar',lat:-32.95,lon:-71.48},
+ {c:'SCIC',n:'Curicó',lat:-34.97,lon:-71.22},
+ {c:'SCSE',n:'La Serena',lat:-29.916,lon:-71.2},
+ {c:'SCIE',n:'Concepción',lat:-36.77,lon:-73.06},
+ {c:'SCQP',n:'Temuco',lat:-38.93,lon:-72.64},
+ {c:'SCTE',n:'Puerto Montt',lat:-41.44,lon:-73.09},
+ {c:'SCFA',n:'Antofagasta',lat:-23.44,lon:-70.45},
+ {c:'SCDA',n:'Iquique',lat:-20.535,lon:-70.18},
+ {c:'SCAR',n:'Arica',lat:-18.35,lon:-70.34}
+];
+const BR_MIN0={mw:20,mg:25,mx:12,mv:8,mc:2500};
+function brCustom(){try{return JSON.parse(localStorage.getItem('brf_ad')||'[]')}catch(e){return[]}}
+function brAll(){return BR_AD.concat(brCustom())}
+function brMins(){try{return Object.assign({},BR_MIN0,JSON.parse(localStorage.getItem('brf_min')||'{}'))}catch(e){return Object.assign({},BR_MIN0)}}
+function brFill(){
+ const o=$('brO').value||'SCTB',d=$('brD').value||'SCSN';
+ const opts=brAll().map(a=>`<option value="${esc(a.c)}">${esc(a.c)} - ${esc(a.n)}</option>`).join('');
+ $('brO').innerHTML=opts;$('brD').innerHTML=opts;
+ const has=c=>brAll().some(a=>a.c===c);$('brO').value=has(o)?o:'SCTB';$('brD').value=has(d)?d:'SCSN';
+ const m=brMins();$('brMW').value=m.mw;$('brMG').value=m.mg;$('brMX').value=m.mx;$('brMV').value=m.mv;$('brMC').value=m.mc;
+ if(!$('brDate').value){const t=new Date();t.setDate(t.getDate()+1);$('brDate').value=t.toLocaleDateString('en-CA')}
+ if(!$('brTime').value)$('brTime').value='10:00';
+ const rw=c=>{const a=brAll().find(x=>x.c===c);return a&&a.rw!=null?a.rw:''};
+ if(!$('brRwO').dataset.t){$('brRwO').value=rw($('brO').value);$('brRwD').value=rw($('brD').value)}
+}
+function brRad(x){return x*Math.PI/180}
+function brDist(a,b){const R=3440.065,dl=brRad(b.lat-a.lat),dn=brRad(b.lon-a.lon),x=Math.sin(dl/2)**2+Math.cos(brRad(a.lat))*Math.cos(brRad(b.lat))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function brBrg(a,b){const y=Math.sin(brRad(b.lon-a.lon))*Math.cos(brRad(b.lat)),x=Math.cos(brRad(a.lat))*Math.sin(brRad(b.lat))-Math.sin(brRad(a.lat))*Math.cos(brRad(b.lat))*Math.cos(brRad(b.lon-a.lon));return(Math.atan2(y,x)*180/Math.PI+360)%360}
+const BR_TZ='America/Santiago';
+function brParts(ms){const p={};new Intl.DateTimeFormat('en-CA',{timeZone:BR_TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date(ms)).forEach(x=>{p[x.type]=x.value});if(p.hour==='24')p.hour='00';return p}
+function brOff(ms){const p=brParts(ms);return Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute)-Math.floor(ms/6e4)*6e4}
+function brLocalMs(ds,ts){const[y,m,d]=ds.split('-').map(Number),[h,mi]=ts.split(':').map(Number),ms0=Date.UTC(y,m-1,d,h,mi);let ms=ms0-brOff(ms0);ms=ms0-brOff(ms);return ms}
+function brHourKey(ms){const p=brParts(Math.round(ms/36e5)*36e5);return p.year+'-'+p.month+'-'+p.day+'T'+p.hour+':00'}
+function brFmt(ms){const p=brParts(ms);return p.hour+':'+p.minute}
+function brDay(ms){const p=brParts(ms);return p.year+'-'+p.month+'-'+p.day}
+function brSun(ds,lat,lon,zen,rise){const[y,m,d]=ds.split('-').map(Number);let ms=sunTime(new Date(y,m-1,d),lat,lon,zen,rise);if(ms==null)return null;for(let i=0;i<3&&brDay(ms)!==ds;i++)ms+=(brDay(ms)<ds?1:-1)*864e5;return ms}
+const BR_VARS='temperature_2m,dew_point_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,precipitation,precipitation_probability,weather_code,pressure_msl,freezing_level_height,cape,wind_speed_925hPa,wind_direction_925hPa,wind_speed_850hPa,wind_direction_850hPa,wind_speed_700hPa,wind_direction_700hPa';
+async function brFetch(pt,d0,d1){
+ const u=`https://api.open-meteo.com/v1/forecast?latitude=${pt.lat.toFixed(4)}&longitude=${pt.lon.toFixed(4)}&hourly=${BR_VARS}&wind_speed_unit=kn&timezone=${encodeURIComponent(BR_TZ)}&start_date=${d0}&end_date=${d1}`;
+ const r=await fetch(u);if(!r.ok)throw new Error('El servicio de pronóstico respondió '+r.status+'. Revisa que la fecha esté dentro de los próximos 15 días.');
+ return r.json()}
+function brAt(data,ms){
+ const h=data.hourly,i=h.time.indexOf(brHourKey(ms));if(i<0)return null;
+ const g=k=>h[k]?h[k][i]:null;
+ const elevFt=(data.elevation||0)*3.28084,T=g('temperature_2m'),Td=g('dew_point_2m'),qnh=g('pressure_msl');
+ const pa=elevFt+(1013.25-qnh)*30,isa=15-2*elevFt/1000,da=pa+120*(T-isa);
+ return{T,Td,ws:g('wind_speed_10m'),wd:g('wind_direction_10m'),wg:g('wind_gusts_10m'),cl:g('cloud_cover_low'),cm:g('cloud_cover_mid'),ch:g('cloud_cover_high'),vis:g('visibility')==null?null:g('visibility')/1000,pr:g('precipitation'),pp:g('precipitation_probability'),wc:g('weather_code'),qnh,fl:g('freezing_level_height'),cape:g('cape'),elevFt,da,base:(T-Td)*400,
+  up:{925:[g('wind_speed_925hPa'),g('wind_direction_925hPa')],850:[g('wind_speed_850hPa'),g('wind_direction_850hPa')],700:[g('wind_speed_700hPa'),g('wind_direction_700hPa')]}}}
+const BR_WC={0:'despejado',1:'mayormente despejado',2:'parcialmente nublado',3:'nublado',45:'niebla',48:'niebla con escarcha',51:'llovizna ligera',53:'llovizna',55:'llovizna intensa',56:'llovizna helada',57:'llovizna helada',61:'lluvia ligera',63:'lluvia',65:'lluvia intensa',66:'lluvia helada',67:'lluvia helada',71:'nieve ligera',73:'nieve',75:'nieve intensa',77:'cristales de nieve',80:'chubascos ligeros',81:'chubascos',82:'chubascos fuertes',85:'chubascos de nieve',86:'chubascos de nieve fuertes',95:'tormenta eléctrica',96:'tormenta con granizo',99:'tormenta con granizo fuerte'};
+function brRank(k){return{ok:0,warn:1,bad:2}[k]}
+function brEval(w,m,rw,cruiseFt){
+ const A=[];const add=(k,t)=>A.push({k,t});
+ const lv=(v,lim,warnF)=>v>lim?'bad':v>lim*warnF?'warn':'ok';
+ let k=lv(w.ws,m.mw,.8);if(k!=='ok')add(k,`Viento medio ${Math.round(w.ws)} kt (tu máximo: ${m.mw} kt)`);
+ k=lv(w.wg,m.mg,.85);if(k!=='ok')add(k,`Ráfagas de ${Math.round(w.wg)} kt (tu máximo: ${m.mg} kt)`);
+ let xw=null;if(rw!==''&&rw!=null&&!isNaN(rw)){xw=Math.abs(Math.max(w.ws,w.wg||0)*Math.sin(brRad(w.wd-rw)));w.xw=xw;k=lv(xw,m.mx,.8);if(k!=='ok')add(k,`Viento cruzado hasta ${Math.round(xw)} kt con pista ${String(Math.round(rw/10)).padStart(2,'0')}/${String(Math.round(((rw+180)%360)/10)||36).padStart(2,'0')} (tu máximo: ${m.mx} kt)`)}
+ if(w.vis!=null){k=w.vis<m.mv?'bad':w.vis<m.mv*1.5?'warn':'ok';if(k!=='ok')add(k,`Visibilidad estimada ${w.vis.toFixed(0)} km (tu mínimo: ${m.mv} km)`)}
+ if(w.cl>=50){const b=Math.max(0,Math.round(w.base/100)*100);k=b<m.mc?'bad':b<m.mc*1.3?'warn':'ok';if(k!=='ok')add(k,`Nubes bajas ${Math.round(w.cl)}%, base estimada ~${b} ft sobre el terreno (tu mínimo: ${m.mc} ft)`)}
+ if(w.wc>=95)add('bad','Tormenta eléctrica pronosticada');
+ else if(w.wc>=61||w.pr>=1||w.pp>=60)add('warn',`Precipitación: ${BR_WC[w.wc]||'posible'}${w.pp!=null?' ('+w.pp+'% prob.)':''}`);
+ else if(w.wc===45||w.wc===48)add('bad','Niebla pronosticada');
+ if(w.cape>=1000)add('bad',`Inestabilidad fuerte (CAPE ${Math.round(w.cape)} J/kg): riesgo de convección`);else if(w.cape>=300)add('warn',`Cierta inestabilidad (CAPE ${Math.round(w.cape)} J/kg)`);
+ if(w.fl!=null&&cruiseFt&&cruiseFt/3.28084>w.fl-300&&(w.cl+w.cm>50||w.pr>0))add('warn',`Isoterma 0 °C a ~${Math.round(w.fl*3.28084/100)*100} ft: posible engelamiento a tu altitud`);
+ return A}
+const BR_LBL={ok:'Sin alertas',warn:'Atención',bad:'No recomendable'};
+async function brMetar(ids){
+ try{const c=new AbortController(),t=setTimeout(()=>c.abort(),6000);
+  const r=await fetch('https://aviationweather.gov/api/data/metar?ids='+ids.join(',')+'&format=raw&taf=true&hours=3',{signal:c.signal});clearTimeout(t);
+  if(!r.ok)return null;const x=(await r.text()).trim();return x||null}catch(e){return null}}
+async function brGo(){
+ const A=brAll(),o=A.find(a=>a.c===$('brO').value),d=A.find(a=>a.c===$('brD').value);
+ const ds=$('brDate').value,ts=$('brTime').value,tas=+$('brTAS').value||110,alt=+$('brAlt').value||5500;
+ if(!o||!d||!ds||!ts)return note('brMsg','Completa origen, destino, fecha y hora.','err');
+ const m={mw:+$('brMW').value||BR_MIN0.mw,mg:+$('brMG').value||BR_MIN0.mg,mx:+$('brMX').value||BR_MIN0.mx,mv:+$('brMV').value||BR_MIN0.mv,mc:+$('brMC').value||BR_MIN0.mc};
+ try{localStorage.setItem('brf_min',JSON.stringify(m))}catch(e){}
+ const dep=brLocalMs(ds,ts),dist=brDist(o,d),crs=brBrg(o,d),mid={lat:(o.lat+d.lat)/2,lon:(o.lon+d.lon)/2};
+ const rwO=$('brRwO').value===''?'':+$('brRwO').value,rwD=$('brRwD').value===''?'':+$('brRwD').value;
+ $('brGo').disabled=true;note('brMsg','Consultando pronóstico…');$('brOut').innerHTML='';
+ try{
+  const eteGuess=dist/tas*60*6e4,d0=brDay(dep),d1=brDay(dep+eteGuess*1.5+36e5);
+  const[dO,dM,dD]=await Promise.all([brFetch(o,d0,d1),brFetch(mid,d0,d1),brFetch(d,d0,d1)]);
+  const wm0=brAt(dM,dep);if(!wm0)throw new Error('No hay pronóstico para esa fecha y hora.');
+  const lvl=alt<3800?925:alt<7500?850:700,uw=wm0.up[lvl];
+  const head=uw&&uw[0]!=null?uw[0]*Math.cos(brRad(uw[1]-crs)):0,gs=Math.max(40,tas-head),ete=dist/gs*60*6e4;
+  const arr=dep+ete,wO=brAt(dO,dep),wM=brAt(dM,dep+ete/2),wD=brAt(dD,arr);
+  if(!wO||!wD||!wM)throw new Error('El pronóstico no cubre toda la hora del vuelo (usa una fecha de hoy a 15 días).');
+  const P=[['Salida '+o.c,wO,rwO,dep],['Ruta (punto medio)',wM,'',dep+ete/2],['Llegada '+d.c,wD,rwD,arr]];
+  const alerts=[];
+  P.forEach(([n,w,rw,t])=>brEval(w,m,rw,n==='Ruta (punto medio)'?alt:null).forEach(a=>alerts.push({k:a.k,t:n+': '+a.t})));
+  // luz diurna
+  const dDay=brDay(arr),fcv=brSun(dDay,d.lat,d.lon,96,false),ssD=brSun(dDay,d.lat,d.lon,90.833,false),cmO=brSun(brDay(dep),o.lat,o.lon,96,true);
+  if(cmO&&dep<cmO)alerts.push({k:'bad',t:`Salida ${brFmt(dep)} antes del CCCM de ${o.c} (${brFmt(cmO)}): no se puede iniciar vuelo VFR (Manual 4.16.21.2)`});
+  if(fcv&&arr>fcv)alerts.push({k:'bad',t:`Llegada estimada ${brFmt(arr)} después del FCCV de ${d.c} (${brFmt(fcv)})`});
+  else if(ssD&&arr>ssD)alerts.push({k:'warn',t:`Llegada estimada ${brFmt(arr)} después de la puesta de sol de ${d.c} (${brFmt(ssD)}): el límite general es la puesta de sol; hasta el FCCV (${brFmt(fcv)}) solo pilotos autorizados (4.16.21)`});
+  else if(fcv&&arr>fcv-30*6e4)alerts.push({k:'warn',t:`Llegada estimada ${brFmt(arr)}: poco margen antes del FCCV (${brFmt(fcv)})`});
+  let worst='ok';alerts.forEach(a=>{if(brRank(a.k)>brRank(worst))worst=a.k});
+  alerts.sort((a,b)=>brRank(b.k)-brRank(a.k));
+  const col={ok:'var(--ok)',warn:'#e0a100',bad:'var(--bad)'};
+  const f0=x=>x==null?'-':Math.round(x),dir=x=>x==null?'':String(Math.round(x)).padStart(3,'0')+'°';
+  const rows=[['Hora local',...P.map(p=>brFmt(p[3]))],['Viento (10 m)',...P.map(p=>`${dir(p[1].wd)} ${f0(p[1].ws)} kt`)],['Ráfagas',...P.map(p=>f0(p[1].wg)+' kt')],['Viento cruzado máx.',...P.map(p=>p[1].xw!=null?Math.round(p[1].xw)+' kt':'-')],['Visibilidad',...P.map(p=>p[1].vis==null?'-':p[1].vis>=10?'10+ km':p[1].vis.toFixed(1)+' km')],['Nubes bajas / medias / altas',...P.map(p=>`${f0(p[1].cl)} / ${f0(p[1].cm)} / ${f0(p[1].ch)} %`)],['Base de nubes bajas (est.)',...P.map(p=>p[1].cl>=30?'~'+Math.max(0,Math.round(p[1].base/100)*100)+' ft AGL':'sin nubes bajas')],['Temperatura / punto de rocío',...P.map(p=>`${f0(p[1].T)} / ${f0(p[1].Td)} °C`)],['QNH (presión)',...P.map(p=>f0(p[1].qnh)+' hPa')],['Altitud densidad (aprox.)',...P.map(p=>f0(p[1].da/10)*10+' ft')],['Fenómeno',...P.map(p=>BR_WC[p[1].wc]||'-')],['Precipitación / probabilidad',...P.map(p=>`${(p[1].pr||0).toFixed(1)} mm / ${f0(p[1].pp)}%`)],['Isoterma 0 °C',...P.map(p=>p[1].fl==null?'-':Math.round(p[1].fl*3.28084/100)*100+' ft')]];
+  const mins=Math.round(ete/6e4),dn=new Intl.DateTimeFormat('es-CL',{timeZone:BR_TZ,weekday:'long',day:'numeric',month:'long'}).format(new Date(dep));
+  const sum=`Vuelo ${o.c} → ${d.c} el ${dn} a las ${brFmt(dep)}: ${Math.round(dist)} NM, rumbo ${Math.round(crs)}°, ~${mins} min con ${Math.round(gs)} kt de velocidad sobre el suelo (${head>=0?'viento de frente':'viento de cola'} de ${Math.abs(Math.round(head))} kt a ${lvl} hPa). `
+   +`En la salida: ${BR_WC[wO.wc]||'sin datos'}, viento ${dir(wO.wd)} ${f0(wO.ws)} kt con ráfagas de ${f0(wO.wg)}, visibilidad ${wO.vis==null?'-':wO.vis>=10?'10+ km':wO.vis.toFixed(0)+' km'}. `
+   +`En el destino (${brFmt(arr)}): ${BR_WC[wD.wc]||'sin datos'}, viento ${dir(wD.wd)} ${f0(wD.ws)} kt con ráfagas de ${f0(wD.wg)}. `
+   +(wM.cl+wM.cm>60?`En ruta se espera nubosidad significativa (bajas ${f0(wM.cl)}%, medias ${f0(wM.cm)}%). `:'En ruta la nubosidad es acotada. ')
+   +(fcv?`Luz: FCCV en ${d.c} a las ${brFmt(fcv)}, puesta de sol ${brFmt(ssD)}.`:'');
+  $('brOut').innerHTML=`<div class="card" style="margin-top:14px"><div style="display:flex;align-items:center;gap:12px"><span style="width:18px;height:18px;border-radius:50%;background:${col[worst]};flex:none"></span><h2 style="margin:0">${BR_LBL[worst]}</h2></div>`
+   +(alerts.length?'<ul style="margin:10px 0 0 18px">'+alerts.map(a=>`<li style="color:${a.k==='bad'?'var(--bad)':'inherit'}">${a.k==='bad'?'<b>':''}${esc(a.t)}${a.k==='bad'?'</b>':''}</li>`).join('')+'</ul>':'<p class="hint">No se detectaron condiciones fuera de tus mínimos con este pronóstico.</p>')
+   +`<p style="margin-top:12px">${esc(sum)}</p></div>`
+   +`<div class="card" style="margin-top:14px"><h2>Detalle por punto</h2><div style="overflow-x:auto"><table><tr><th></th>${P.map(p=>`<th>${esc(p[0])}</th>`).join('')}</tr>${rows.map(r=>`<tr><td><b>${esc(r[0])}</b></td>${r.slice(1).map(x=>`<td>${esc(x)}</td>`).join('')}</tr>`).join('')}</table></div>`
+   +`<h3 style="margin:14px 0 6px">Viento en altura (punto medio, hora de salida)</h3><div style="overflow-x:auto"><table><tr><th>Nivel</th><th>Altitud aprox.</th><th>Viento</th><th>Componente de frente</th></tr>${[[925,'2.500 ft'],[850,'5.000 ft'],[700,'10.000 ft']].map(([l,a])=>{const u=wM0(wm0,l);return`<tr><td>${l} hPa</td><td>${a}</td><td>${u?dir(u[1])+' '+f0(u[0])+' kt':'-'}</td><td>${u&&u[0]!=null?Math.round(u[0]*Math.cos(brRad(u[1]-crs)))+' kt':'-'}</td></tr>`}).join('')}</table></div>`
+   +`<p class="hint">Elevación del terreno en el modelo: ${esc(o.c)} ${f0(wO.elevFt)} ft, ${esc(d.c)} ${f0(wD.elevFt)} ft. Base de nubes y altitud densidad son estimaciones simples (temperatura menos punto de rocío; QNH y temperatura).</p></div>`
+   +`<div class="card" style="margin-top:14px"><h2>METAR / TAF</h2><div id="brMet" class="hint">Buscando…</div></div>`
+   +`<p class="hint" style="margin-top:12px"><b>Orientativo.</b> Es un pronóstico de modelo numérico (Open-Meteo), no un briefing oficial. Puede subestimar nubosidad baja costera, niebla y vientos de montaña. Antes de volar confirma METAR/TAF, SIGMET y NOTAM con las fuentes oficiales (Dirección Meteorológica de Chile, meteochile.gob.cl, y AIS de la DGAC). La decisión de volar es del piloto al mando.</p>`;
+  note('brMsg','');
+  const ids=[o.c,d.c].filter(c=>/^[A-Z]{4}$/.test(c));
+  brMetar(ids).then(t=>{const e=$('brMet');if(!e)return;e.innerHTML=t?'<pre style="white-space:pre-wrap;font-size:12.5px;margin:0">'+esc(t)+'</pre>':'No disponible desde el navegador en este momento (o el aeródromo no emite METAR/TAF). Consulta la Dirección Meteorológica de Chile.'});
+ }catch(e){note('brMsg',e.message||String(e),'err')}
+ $('brGo').disabled=false;
+}
+function wM0(w,l){return w.up[l]}
+$('brGo').onclick=brGo;
+['brO','brD'].forEach(id=>$(id).onchange=()=>{$('brRwO').dataset.t='';const rw=c=>{const a=brAll().find(x=>x.c===c);return a&&a.rw!=null?a.rw:''};$('brRwO').value=rw($('brO').value);$('brRwD').value=rw($('brD').value)});
+$('brRwO').oninput=$('brRwD').oninput=e=>{e.target.dataset.t='1'};
+$('brAsave').onclick=()=>{
+ const c=$('brAc').value.trim().toUpperCase(),n=$('brAn').value.trim()||c,lat=parseFloat($('brAlat').value.replace(',','.')),lon=parseFloat($('brAlon').value.replace(',','.')),rw=$('brArw').value===''?null:+$('brArw').value;
+ if(!c||isNaN(lat)||isNaN(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return note('brAmsg','Indica código, latitud y longitud (ej. -33.45 y -70.54).','err');
+ const L=brCustom().filter(a=>a.c!==c);L.push({c,n,lat,lon,rw});try{localStorage.setItem('brf_ad',JSON.stringify(L))}catch(e){}
+ brFill();$('brD').value=c;note('brAmsg','Aeródromo guardado en este dispositivo.','ok');
+};
+
 /* ---------- Navegación ---------- */
 function go(v){
- ['resumen','vuelos','metricas','chequeo','exportar','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
- {const G=['vuelos','nuevo','chequeo','exportar'].includes(v);document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g?G:b.dataset.v===v));document.querySelectorAll('#subnav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G)}
+ ['resumen','vuelos','metricas','chequeo','exportar','briefing','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
+ {const G=['vuelos','nuevo','chequeo','exportar'].includes(v),Hh=v==='briefing';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g==='1'?G:b.dataset.g==='h'?Hh:b.dataset.v===v));document.querySelectorAll('#subnav button,#subnav2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G);$('subnav2').classList.toggle('hidden',!Hh)}
  {const nb=document.querySelector('#nav button.on');if(nb)$('burgerT').textContent=nb.textContent;$('nav').classList.remove('open')}
  if(v==='resumen')renderDash();
  if(v==='vuelos')table();
@@ -755,10 +933,11 @@ function go(v){
  if(v==='metricas')renderMetrics();
  if(v==='chequeo')renderChequeo();
  if(v==='exportar')prepPdf();
+ if(v==='briefing')brFill();
  if(v==='cuenta'){note('avMsg','');paintAvatar();$('cuMail').textContent=user.email||'';$('cuP1').value=$('cuP2').value='';note('cuMsg','')}
 }
 $('burger').onclick=()=>$('nav').classList.toggle('open');
-$('nav').onclick=$('subnav').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)};
+$('nav').onclick=$('subnav').onclick=$('subnav2').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
 
 /* ---------- Agrupación de aeronaves ---------- */
