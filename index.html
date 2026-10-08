@@ -169,7 +169,7 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #nav [d
     </div>
     <div class="cap">Si no marcas nada, se registra como vuelo al mando.</div>
    </div>
-   <div class="full subbox hidden" id="paxBox"><label for="fNPax">¿Cuántos pasajeros?</label>
+   <div class="full subbox hidden" id="paxBox"><label for="fNPax">¿Cuántos pasajeros? <span class="hint">(los nombres son opcionales)</span></label>
     <div class="stepper"><button type="button" id="paxMinus" aria-label="Menos pasajeros">−</button><input id="fNPax" type="number" min="1" max="9" value="1"><button type="button" id="paxPlus" aria-label="Más pasajeros">+</button></div>
     <div class="paxn" id="paxNames"></div></div>
    <div class="full subbox hidden" id="fInstWrap"><label for="fInst">Nombre del instructor</label><input id="fInst"></div>
@@ -672,7 +672,7 @@ $('fa').onchange=e=>{st.a=e.target.value;st.n=25;renderDash();table()};
 function table(){
  const q=$('q').value.toLowerCase(),fk=$('fc').value;
  const R=filt().filter(r=>(!fk||r.k===fk)&&(!q||[r.rt,r.c,r.instr,r.pn,r.t,r.m].join(' ').toLowerCase().includes(q)));
- $('tb').innerHTML=R.slice(0,st.n).map(r=>`<tr><td>${r.pv?'Previo':esc(r.d)}</td><td>${esc(r.m)}<div class="muted">${esc(r.t)}</div></td><td>${hm(r.tot)}</td><td>${r.l||''}</td><td><span class="tag" style="background:var(${KC[r.k]||'--gry'});${r.k==='Al mando'?'color:#222':''}">${esc(r.k)}</span></td><td>${esc(r.rt)}<div class="muted">${esc([r.c,r.instr&&'Instr.: '+r.instr,r.pn&&'Pax: '+r.pn].filter(Boolean).join(' · '))}</div></td><td style="white-space:nowrap"><button class="btn ghost small" data-e="${r.id}">Editar</button> <button class="btn ghost small danger" data-d="${r.id}">Borrar</button></td></tr>`).join('')||'<tr><td colspan="7" class="muted">Sin resultados.</td></tr>';
+ $('tb').innerHTML=R.slice(0,st.n).map(r=>`<tr><td>${r.pv?'Previo':esc(r.d)}</td><td>${esc(r.m)}<div class="muted">${esc(r.t)}</div></td><td>${hm(r.tot)}</td><td>${r.l||''}</td><td><span class="tag" style="background:var(${KC[r.k]||'--gry'});${r.k==='Al mando'?'color:#222':''}">${esc(r.k)}</span></td><td>${esc(r.rt)}<div class="muted">${esc([r.c,r.instr&&'Instr.: '+r.instr,(r.pn?'Pax: '+r.pn:(+r.num_pax>0?'Pax: '+r.num_pax:''))].filter(Boolean).join(' · '))}</div></td><td style="white-space:nowrap"><button class="btn ghost small" data-e="${r.id}">Editar</button> <button class="btn ghost small danger" data-d="${r.id}">Borrar</button></td></tr>`).join('')||'<tr><td colspan="7" class="muted">Sin resultados.</td></tr>';
  $('more').classList.toggle('hidden',R.length<=st.n);$('more').textContent=`Ver más (${(R.length-st.n).toLocaleString('es-CL')} restantes)`;
 }
 $('q').oninput=()=>{st.n=25;table()};$('fc').onchange=()=>{st.n=25;table()};$('more').onclick=()=>{st.n+=25;table()};
@@ -734,7 +734,7 @@ function paxVals(){return[...$('paxNames').querySelectorAll('input')].map(i=>i.v
 function renderPax(names){
  const n=Math.min(9,Math.max(1,parseInt($('fNPax').value)||1));$('fNPax').value=n;
  const cur=names||paxVals();
- $('paxNames').innerHTML=Array.from({length:n},(_,i)=>`<div><label for="px${i}">Pasajero ${i+1}</label><input id="px${i}" value="${esc(cur[i]||'')}" placeholder="Nombre y apellido" autocomplete="off"></div>`).join('');
+ $('paxNames').innerHTML=Array.from({length:n},(_,i)=>`<div><label for="px${i}">Pasajero ${i+1}</label><input id="px${i}" value="${esc(cur[i]||'')}" placeholder="Nombre y apellido (opcional)" autocomplete="off"></div>`).join('');
 }
 $('paxMinus').onclick=()=>{$('fNPax').value=Math.max(1,(parseInt($('fNPax').value)||1)-1);renderPax()};
 $('paxPlus').onclick=()=>{$('fNPax').value=Math.min(9,(parseInt($('fNPax').value)||1)+1);renderPax()};
@@ -759,23 +759,25 @@ function loadForm(r){
  if(r.matricula&&$('fMat').value!==r.matricula){$('fMat').value='__new';$('fMatNew').value=r.matricula;$('fMatNew').classList.remove('hidden')}
  const names=(r.pasajeros||'').split(',').map(s=>s.trim()).filter(Boolean);
  $('oXc').checked=r.xc>0;$('oSolo').checked=r.k==='Solo';$('oDual').checked=r.k==='Instrucción recibida';$('oDada').checked=r.k==='Como instructor';$('oSic').checked=r.k==='Copiloto';
- $('oPax').checked=names.length>0;$('fNPax').value=Math.max(1,names.length);$('fInst').value=r.instructor||'';
+ const np0=Math.max(names.length,+r.num_pax||0);$('oPax').checked=np0>0;$('fNPax').value=Math.min(9,Math.max(1,np0));$('fInst').value=r.instructor||'';
  $('optsWrap').classList.toggle('hidden',!!editKeep);
- applyRules();if(names.length)renderPax(names);
+ applyRules();if(np0)renderPax(names);
  $('fTitle').textContent='Editar vuelo';$('fCancel').classList.remove('hidden');prev();
 }
 $('fCancel').onclick=()=>{resetForm();go('vuelos')};
 $('fSave').onclick=async()=>{
  const total=parseT($('fTotal').value),modelo=getModel(),fecha=$('fFecha').value;
  if(!fecha||!modelo||isNaN(total)||total<=0)return note('fMsg','Completa fecha, aeronave y un tiempo total válido.','err');
- let names=[];
- if(!editKeep&&chk('pax')){names=paxVals().map(s=>s.trim());if(names.some(s=>!s))return note('fMsg',`Escribe el nombre de cada pasajero (${names.length}).`,'err')}
+ let names=[],npax=null;
+ if(!editKeep&&chk('pax')){npax=Math.min(9,Math.max(1,parseInt($('fNPax').value)||1));names=paxVals().map(s=>s.trim()).filter(Boolean)}
  const tipo=editKeep||tipoFromChecks();
- const row=Object.assign({fecha,modelo,matricula:getTail()||null,tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:$('fCom').value.trim()||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:derived(tipo,total));
+ const row=Object.assign({fecha,modelo,matricula:getTail()||null,tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:$('fCom').value.trim()||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:{num_pax:npax},editKeep?{}:derived(tipo,total));
  $('fSave').disabled=true;
  try{
-  const q=editId?sb.from('vuelos').update(row).eq('id',editId):sb.from('vuelos').insert(Object.assign({},row,{user_id:user.id}));
-  const{error}=await q;if(error)throw error;
+  const run=r=>editId?sb.from('vuelos').update(r).eq('id',editId):sb.from('vuelos').insert(Object.assign({},r,{user_id:user.id}));
+  let{error}=await run(row);
+  if(error&&/num_pax/.test(error.message)){const r2=Object.assign({},row);delete r2.num_pax;if(npax&&!names.length)r2.pasajeros=null;({error}=await run(r2));if(!error&&npax&&!names.length)note('fMsg','Guardado, pero sin la cantidad de pasajeros: falta ejecutar migracion_v3.sql en Supabase.','err')}
+  if(error)throw error;
   const was=editId;await loadAll();resetForm();note('fMsg',was?'Vuelo actualizado.':'Vuelo guardado.','ok');
   if(was)go('vuelos');
  }catch(e){note('fMsg',hintDb(e.message),'err')}
