@@ -439,6 +439,8 @@ async function loadPdfLib(){
  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',()=>window.jspdf&&window.jspdf.jsPDF);
  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js',()=>window.jspdf&&window.jspdf.jsPDF.API.autoTable);
 }
+const PDF_FAM={'C-172':'Cessna 172','C-R182':'Cessna 182 RG','C-182':'Cessna 182','RV-9':'RV-9A','PA-28':'Piper PA-28','Boeing 737':'Boeing 737'};
+function pdfModel(m){const f=familyOf(m);return PDF_FAM[f]||(f&&f!==String(m||'').trim()?f:String(m||'').split(',')[0].trim())}
 function buildLogPdf(jsPDF,rows,o){
  const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
  const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=36;
@@ -466,7 +468,7 @@ function buildLogPdf(jsPDF,rows,o){
   doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...MUTE);doc.text(T(k[0]).toUpperCase(),x+14,y+39)});
  y+=70;
  // por año y por aeronave
- const ya={},ma={};real.forEach(r=>{const a=ya[r.y]||(ya[r.y]={n:0,h:0});a.n++;a.h+=r.tot;const b=ma[r.m]||(ma[r.m]={n:0,h:0});b.n++;b.h+=r.tot});
+ const ya={},ma={};real.forEach(r=>{const a=ya[r.y]||(ya[r.y]={n:0,h:0});a.n++;a.h+=r.tot;const mk2=pdfModel(r.m),b=ma[mk2]||(ma[mk2]={n:0,h:0});b.n++;b.h+=r.tot});
  const yl=Object.entries(ya).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,10).map(([k,v])=>[k,v.n,hm(v.h)]);
  const ml=Object.entries(ma).sort((a,b)=>b[1].h-a[1].h).slice(0,10).map(([k,v])=>[T(k),v.n,hm(v.h)]);
  const half=(W-2*M-20)/2;
@@ -480,8 +482,8 @@ function buildLogPdf(jsPDF,rows,o){
  let f2=doc.lastAutoTable.finalY;const sy=Math.max(f1,f2)+30;
  doc.setTextColor(...DEEP);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('Listado de vuelos',M,sy-8);
  const TC={'Instrucción recibida':[31,111,209],'Solo':[22,140,90],'Al mando':[40,48,64],'Copiloto':[90,110,130],'Como instructor':[124,77,214],'Simulador':[200,120,20],'Previo':[120,120,120]};
- const cs={0:{cellWidth:56},1:{cellWidth:124},2:{cellWidth:56},3:{cellWidth:o.obs?100:230},4:{cellWidth:42,halign:'right'},5:{cellWidth:36,halign:'right'},6:{cellWidth:86}};
- doc.autoTable({startY:sy,margin:{left:M,right:M,top:56,bottom:40},head:[head],body,
+ const cs={0:{cellWidth:56},1:o.obs?{cellWidth:124}:{cellWidth:150},2:{cellWidth:56},3:o.obs?{cellWidth:110}:{},4:{cellWidth:42,halign:'right'},5:{cellWidth:36,halign:'right'},6:{cellWidth:86}};
+ doc.autoTable({startY:sy,tableWidth:W-2*M,margin:{left:M,right:M,top:56,bottom:40},head:[head],body,
   foot:[[{content:'Totales',colSpan:4,styles:{halign:'right'}},hm(sum(rows,'tot')),String(sum(rows,'l')),'',...(o.obs?['']:[])]],showFoot:'lastPage',
   theme:'plain',styles:{font:'helvetica',fontSize:8,cellPadding:{top:3.5,bottom:3.5,left:5,right:5},textColor:INK,overflow:'linebreak',lineColor:[225,232,242],lineWidth:{bottom:0.4}},
   headStyles:{fillColor:DEEP,textColor:255,fontStyle:'bold'},footStyles:{fillColor:SOFT,textColor:DEEP,fontStyle:'bold'},alternateRowStyles:{fillColor:[247,250,254]},columnStyles:cs,
