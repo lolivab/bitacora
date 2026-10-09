@@ -1750,18 +1750,24 @@ async function renderPasaporte(){
  const W=1080,H=1600,MH=700,cv=$('ppCv');cv.width=W;cv.height=H;const g=cv.getContext('2d');
  g.fillStyle='#f4f3ea';g.fillRect(0,0,W,H);
  // map
- let la0=-34,la1=-33,lo0=-71,lo1=-70;
- if(codes.length){const la=codes.map(c=>AP[c][0]),lo=codes.map(c=>AP[c][1]);la0=Math.min(...la);la1=Math.max(...la);lo0=Math.min(...lo);lo1=Math.max(...lo)}
- let dla=Math.max(la1-la0,6),dlo=Math.max(lo1-lo0,6);const mla=(la0+la1)/2,mlo=(lo0+lo1)/2,cs=Math.cos(mla*Math.PI/180);
- const sc=Math.min((W-120)/(dlo*cs),(MH-140)/dla)*0.92;
- const P=(lat,lon)=>[W/2+(lon-mlo)*cs*sc,MH/2+10-(lat-mla)*sc];
+ let la0=-34,la1=-33,mlo=-70,spanLo=6;
+ if(codes.length){const la=codes.map(c=>AP[c][0]),lo=codes.map(c=>AP[c][1]).sort((x,y)=>x-y);la0=Math.min(...la);la1=Math.max(...la);
+  let gap=-1,ga=lo[0],gb=lo[0];for(let i=0;i<lo.length;i++){const a=lo[i],b=i+1<lo.length?lo[i+1]:lo[0]+360,d=b-a;if(d>gap){gap=d;ga=a;gb=b}}
+  spanLo=360-gap;mlo=((gb+ga+360)/2+540)%360-180;if(lo.length===1)spanLo=6}
+ const dla=Math.max(la1-la0,6),dlo=Math.max(spanLo,6),mla=(la0+la1)/2,cs=Math.cos(mla*Math.PI/180);
+ const sc=Math.min((W-120)/(dlo*cs),(MH-140)/dla)*0.92,WW=360*cs*sc;
+ const wr=l=>((l-mlo+540)%360+360)%360-180;
+ const P=(lat,lon)=>[W/2+wr(lon)*cs*sc,MH/2+10-(lat-mla)*sc];
  g.save();g.beginPath();g.rect(0,0,W,MH);g.clip();
  g.fillStyle='#fbfaf2';g.fillRect(0,0,W,MH);
  g.fillStyle='#bfe8dc';g.strokeStyle='#8fd0c0';g.lineWidth=1;
- (WORLD||[]).forEach(f=>{const G=f.geometry;if(!G)return;const polys=G.type==='Polygon'?[G.coordinates]:G.type==='MultiPolygon'?G.coordinates:[];polys.forEach(p=>{g.beginPath();p.forEach(ring=>ring.forEach((pt,i)=>{const q=P(pt[1],pt[0]);i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])}));g.closePath();g.fill('evenodd');g.stroke()})});
+ const PL=(lat,lon,off)=>[W/2+(lon-mlo+off)*cs*sc,MH/2+10-(lat-mla)*sc];
+ (WORLD||[]).forEach(f=>{const G=f.geometry;if(!G)return;const polys=G.type==='Polygon'?[G.coordinates]:G.type==='MultiPolygon'?G.coordinates:[];[-360,0,360].forEach(off=>polys.forEach(p=>{g.beginPath();p.forEach(ring=>ring.forEach((pt,i)=>{const q=PL(pt[1],pt[0],off);i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])}));g.closePath();g.fill('evenodd');g.stroke()}))});
  g.lineCap='round';
- Object.keys(segs).forEach(k=>{const[a,b]=k.split('-'),p=P(AP[a][0],AP[a][1]),q=P(AP[b][0],AP[b][1]),dx=q[0]-p[0],dy=q[1]-p[1],d=Math.hypot(dx,dy)||1,cx=(p[0]+q[0])/2-dy*0.22,cy=(p[1]+q[1])/2+dx*0.22-d*0.12;
-  g.strokeStyle='rgba(232,115,26,.85)';g.lineWidth=1.6+Math.min(segs[k],8)*.5;g.beginPath();g.moveTo(p[0],p[1]);g.quadraticCurveTo(cx,cy,q[0],q[1]);g.stroke()});
+ Object.keys(segs).forEach(k=>{const[a,b]=k.split('-'),p=P(AP[a][0],AP[a][1]);let q=P(AP[b][0],AP[b][1]);
+  const dxr=wr(AP[b][1])-wr(AP[a][1]);const sh=Math.abs(dxr)>180?(dxr>0?-1:1)*WW:0;q=[q[0]+sh,q[1]];
+  [0,sh?-sh:0].forEach((o,ii)=>{if(ii&&!sh)return;const p2=[p[0]+o,p[1]],q2=[q[0]+o,q[1]],dx=q2[0]-p2[0],dy=q2[1]-p2[1],d=Math.hypot(dx,dy)||1,cx=(p2[0]+q2[0])/2-dy*0.18,cy=(p2[1]+q2[1])/2+dx*0.18-d*0.1;
+   g.strokeStyle='rgba(232,115,26,.85)';g.lineWidth=1.6+Math.min(segs[k],8)*.5;g.beginPath();g.moveTo(p2[0],p2[1]);g.quadraticCurveTo(cx,cy,q2[0],q2[1]);g.stroke()})});
  codes.forEach(c=>{const p=P(AP[c][0],AP[c][1]);g.beginPath();g.arc(p[0],p[1],7,0,7);g.fillStyle='#e03b3b';g.fill();g.lineWidth=2.5;g.strokeStyle='#a31f1f';g.stroke()});
  g.restore();
  const gr=g.createLinearGradient(0,MH-90,0,MH);gr.addColorStop(0,'rgba(244,243,234,0)');gr.addColorStop(1,'#f4f3ea');g.fillStyle=gr;g.fillRect(0,MH-90,W,90);
