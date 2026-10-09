@@ -1735,6 +1735,7 @@ let WORLD=null;
 const hav=(a,b)=>{const R=6371,t=x=>x*Math.PI/180,dl=t(b[0]-a[0]),dn=t(b[1]-a[1]),h=Math.sin(dl/2)**2+Math.cos(t(a[0]))*Math.cos(t(b[0]))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 const flagOf=cc=>/^[A-Z]{2}$/.test(cc||'')?String.fromCodePoint(...[...cc].map(c=>127397+c.charCodeAt(0))):'';
 const mrz=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'<');
+function fitTxt(g,t,x,y,maxW,px,wt){let p=px;g.textAlign='left';do{g.font=wt+' '+p+'px system-ui,sans-serif';p-=2}while(g.measureText(t).width>maxW&&p>12);g.fillText(t,x,y)}
 async function renderPasaporte(){
  note('ppMsg','');
  try{if(!AP){const r=await fetch('airports.json');if(!r.ok)throw new Error('No pude cargar la base de aeródromos');AP=await r.json()}}catch(e){return note('ppMsg',e.message,'err')}
@@ -1746,7 +1747,7 @@ async function renderPasaporte(){
  const codes=Object.keys(V),hrs=sum(ALL,'tot'),first=real.reduce((m,r)=>!m||r.d<m?r.d:m,''),acs=new Set(real.map(r=>familyOf?familyOf(r.m):r.m)).size;
  const home=codes.sort((a,b)=>V[b]-V[a])[0]||'',ccs=[...new Set(codes.map(c=>AP[c][4]).filter(Boolean))];
  const nm=(viewing?(viewing.name||viewing.email):(user&&((user.user_metadata&&user.user_metadata.nombre)||String(user.email||'').split('@')[0])))||'PILOTO';
- const W=1080,H=1480,MH=700,cv=$('ppCv');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+ const W=1080,H=1600,MH=700,cv=$('ppCv');cv.width=W;cv.height=H;const g=cv.getContext('2d');
  g.fillStyle='#f4f3ea';g.fillRect(0,0,W,H);
  // map
  let la0=-34,la1=-33,lo0=-71,lo1=-70;
@@ -1778,12 +1779,12 @@ async function renderPasaporte(){
  g.fillStyle='#1c1c1c';g.font='700 150px system-ui,sans-serif';g.fillText(real.length.toLocaleString('es-CL'),44,MH+360);
  g.fillStyle=muted;g.font='300 78px system-ui,sans-serif';g.fillText(real.length===1?'vuelo':'vuelos',48,MH+440);
  const kv=[['Piloto',nm],['Lugar de emisión',home||'—'],['Fecha de emisión',dm(todayIso())],['Piloto desde',first?dm(first):'—']];
- kv.forEach((x,i)=>{const y=MH+280+i*58;g.fillStyle=muted;g.font='500 30px system-ui,sans-serif';g.fillText(x[0],470,y);const w=g.measureText(x[0]+' ').width;g.fillStyle='#666';g.fillText(String(x[1]).slice(0,22),470+w,y)});
+ kv.forEach((x,i)=>{const y=MH+280+i*58;g.fillStyle=muted;g.font='500 30px system-ui,sans-serif';g.fillText(x[0],470,y);const w=g.measureText(x[0]+' ').width;g.fillStyle='#666';fitTxt(g,String(x[1]),470+w,y,W-44-(470+w),30,'500')});
  const st=[['Distancia',fmt(km,0)+' km'],['Tiempo de vuelo',fmt(hrs,1)+' h'],['Aeródromos',String(codes.length)],['Aeronaves',String(acs)]];
- const xs=[44,330,640,860];st.forEach((x,i)=>{g.fillStyle=muted;g.font='500 30px system-ui,sans-serif';g.fillText(x[0],xs[i],MH+560);g.fillStyle='#1c1c1c';g.font='700 46px system-ui,sans-serif';g.fillText(x[1],xs[i],MH+615)});
+ const xs=[44,560];st.forEach((x,i)=>{const cx=xs[i%2],cy=MH+560+Math.floor(i/2)*115;g.fillStyle=muted;g.font='500 30px system-ui,sans-serif';g.fillText(x[0],cx,cy);g.fillStyle='#1c1c1c';fitTxt(g,x[1],cx,cy+55,W-44-cx-(i%2?0:20),46,'700')});
  g.fillStyle='#333';g.font='500 32px ui-monospace,Menlo,Consolas,monospace';
- g.fillText(('TOTAL<<'+mrz(nm)+'<<PILOTO'+mrz(dm(first)||'')+'<<<<<<<<<<<<<<<<<<<<<').slice(0,46),44,MH+700);
- g.fillText(('EMITIDO'+mrz(dm(todayIso()))+(home||'')+'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<').slice(0,46),44,MH+745);
+ g.fillText(('TOTAL<<'+mrz(nm)+'<<PILOTO'+mrz(dm(first)||'')+'<<<<<<<<<<<<<<<<<<<<<').slice(0,46),44,MH+815);
+ g.fillText(('EMITIDO'+mrz(dm(todayIso()))+(home||'')+'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<').slice(0,46),44,MH+860);
  $('ppH').textContent=codes.length?`${codes.length} aeródromos en ${ccs.length} ${ccs.length===1?'país':'países'}. Las horas son las totales de tu bitácora (incluyen experiencia previa y simulador); la distancia suma solo tramos con códigos ICAO en la ruta.`:'Aún no hay códigos ICAO en las rutas de tus vuelos; agrégalos (ej. SCTB SCVH) para ver el mapa.';
 }
 $('ppDl').onclick=()=>{$('ppCv').toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='pasaporte-de-vuelo.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)})};
