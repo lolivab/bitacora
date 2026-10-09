@@ -1754,7 +1754,9 @@ async function renderPasaporte(){
  if(codes.length){const la=codes.map(c=>AP[c][0]),lo=codes.map(c=>AP[c][1]).sort((x,y)=>x-y);la0=Math.min(...la);la1=Math.max(...la);
   let gap=-1,ga=lo[0],gb=lo[0];for(let i=0;i<lo.length;i++){const a=lo[i],b=i+1<lo.length?lo[i+1]:lo[0]+360,d=b-a;if(d>gap){gap=d;ga=a;gb=b}}
   spanLo=360-gap;mlo=((gb+ga+360)/2+540)%360-180;if(lo.length===1)spanLo=6}
- const dla=Math.max(la1-la0,6),dlo=Math.max(spanLo,6),mla=(la0+la1)/2,cs=Math.cos(mla*Math.PI/180);
+ let dla=Math.max(la1-la0,6),dlo=Math.max(spanLo,6),mla=(la0+la1)/2;
+ if(spanLo>120){mlo=-118.4;dlo=360;dla=Math.max(la1-la0+20,110);}
+ const cs=Math.cos(mla*Math.PI/180);
  const sc=Math.min((W-120)/(dlo*cs),(MH-140)/dla)*0.92,WW=360*cs*sc;
  const wr=l=>((l-mlo+540)%360+360)%360-180;
  const P=(lat,lon)=>[W/2+wr(lon)*cs*sc,MH/2+10-(lat-mla)*sc];
