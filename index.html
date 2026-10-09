@@ -1767,10 +1767,9 @@ async function renderPasaporte(){
  g.fillStyle='#6a5acd';g.font='600 26px system-ui,sans-serif';g.textAlign='left';
  g.fillText('✈ ✈ ✈  '+(home||'—')+'  ✈ ✈ ✈',30,48);
  // flags
- const FL=ccs.slice(0,16);
+ const FL=ccs.slice(),step=Math.min(62,FL.length>1?(W-112)/(FL.length-1):62);
  const imgs=await Promise.all(FL.map(c=>new Promise(res=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>res(im);im.onerror=()=>res(null);im.src='https://flagcdn.com/w80/'+c.toLowerCase()+'.png'})));
- FL.forEach((c,i)=>{const x=56+i*62,y=MH+8,r=26;g.save();g.beginPath();g.arc(x,y,r,0,7);g.clip();if(imgs[i]){const im=imgs[i],h=r*2,w=h*im.width/im.height;g.drawImage(im,x-w/2,y-r,w,h)}else{g.fillStyle='#d9d8cc';g.fillRect(x-r,y-r,r*2,r*2);g.fillStyle='#555';g.font='600 20px system-ui,sans-serif';g.textAlign='center';g.fillText(c,x,y+7);g.textAlign='left'}g.restore();g.beginPath();g.arc(x,y,r,0,7);g.lineWidth=2;g.strokeStyle='#ffffffcc';g.stroke()});
- if(ccs.length>16){g.fillStyle='#444';g.beginPath();g.arc(W-70,MH+8,26,0,7);g.fill();g.fillStyle='#fff';g.font='600 22px system-ui,sans-serif';g.textAlign='center';g.fillText('+'+(ccs.length-16),W-70,MH+16);g.textAlign='left'}
+ FL.forEach((c,i)=>{const x=56+i*step,y=MH+8,r=26;g.save();g.beginPath();g.arc(x,y,r,0,7);g.clip();if(imgs[i]){const im=imgs[i],h=r*2,w=h*im.width/im.height;g.drawImage(im,x-w/2,y-r,w,h)}else{g.fillStyle='#d9d8cc';g.fillRect(x-r,y-r,r*2,r*2);g.fillStyle='#555';g.font='600 20px system-ui,sans-serif';g.textAlign='center';g.fillText(c,x,y+7);g.textAlign='left'}g.restore();g.beginPath();g.arc(x,y,r,0,7);g.lineWidth=2;g.strokeStyle='#ffffffcc';g.stroke()});
  g.strokeStyle='#d7d5c6';g.setLineDash([8,6]);g.beginPath();g.moveTo(0,MH+60);g.lineTo(W,MH+60);g.stroke();g.setLineDash([]);
  // text
  const navy='#1d2a78',muted='#5a63a8';
