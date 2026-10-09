@@ -234,14 +234,14 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <div class="card" style="max-width:760px">
    <h2>LiveATC · Santiago (SCEL)</h2>
    <p class="hint">Audio en vivo de las comunicaciones ATC, transmitido por LiveATC.net. Presiona reproducir; en el celular puede tardar unos segundos en partir.</p>
-   <audio id="laAudio" controls preload="none" style="width:100%;margin:8px 0;display:none"></audio><iframe id="laFrame" title="LiveATC SCEL" style="display:none;width:100%;height:230px;border:1px solid var(--line);border-radius:8px;margin:8px 0;background:#fff" allow="autoplay"></iframe>
+   <audio id="laAudio" controls preload="none" style="width:100%;margin:8px 0"></audio>
    <p><button class="btn" id="laPlay" type="button">▶ Escuchar SCL en vivo</button> <button class="btn ghost" id="laStop" type="button">■ Detener</button></p>
    <div id="laMsg" class="hint"></div>
    <details style="margin:10px 0"><summary>Si no suena</summary>
     <div class="field" style="margin-top:8px"><label for="laMount">Nombre del feed en LiveATC</label><input id="laMount" value="scel" maxlength="30"></div>
     <p class="hint">Si el feed cambió de nombre, búscalo en LiveATC y escribe aquí el nombre que aparece al final del enlace del stream (se guarda en este dispositivo).</p>
    </details>
-   <p><a href="https://www.liveatc.net/hlisten.php?mount=scel&icao=scel" target="_blank" rel="noopener">Abrir el reproductor de LiveATC en otra pestaña ↗</a></p>
+   <p><a href="https://www.liveatc.net/search/?icao=SCEL" target="_blank" rel="noopener">Abrir SCEL en LiveATC.net ↗</a></p>
   </div>
   </section>
   <section id="s-briefing" class="hidden">
@@ -962,8 +962,8 @@ function go(v){
 }
 document.addEventListener('input',e=>{const t=e.target;if(!t.classList||!t.classList.contains('dti'))return;if(e.inputType&&e.inputType.startsWith('delete'))return;let v=t.value.replace(/[^\d]/g,'').slice(0,8);if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);else if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);t.value=v});
 (()=>{const a=$('laAudio'),m=$('laMount'),msg=$('laMsg');try{m.value=localStorage.getItem('la_mount')||'scel'}catch(e){}
-$('laPlay').onclick=()=>{const k=(m.value||'scel').trim().toLowerCase().replace(/[^a-z0-9_\-]/g,'');try{localStorage.setItem('la_mount',k)}catch(e){}const f=$('laFrame');f.src='https://www.liveatc.net/hlisten.php?mount='+k+'&icao='+k;f.style.display='block';msg.textContent='Cargando el reproductor de LiveATC; presiona su botón de play. Si queda en blanco, usa el enlace de abajo.'};
-$('laStop').onclick=()=>{const f=$('laFrame');f.removeAttribute('src');f.style.display='none';msg.textContent='Detenido.'};
+$('laPlay').onclick=()=>{const k=(m.value||'scel').trim().toLowerCase().replace(/[^a-z0-9_\-]/g,'');try{localStorage.setItem('la_mount',k)}catch(e){}msg.textContent='Conectando…';a.src='https://d.liveatc.net/'+k;a.play().then(()=>msg.textContent='Reproduciendo en vivo.').catch(()=>msg.textContent='No se pudo reproducir. Prueba el enlace de abajo para abrirlo en LiveATC.')};
+$('laStop').onclick=()=>{a.pause();a.removeAttribute('src');a.load();msg.textContent='Detenido.'};
 a.onerror=()=>{if(a.getAttribute('src'))msg.textContent='El feed no responde o no existe con ese nombre. Revisa "Si no suena".'};
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#nav,#subnav,#subnav2')&&!$('s-liveatc').classList.contains('hidden')===false){}})})();
 $('burger').onclick=()=>$('nav').classList.toggle('open');
