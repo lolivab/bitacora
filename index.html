@@ -140,7 +140,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <button data-v="resumen" class="on">Resumen</button><button data-v="vuelos" data-g="1">Bitácora</button><button data-v="metricas">Métricas</button><button data-v="briefing" data-g="h">Herramientas</button><button data-v="cuenta">Mi cuenta</button><button data-v="admin" id="navAdmin" class="hidden">Administrador</button>
  </div>
  <div id="subnav2" class="hidden"><button data-v="briefing">Briefing meteorológico</button><button data-v="liveatc">LiveATC</button></div>
- <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Chequeo de habilitaciones</button><button data-v="mapa">Mapa</button><button data-v="importar">Importar</button><button data-v="exportar">Exportar</button></div>
+ <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Chequeo de habilitaciones</button><button data-v="mapa">Mapa</button><button data-v="pasaporte">Pasaporte</button><button data-v="importar">Importar</button><button data-v="exportar">Exportar</button></div>
 
  <section id="s-resumen">
   <div class="filters"><div class="seg" id="fy"></div><select id="fa" aria-label="Aeronave"></select><label class="tog" for="grp"><input id="grp" type="checkbox" checked>Agrupar variantes</label></div>
@@ -317,6 +317,12 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
    <div class="card c6"><h2>Vuelos por día de la semana</h2><div class="hint">Según la fecha de cada vuelo</div><div class="chart"><canvas id="mxD"></canvas></div></div>
   </div>
  </section>
+ <section id="s-pasaporte" class="hidden"><div class="card" style="max-width:560px">
+  <h2>Mi pasaporte de vuelo</h2><div class="hint" id="ppH">Una tarjeta con tus rutas, aeródromos y totales. Se arma con los códigos ICAO de la ruta de tus vuelos.</div>
+  <canvas id="ppCv" style="width:100%;border-radius:14px;margin:10px 0;box-shadow:0 2px 14px #0003"></canvas>
+  <div id="ppMsg" class="hint"></div>
+  <p><button class="btn" id="ppDl" type="button">Descargar imagen</button> <button class="btn ghost" id="ppSh" type="button">Compartir</button></p>
+ </div></section>
  <section id="s-mapa" class="hidden"><div class="card">
   <h2>Mapa de aeródromos</h2><div class="hint" id="mpH">Aeródromos y aeropuertos donde has volado, según la ruta de tus vuelos.</div>
   <div class="filters" style="margin-bottom:10px"><label class="tog" for="mpRoutes"><input id="mpRoutes" type="checkbox">Mostrar rutas</label><label class="tog" for="mpScratch"><input id="mpScratch" type="checkbox">Modo mapa raspable</label><select id="mpScrMode" style="width:auto"><option value="r">Radio de 300 km</option><option value="c">País entero</option></select></div>
@@ -966,14 +972,14 @@ $('brAsave').onclick=()=>{
 
 /* ---------- Navegación ---------- */
 function go(v){
- ['resumen','vuelos','metricas','chequeo','exportar','briefing','liveatc','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
- {const G=['vuelos','nuevo','chequeo','mapa','exportar','importar'].includes(v),Hh=v==='briefing'||v==='liveatc';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g==='1'?G:b.dataset.g==='h'?Hh:b.dataset.v===v));document.querySelectorAll('#subnav button,#subnav2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G);$('subnav2').classList.toggle('hidden',!Hh)}
+ ['resumen','vuelos','metricas','chequeo','exportar','briefing','liveatc','mapa','pasaporte','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
+ {const G=['vuelos','nuevo','chequeo','mapa','pasaporte','exportar','importar'].includes(v),Hh=v==='briefing'||v==='liveatc';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g==='1'?G:b.dataset.g==='h'?Hh:b.dataset.v===v));document.querySelectorAll('#subnav button,#subnav2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G);$('subnav2').classList.toggle('hidden',!Hh)}
  {const nb=document.querySelector('#nav button.on');if(nb)$('burgerT').textContent=nb.textContent;$('nav').classList.remove('open')}
  if(v==='resumen')renderDash();
  if(v==='vuelos')table();
  if(v==='nuevo'&&!editId)resetForm();
  if(v==='admin')loadAdmin();
- if(v==='mapa')renderMap();
+ if(v==='mapa')renderMap();if(v==='pasaporte')renderPasaporte();
  if(v==='metricas')renderMetrics();
  if(v==='chequeo')renderChequeo();
  if(v==='exportar')prepPdf();
@@ -1723,6 +1729,64 @@ async function renderMap(){
  $('mpTbl').innerHTML=codes.length?'<thead><tr><th>Código</th><th>Aeródromo</th><th style="text-align:right">Vuelos</th><th>Último vuelo</th></tr></thead><tbody>'+codes.map(c=>`<tr data-c="${esc(c)}" style="cursor:pointer"><td><b>${esc(c)}</b></td><td>${esc(AP[c][2])}${AP[c][3]?' · '+esc(AP[c][3]):''}</td><td style="text-align:right">${V[c].n}</td><td>${esc(dm(V[c].last))}</td></tr>`).join('')+'</tbody>':'';
 }
 document.addEventListener('click',e=>{const tr=e.target.closest('#mpTbl tr[data-c]');if(!tr||!leafMap)return;const m=mapMarkers[tr.dataset.c];if(m){leafMap.setView(m.getLatLng(),12);m.openPopup();$('mpMap').scrollIntoView({behavior:'smooth',block:'center'})}});
+
+/* ---------- Pasaporte de vuelo ---------- */
+let WORLD=null;
+const hav=(a,b)=>{const R=6371,t=x=>x*Math.PI/180,dl=t(b[0]-a[0]),dn=t(b[1]-a[1]),h=Math.sin(dl/2)**2+Math.cos(t(a[0]))*Math.cos(t(b[0]))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+const flagOf=cc=>/^[A-Z]{2}$/.test(cc||'')?String.fromCodePoint(...[...cc].map(c=>127397+c.charCodeAt(0))):'';
+const mrz=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'<');
+async function renderPasaporte(){
+ note('ppMsg','');
+ try{if(!AP){const r=await fetch('airports.json');if(!r.ok)throw new Error('No pude cargar la base de aeródromos');AP=await r.json()}}catch(e){return note('ppMsg',e.message,'err')}
+ if(!WORLD){try{const r=await fetch('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json');WORLD=(await r.json()).features}catch(e){WORLD=[]}}
+ const real=ALL.filter(r=>!r.pv&&r.k!=='Simulador');
+ const segs={},V={};let km=0;
+ real.forEach(r=>{const c=String(r.rt||'').toUpperCase().split(/[^A-Z0-9]+/).filter(x=>/^[A-Z]{4}$/.test(x)&&AP[x]);c.forEach(x=>V[x]=(V[x]||0)+1);
+  for(let i=1;i<c.length;i++){if(c[i]===c[i-1])continue;km+=hav(AP[c[i-1]],AP[c[i]]);const k=[c[i-1],c[i]].sort().join('-');segs[k]=(segs[k]||0)+1}});
+ const codes=Object.keys(V),hrs=sum(real,'tot'),first=real.reduce((m,r)=>!m||r.d<m?r.d:m,''),acs=new Set(real.map(r=>familyOf?familyOf(r.m):r.m)).size;
+ const home=codes.sort((a,b)=>V[b]-V[a])[0]||'',ccs=[...new Set(codes.map(c=>AP[c][4]).filter(Boolean))];
+ const nm=(viewing?(viewing.name||viewing.email):(user&&((user.user_metadata&&user.user_metadata.nombre)||String(user.email||'').split('@')[0])))||'PILOTO';
+ const W=1080,H=1480,MH=700,cv=$('ppCv');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+ g.fillStyle='#f4f3ea';g.fillRect(0,0,W,H);
+ // map
+ let la0=-34,la1=-33,lo0=-71,lo1=-70;
+ if(codes.length){const la=codes.map(c=>AP[c][0]),lo=codes.map(c=>AP[c][1]);la0=Math.min(...la);la1=Math.max(...la);lo0=Math.min(...lo);lo1=Math.max(...lo)}
+ let dla=Math.max(la1-la0,6),dlo=Math.max(lo1-lo0,6);const mla=(la0+la1)/2,mlo=(lo0+lo1)/2,cs=Math.cos(mla*Math.PI/180);
+ const sc=Math.min((W-120)/(dlo*cs),(MH-140)/dla)*0.92;
+ const P=(lat,lon)=>[W/2+(lon-mlo)*cs*sc,MH/2+10-(lat-mla)*sc];
+ g.save();g.beginPath();g.rect(0,0,W,MH);g.clip();
+ g.fillStyle='#fbfaf2';g.fillRect(0,0,W,MH);
+ g.fillStyle='#bfe8dc';g.strokeStyle='#8fd0c0';g.lineWidth=1;
+ (WORLD||[]).forEach(f=>{const G=f.geometry;if(!G)return;const polys=G.type==='Polygon'?[G.coordinates]:G.type==='MultiPolygon'?G.coordinates:[];polys.forEach(p=>{g.beginPath();p.forEach(ring=>ring.forEach((pt,i)=>{const q=P(pt[1],pt[0]);i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])}));g.closePath();g.fill('evenodd');g.stroke()})});
+ g.lineCap='round';
+ Object.keys(segs).forEach(k=>{const[a,b]=k.split('-'),p=P(AP[a][0],AP[a][1]),q=P(AP[b][0],AP[b][1]),dx=q[0]-p[0],dy=q[1]-p[1],d=Math.hypot(dx,dy)||1,cx=(p[0]+q[0])/2-dy*0.22,cy=(p[1]+q[1])/2+dx*0.22-d*0.12;
+  g.strokeStyle='rgba(232,115,26,.85)';g.lineWidth=1.6+Math.min(segs[k],8)*.5;g.beginPath();g.moveTo(p[0],p[1]);g.quadraticCurveTo(cx,cy,q[0],q[1]);g.stroke()});
+ codes.forEach(c=>{const p=P(AP[c][0],AP[c][1]);g.beginPath();g.arc(p[0],p[1],7,0,7);g.fillStyle='#e03b3b';g.fill();g.lineWidth=2.5;g.strokeStyle='#a31f1f';g.stroke()});
+ g.restore();
+ const gr=g.createLinearGradient(0,MH-90,0,MH);gr.addColorStop(0,'rgba(244,243,234,0)');gr.addColorStop(1,'#f4f3ea');g.fillStyle=gr;g.fillRect(0,MH-90,W,90);
+ g.fillStyle='#6a5acd';g.font='600 26px system-ui,sans-serif';g.textAlign='left';
+ g.fillText('✈ ✈ ✈  '+(home||'—')+'  ✈ ✈ ✈',30,48);
+ // flags
+ const FL=ccs.slice(0,16);g.font='44px system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif';FL.forEach((c,i)=>{g.fillText(flagOf(c)||c,34+i*62,MH+20)});
+ if(ccs.length>16){g.fillStyle='#444';g.beginPath();g.arc(W-70,MH+8,26,0,7);g.fill();g.fillStyle='#fff';g.font='600 22px system-ui,sans-serif';g.textAlign='center';g.fillText('+'+(ccs.length-16),W-70,MH+16);g.textAlign='left'}
+ g.strokeStyle='#d7d5c6';g.setLineDash([8,6]);g.beginPath();g.moveTo(0,MH+60);g.lineTo(W,MH+60);g.stroke();g.setLineDash([]);
+ // text
+ const navy='#1d2a78',muted='#5a63a8';
+ g.fillStyle=navy;g.font='700 52px system-ui,sans-serif';g.fillText('MI PASAPORTE DE VUELO',44,MH+140);
+ g.fillStyle='#555';g.font='600 26px system-ui,sans-serif';g.fillText('PASAPORTE • PASSPORT • PASS',44,MH+185);
+ g.fillStyle='#1c1c1c';g.font='700 150px system-ui,sans-serif';g.fillText(real.length.toLocaleString('es-CL'),44,MH+360);
+ g.fillStyle=muted;g.font='300 78px system-ui,sans-serif';g.fillText(real.length===1?'vuelo':'vuelos',48,MH+440);
+ const kv=[['Piloto',nm],['Lugar de emisión',home||'—'],['Fecha de emisión',dm(todayIso())],['Piloto desde',first?dm(first):'—']];
+ kv.forEach((x,i)=>{const y=MH+280+i*58;g.fillStyle=muted;g.font='500 30px system-ui,sans-serif';g.fillText(x[0],470,y);const w=g.measureText(x[0]+' ').width;g.fillStyle='#666';g.fillText(String(x[1]).slice(0,22),470+w,y)});
+ const st=[['Distancia',fmt(km,0)+' km'],['Tiempo de vuelo',fmt(hrs,1)+' h'],['Aeródromos',String(codes.length)],['Aeronaves',String(acs)]];
+ const xs=[44,330,640,860];st.forEach((x,i)=>{g.fillStyle=muted;g.font='500 30px system-ui,sans-serif';g.fillText(x[0],xs[i],MH+560);g.fillStyle='#1c1c1c';g.font='700 46px system-ui,sans-serif';g.fillText(x[1],xs[i],MH+615)});
+ g.fillStyle='#333';g.font='500 32px ui-monospace,Menlo,Consolas,monospace';
+ g.fillText(('TOTAL<<'+mrz(nm)+'<<PILOTO'+mrz(dm(first)||'')+'<<<<<<<<<<<<<<<<<<<<<').slice(0,46),44,MH+700);
+ g.fillText(('EMITIDO'+mrz(dm(todayIso()))+(home||'')+'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<').slice(0,46),44,MH+745);
+ $('ppH').textContent=codes.length?`${codes.length} aeródromos en ${ccs.length} ${ccs.length===1?'país':'países'}. La distancia suma solo tramos con códigos ICAO en la ruta.`:'Aún no hay códigos ICAO en las rutas de tus vuelos; agrégalos (ej. SCTB SCVH) para ver el mapa.';
+}
+$('ppDl').onclick=()=>{$('ppCv').toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='pasaporte-de-vuelo.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)})};
+$('ppSh').onclick=()=>{$('ppCv').toBlob(async b=>{const f=new File([b],'pasaporte-de-vuelo.png',{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],title:'Mi pasaporte de vuelo'});else note('ppMsg','Tu navegador no permite compartir; usa Descargar imagen.','err')}catch(e){}})};
 
 /* ---------- Foto de perfil ---------- */
 let avatar=null;
