@@ -1743,7 +1743,7 @@ async function renderPasaporte(){
  const segs={},V={};let km=0;
  real.forEach(r=>{const c=String(r.rt||'').toUpperCase().split(/[^A-Z0-9]+/).filter(x=>/^[A-Z]{4}$/.test(x)&&AP[x]);c.forEach(x=>V[x]=(V[x]||0)+1);
   for(let i=1;i<c.length;i++){if(c[i]===c[i-1])continue;km+=hav(AP[c[i-1]],AP[c[i]]);const k=[c[i-1],c[i]].sort().join('-');segs[k]=(segs[k]||0)+1}});
- const codes=Object.keys(V),hrs=sum(real,'tot'),first=real.reduce((m,r)=>!m||r.d<m?r.d:m,''),acs=new Set(real.map(r=>familyOf?familyOf(r.m):r.m)).size;
+ const codes=Object.keys(V),hrs=sum(ALL,'tot'),first=real.reduce((m,r)=>!m||r.d<m?r.d:m,''),acs=new Set(real.map(r=>familyOf?familyOf(r.m):r.m)).size;
  const home=codes.sort((a,b)=>V[b]-V[a])[0]||'',ccs=[...new Set(codes.map(c=>AP[c][4]).filter(Boolean))];
  const nm=(viewing?(viewing.name||viewing.email):(user&&((user.user_metadata&&user.user_metadata.nombre)||String(user.email||'').split('@')[0])))||'PILOTO';
  const W=1080,H=1480,MH=700,cv=$('ppCv');cv.width=W;cv.height=H;const g=cv.getContext('2d');
@@ -1785,7 +1785,7 @@ async function renderPasaporte(){
  g.fillStyle='#333';g.font='500 32px ui-monospace,Menlo,Consolas,monospace';
  g.fillText(('TOTAL<<'+mrz(nm)+'<<PILOTO'+mrz(dm(first)||'')+'<<<<<<<<<<<<<<<<<<<<<').slice(0,46),44,MH+700);
  g.fillText(('EMITIDO'+mrz(dm(todayIso()))+(home||'')+'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<').slice(0,46),44,MH+745);
- $('ppH').textContent=codes.length?`${codes.length} aeródromos en ${ccs.length} ${ccs.length===1?'país':'países'}. La distancia suma solo tramos con códigos ICAO en la ruta.`:'Aún no hay códigos ICAO en las rutas de tus vuelos; agrégalos (ej. SCTB SCVH) para ver el mapa.';
+ $('ppH').textContent=codes.length?`${codes.length} aeródromos en ${ccs.length} ${ccs.length===1?'país':'países'}. Las horas son las totales de tu bitácora (incluyen experiencia previa y simulador); la distancia suma solo tramos con códigos ICAO en la ruta.`:'Aún no hay códigos ICAO en las rutas de tus vuelos; agrégalos (ej. SCTB SCVH) para ver el mapa.';
 }
 $('ppDl').onclick=()=>{$('ppCv').toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='pasaporte-de-vuelo.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)})};
 $('ppSh').onclick=()=>{$('ppCv').toBlob(async b=>{const f=new File([b],'pasaporte-de-vuelo.png',{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],title:'Mi pasaporte de vuelo'});else note('ppMsg','Tu navegador no permite compartir; usa Descargar imagen.','err')}catch(e){}})};
