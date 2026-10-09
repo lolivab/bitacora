@@ -277,6 +277,14 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     </div></details>
    <p><button class="btn" id="brGo" type="button">Generar briefing</button></p><div id="brMsg"></div>
   </div>
+  <div class="card" style="max-width:760px;margin-top:14px">
+   <h2>Mapa del tiempo · Santiago</h2>
+   <p class="hint">Radar, satélite, viento y presión sobre la zona central (por Windy.com). Es una vista de apoyo: confirma con DMC y las fuentes oficiales.</p>
+   <div class="field"><label for="wnOv">Capa</label><select id="wnOv"><option value="radar">Radar de lluvia</option><option value="satellite">Satélite (nubes)</option><option value="wind">Viento</option><option value="clouds">Nubosidad</option><option value="pressure">Presión (vista sinóptica)</option><option value="gust">Ráfagas</option><option value="temp">Temperatura</option></select></div>
+   <div class="field"><label for="wnZ">Alcance</label><select id="wnZ"><option value="5">Chile central y mar (sinóptica)</option><option value="8" selected>Región Metropolitana</option><option value="10">Santiago (detalle)</option></select></div>
+   <iframe id="wnFrame" title="Mapa del tiempo" loading="lazy" style="display:none;width:100%;height:380px;border:1px solid var(--line);border-radius:8px"></iframe>
+   <p><a id="wnLink" href="https://www.windy.com/-33.450/-70.660?radar,-33.450,-70.660,8" target="_blank" rel="noopener">Abrir en Windy ↗</a> · <a href="https://www.meteochile.gob.cl/PortalDMC-web/index.xhtml" target="_blank" rel="noopener">Meteochile (DMC) ↗</a></p>
+  </div>
   <div id="brOut"></div>
   </section>
 
@@ -827,7 +835,9 @@ const BR_MIN0={mw:20,mg:25,mx:12,mv:8,mc:2500};
 function brCustom(){try{return JSON.parse(localStorage.getItem('brf_ad')||'[]')}catch(e){return[]}}
 function brAll(){return BR_AD.concat(brCustom())}
 function brMins(){try{return Object.assign({},BR_MIN0,JSON.parse(localStorage.getItem('brf_min')||'{}'))}catch(e){return Object.assign({},BR_MIN0)}}
-function brFill(){
+function wnPaint(){const o=$('wnOv').value,z=$('wnZ').value,f=$('wnFrame');const u=`https://embed.windy.com/embed2.html?lat=-33.45&lon=-70.66&detailLat=-33.45&detailLon=-70.66&zoom=${z}&level=surface&overlay=${o}&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1`;if(f.dataset.u!==u){f.dataset.u=u;f.src=u}f.style.display='block';$('wnLink').href=`https://www.windy.com/-33.450/-70.660?${o},-33.450,-70.660,${z}`}
+$('wnOv').onchange=$('wnZ').onchange=wnPaint;
+function brFill(){wnPaint();
  const o=$('brO').value||'SCTB',d=$('brD').value||'SCSN';
  const opts=brAll().map(a=>`<option value="${esc(a.c)}">${esc(a.c)} - ${esc(a.n)}</option>`).join('');
  $('brO').innerHTML=opts;$('brD').innerHTML=opts;
