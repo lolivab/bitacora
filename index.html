@@ -90,7 +90,7 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 .map select{padding:7px 8px;font-size:13px}
 @media(max-width:820px){.hitos{grid-row:auto}.hero{grid-template-columns:minmax(0,1fr)}.c8,.c4,.c6{grid-column:span 12}.map{grid-template-columns:repeat(2,1fr)}}
 #roBar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--pax);color:#1b1b1b;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-weight:600}#roBar.hidden{display:none}
-body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #nav [data-v=importar],body.ro #nav [data-v=cuenta]{display:none!important}
+body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #subnav [data-v=importar],body.ro #nav [data-v=cuenta]{display:none!important}
 #burger{display:none}
 .dti{max-width:150px}
 input,select,textarea{box-sizing:border-box;max-width:100%;min-width:0}
@@ -137,10 +137,10 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  <div id="roBar" class="hidden"><span id="roTxt"></span><button class="btn small" id="roExit" type="button">Volver a mi cuenta</button></div>
  <button type="button" id="burger" aria-label="Menú"><span id="burgerT">Resumen</span><span class="ic">☰</span></button>
  <div class="nav" id="nav" style="margin-bottom:16px">
-  <button data-v="resumen" class="on">Resumen</button><button data-v="vuelos" data-g="1">Bitácora</button><button data-v="metricas">Métricas</button><button data-v="mapa">Mapa</button><button data-v="importar">Importar</button><button data-v="briefing" data-g="h">Herramientas</button><button data-v="cuenta">Mi cuenta</button><button data-v="admin" id="navAdmin" class="hidden">Administrador</button>
+  <button data-v="resumen" class="on">Resumen</button><button data-v="vuelos" data-g="1">Bitácora</button><button data-v="metricas">Métricas</button><button data-v="mapa">Mapa</button><button data-v="briefing" data-g="h">Herramientas</button><button data-v="cuenta">Mi cuenta</button><button data-v="admin" id="navAdmin" class="hidden">Administrador</button>
  </div>
  <div id="subnav2" class="hidden"><button data-v="briefing">Briefing meteorológico</button><button data-v="liveatc">LiveATC</button></div>
- <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Chequeo de habilitaciones</button><button data-v="exportar">Exportar PDF</button></div>
+ <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Chequeo de habilitaciones</button><button data-v="importar">Importar</button><button data-v="exportar">Exportar</button></div>
 
  <section id="s-resumen">
   <div class="filters"><div class="seg" id="fy"></div><select id="fa" aria-label="Aeronave"></select><label class="tog" for="grp"><input id="grp" type="checkbox" checked>Agrupar variantes</label></div>
@@ -947,7 +947,7 @@ $('brAsave').onclick=()=>{
 /* ---------- Navegación ---------- */
 function go(v){
  ['resumen','vuelos','metricas','chequeo','exportar','briefing','liveatc','mapa','nuevo','importar','cuenta','admin'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
- {const G=['vuelos','nuevo','chequeo','exportar'].includes(v),Hh=v==='briefing'||v==='liveatc';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g==='1'?G:b.dataset.g==='h'?Hh:b.dataset.v===v));document.querySelectorAll('#subnav button,#subnav2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G);$('subnav2').classList.toggle('hidden',!Hh)}
+ {const G=['vuelos','nuevo','chequeo','exportar','importar'].includes(v),Hh=v==='briefing'||v==='liveatc';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g==='1'?G:b.dataset.g==='h'?Hh:b.dataset.v===v));document.querySelectorAll('#subnav button,#subnav2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G);$('subnav2').classList.toggle('hidden',!Hh)}
  {const nb=document.querySelector('#nav button.on');if(nb)$('burgerT').textContent=nb.textContent;$('nav').classList.remove('open')}
  if(v==='resumen')renderDash();
  if(v==='vuelos')table();
