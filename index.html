@@ -1459,6 +1459,9 @@ function renderMetrics(){
  const k=[[R.length,'vuelos'],[fmt(sum(AL,'tot'))+' h','horas totales (incluye experiencia previa y simulador)'],[cap.length,'capitanes distintos'],[cop.length,'copilotos distintos'],[pt.toLocaleString('es-CL'),'pasajeros transportados']];
  if(nCrew)k.splice(2,0,[nCrew,'vuelos con tripulación registrada']);
  if(alu.length)k.push([alu.length,'alumnos']);
+ {const rl=ALL.filter(r=>!r.pv&&r.k!=='Simulador'&&r.tot>0),ga=rl.filter(r=>!isComm(r)),co=rl.filter(isComm);
+  if(ga.length)k.push([fmt(sum(ga,'tot')/ga.length,2)+' h','largo promedio de vuelo · Aviación General ('+ga.length+' vuelos)']);
+  if(co.length)k.push([fmt(sum(co,'tot')/co.length,2)+' h','largo promedio de vuelo · Aviación Comercial ('+co.length+' vuelos)'])}
  $('mxK').innerHTML=k.map(x=>`<div class="kpi" style="border-left-color:var(--line)"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
  // horas por año y rol
  const ys=[...new Set(AL.map(r=>r.y))].sort(),kinds=[...KORDER,'Previo'].filter(t=>AL.some(r=>r.k===t));
