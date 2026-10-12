@@ -937,14 +937,14 @@ $('grp').onchange=e=>{st.grp=e.target.checked;try{localStorage.setItem('grp',st.
 /* ---------- Datos ---------- */
 function view(x){return Object.assign({},x,{d:x.fecha,m:x.modelo,t:x.matricula||'',rt:x.ruta||'',tot:+x.total,l:(x.aterrizajes||0)+(x.aterr_noche||0),pic:+x.pic||0,sic:+x.sic||0,di:+x.dual||0,so:+x.solo||0,ins:+x.inst_h||0,xc:+x.travesia||0,ni:+x.nocturno||0,ifr:+x.ifr||0,ap:x.aproximaciones||0,c:x.comentarios||'',instr:x.instructor||'',pn:x.pasajeros||'',k:x.tipo,pv:!!x.previo,y:x.fecha.slice(0,4),mo:x.fecha.slice(0,7)})}
 let viewing=null;
+let DV=0;
 async function loadAll(uid){
- let out=[],from=0;
- for(;;){
-  const{data,error}=await sb.from('vuelos').select('*').eq('user_id',uid||user.id).order('fecha',{ascending:false}).range(from,from+999);
-  if(error)throw error;
-  out=out.concat(data);if(data.length<1000)break;from+=1000;
- }
- ALL=out.map(view);buildFamilies();
+ const PG=1000,q=(f,t)=>sb.from('vuelos').select('*',f===0?{count:'exact'}:undefined).eq('user_id',uid||user.id).order('fecha',{ascending:false}).order('id',{ascending:true}).range(f,t);
+ const first=await q(0,PG-1);if(first.error)throw first.error;
+ let out=first.data||[];const total=first.count==null?out.length:first.count;
+ if(out.length>=PG&&total>PG){const jobs=[];for(let f=PG;f<total;f+=PG)jobs.push(q(f,f+PG-1));
+  const rs=await Promise.all(jobs);for(const r of rs){if(r.error)throw r.error;out=out.concat(r.data||[])}}
+ ALL=out.map(view);DV++;buildFamilies();
  const kinds=KORDER.filter(k=>ALL.some(r=>r.k===k));
  $('fc').innerHTML=['',...kinds].map(k=>`<option value="${esc(k)}">${k||'Todos los tipos'}</option>`).join('');
 }
@@ -957,7 +957,10 @@ function barList(el,items,unit){
  const mx=Math.max(...items.map(i=>i[1]),1e-9);
  $(el).innerHTML=items.map(([a,v,extra])=>`<div class="row"><span>${esc(a)}</span><div class="track"><div class="fill" style="width:${v/mx*100}%;${extra||''}"></div></div><span class="n">${unit(v)}</span></div>`).join('');
 }
-function renderDash(){
+const darkNow=()=>document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'d':'l');
+let lastDash='',lastMx='';
+function renderDash(force){const sg=[DV,st.y,st.a,st.grp,darkNow(),viewing&&viewing.id].join('|');if(!force&&sg===lastDash)return;lastDash=sg;renderDash0()}
+function renderDash0(){
  const empty=ALL.length===0;$('dashEmpty').classList.toggle('hidden',!empty);$('dash').classList.toggle('hidden',empty);
  ['fy','fa'].forEach(i=>$(i).classList.toggle('hidden',empty));
  if(empty)return;
@@ -1305,7 +1308,8 @@ function peopleBars(el,list,color,top){
 const AIRLINER=/^(A\d{3}[A-Z]?|A\d{2}N|B7\d[0-9A-Z]|B3[0-9A-Z]{2}|E\d{3}|CRJ\w*|AT\d\w*|DH8\w|MD\w+)$/i;
 function isComm(r){const m=String(r.modelo||'').trim();if(AIRLINER.test(m))return true;return(!m||/^sin modelo$/i.test(m))&&/^[A-Z]{3}\d{1,4}\b/.test(String(r.comentarios||''))}
 $('mxGA').onchange=$('mxCO').onchange=()=>renderMetrics();
-function renderMetrics(){
+function renderMetrics(force){const sg=[DV,$('mxGA').checked,$('mxCO').checked,darkNow(),viewing&&viewing.id].join('|');if(!force&&sg===lastMx)return;lastMx=sg;renderMetrics0()}
+function renderMetrics0(){
  const AL=ALL.filter(r=>isComm(r)?$('mxCO').checked:$('mxGA').checked);
  const R=AL.filter(r=>!r.pv&&r.k!=='Simulador');
  $('mxF').classList.toggle('hidden',!ALL.length);
