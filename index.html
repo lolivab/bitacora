@@ -9,6 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Bitácora">
 <title>Bitácora de vuelo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net"><link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#e8eff3;--panel:#f7fafb;--ink:#0d2a3a;--mute:#5b7384;--line:#cbd9e1;--dual:#2a6fb0;--solo:#c2306e;--pax:#e0a02c;--ok:#1d8a6b;--prp:#7a5cc2;--gry:#8a9aa6;--bad:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -351,14 +352,13 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <p class="muted" style="margin-bottom:6px">Sube un archivo y la app detecta el formato. Formatos que puedes subir:</p>
   <ol class="muted" style="margin:0 0 14px;padding-left:22px;line-height:1.6">
    <li>Excel (.xlsx) exportado desde el sitio del Club Aéreo de Santiago</li>
-   <li>PDF "DGAC Chile" exportado desde LogTen Pro</li>
    <li>CSV o TXT exportado desde LogTen Pro (tabulado o con comas)</li>
    <li>Reporte tabulado "Export Flights (Tab)" de LogTen Pro (el más completo: tripulación, jefe de cabina, pasajeros)</li>
    <li>Reporte de calendario (.ics) exportado desde LogTen Pro (incluye Capitán y Copiloto)</li>
    <li>CSV exportado desde MyFlightbook</li>
    <li>Cualquier otro CSV que tenga fecha, aeronave y tiempo</li>
   </ol>
-  <input type="file" id="csv" accept=".xlsx,.csv,.tsv,.txt,.pdf,.ics,text/calendar,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+  <input type="file" id="csv" accept=".xlsx,.csv,.tsv,.txt,.ics,text/calendar,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
   <div id="iMap" class="hidden"></div>
   <div class="chk" style="margin:10px 0"><input id="iUpd" type="checkbox"><label for="iUpd">Actualizar los vuelos que ya existen (márcalo para corregir lo ya importado)</label></div>
   <div id="iMsg"></div>
@@ -371,101 +371,6 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
 <script src="config.js?v=6"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
-/* ===== Lector del PDF "DGAC Chile" exportado desde LogTen Pro ===== */
-const DG_T=/^\d+:\d\d$/;
-const dgH=s=>{const p=s.split(':');return +p[0]+ +p[1]/60};
-function dgWords(vp,tc){
- const out=[];
- for(const it of tc.items){
-  const s=it.str;if(!s||!s.trim())continue;
-  const x=it.transform[4],y=it.transform[5],w=it.width||0,sz=Math.abs(it.transform[3])||8;
-  const top=vp.height-y-sz*0.8,n=s.length||1;
-  for(const m of s.matchAll(/\S+/g))out.push({text:m[0].normalize('NFC'),x0:x+w*m.index/n,x1:x+w*(m.index+m[0].length)/n,top});
- }
- return out;
-}
-const dgCtr=w=>(w.x0+w.x1)/2;
-function dgFind(band,text,n=0){const c=band.filter(w=>w.text===text).sort((a,b)=>a.x0-b.x0);return c[n]||null}
-async function dgacExtract(doc,onProg){
- let year=null;const A={},B={};
- for(let n=2;n<=doc.numPages;n++){
-  if(onProg&&n%10===0)await onProg(n,doc.numPages);
-  const page=await doc.getPage(n),vp=page.getViewport({scale:1}),tc=await page.getTextContent();
-  const ws=dgWords(vp,tc),band=ws.filter(w=>w.top>78&&w.top<132);
-  if(n%2===0){ // pagina A
-   const y=band.filter(w=>/^\d{4}$/.test(w.text)&&w.x0<130);if(y.length)year=+y[0].text;
-   const marca=dgFind(band,'MARCA'),mat=dgFind(band,'MATRICULA'),des=dgFind(band,'DESDE'),has=dgFind(band,'HASTA'),vue=dgFind(band,'VUELO');
-   if(!marca||!mat||!des||!has||!vue)throw new Error('Formato DGAC no reconocido en la página '+n);
-   const D=band.filter(w=>w.text==='D'&&w.x0>650),Nn=band.filter(w=>w.text==='N'&&w.x0>650);
-   const thr=D.length&&Nn.length?((D[0].x0+Nn[0].x0)/2+3):686;
-   const data=ws.filter(w=>w.top>133&&w.top<372);
-   const dates=data.filter(w=>/^\d\d-\d\d$/.test(w.text)&&w.x0<60).sort((a,b)=>a.top-b.top);
-   const list=[];
-   for(const dw of dates){
-    const r=data.filter(w=>Math.abs(w.top-dw.top)<6).sort((a,b)=>a.x0-b.x0);
-    const j=(a,b)=>r.filter(w=>w.x0>=a&&w.x0<b).map(w=>w.text).join(' ');
-    const times=r.filter(w=>DG_T.test(w.text)&&w.x0>=vue.x0-14);
-    const ints=r.filter(w=>/^\d+$/.test(w.text)&&w.x0>=650);
-    const [dd,mm]=dw.text.split('-');
-    list.push({pg:n,y:year,d:dd,mo:mm,m:j(marca.x0-12,mat.x0-12),t:j(mat.x0-12,des.x0-8),fr:j(des.x0-8,has.x0-8),to:j(has.x0-8,vue.x0-12),
-     tot:times.length?dgH(times[0].text):0,ld:ints.filter(w=>dgCtr(w)<thr).reduce((s,w)=>s+ +w.text,0),ln:ints.filter(w=>dgCtr(w)>=thr).reduce((s,w)=>s+ +w.text,0)});
-   }
-   A[n]=list;
-  }else{ // pagina B
-   const c={};
-   const cc=(k,t)=>{const w=dgFind(band,t);if(w)c[k]=dgCtr(w)};
-   cc('dia','DÍA');cc('noche','NOCHE');cc('ifr_sim','SIMULADO');cc('trav','TRAVESÍA');cc('solo','SOLO');cc('pic','(PIC)');cc('sic','(SIC)');cc('inst_rec','RECIBIDA');cc('inst','INSTRUCTOR');cc('sim','ENTRENADOR');cc('app','NO.');
-   const a=dgFind(band,'IFR',0),r_=dgFind(band,'REAL');
-   if(a&&r_)c.ifr_real=(a.x0+r_.x1)/2;
-   const cert=dgFind(ws,'Certifíco'),endy=cert?cert.top-3:372;
-   const data=ws.filter(w=>w.top>133&&w.top<endy),obsx=(c.inst||580)+24;
-   const tcols=['dia','noche','ifr_real','ifr_sim','sim','trav','solo','pic','sic','inst_rec','inst'].filter(k=>k in c);
-   const cells=[],obs=[];
-   for(const w of data){
-    if(w.x0>=obsx){obs.push(w);continue}
-    if(DG_T.test(w.text)){const k=tcols.reduce((b,k)=>Math.abs(dgCtr(w)-c[k])<Math.abs(dgCtr(w)-c[b])?k:b,tcols[0]);cells.push([w.top,k,dgH(w.text)])}
-    else if(/^\d+$/.test(w.text)&&'app' in c&&Math.abs(dgCtr(w)-c.app)<14)cells.push([w.top,'app',+w.text]);
-   }
-   cells.sort((p,q)=>p[0]-q[0]);
-   const cl=[];
-   for(const [t,k,v] of cells){if(cl.length&&t-cl[cl.length-1].top<7)cl[cl.length-1].v[k]=(cl[cl.length-1].v[k]||0)+v;else cl.push({top:t,v:{[k]:v},obs:[]})}
-   for(const w of obs){if(cl.length){let b=cl[0];for(const r of cl)if(Math.abs(r.top-w.top)<Math.abs(b.top-w.top))b=r;b.obs.push(w)}}
-   cl.forEach(r=>{r.obs=r.obs.sort((p,q)=>Math.round(p.top/3)-Math.round(q.top/3)||p.x0-q.x0).map(w=>w.text).join(' ')});
-   B[n]=cl;
-  }
- }
- const out=[];let mis=0;
- for(const pg of Object.keys(A).map(Number)){
-  const a=A[pg],b=B[pg+1]||[];if(a.length!==b.length)mis++;
-  // cruce diciembre a enero dentro de una pagina: las filas previas son del año anterior
-  for(let i=1;i<a.length;i++)if(+a[i].mo<+a[i-1].mo-6)for(let j=0;j<i;j++)a[j].y-=1;
-  a.forEach((x,i)=>{if(b[i])out.push(Object.assign({},x,b[i].v,{obs:b[i].obs}))});
- }
- return {rows:out,mismatch:mis};
-}
-/* filas crudas -> filas de la base de datos */
-function dgacToDb(raw){
- const rows=[];let dropped=0;const seen={};
- for(const x of raw){
-  const prev=x.pg===2;
-  const fecha=prev?'2012-12-31':`${x.y}-${x.mo}-${x.d}`;
-  if(!(x.tot>0)){dropped++;continue}
-  const sim=/^CH-/.test(x.t),pic=x.pic||0,sic=x.sic||0,ins=x.inst||0,dual=x.inst_rec||0,solo=x.solo||0;
-  let tipo;
-  if(prev)tipo='Previo';else if(sim)tipo='Simulador';else if(ins>0)tipo='Como instructor';else if(dual>0)tipo='Instrucción recibida';else if(solo>0)tipo='Solo';else if(sic>0&&sic>=pic)tipo='Copiloto';else tipo='Al mando';
-  const ruta=[x.fr,x.to].filter(Boolean).join(' ');
-  const key=['dgac',fecha,x.m,x.t,x.fr,x.to,Math.round(x.tot*60)].join(':');
-  seen[key]=(seen[key]||0)+1;
-  rows.push({origen_id:key+':'+seen[key],fecha,modelo:x.m||'Sin modelo',matricula:x.t||null,tipo,total:x.tot,aterrizajes:x.ld||0,aterr_noche:x.ln||0,travesia:x.trav||0,ruta:ruta||null,comentarios:x.obs||null,instructor:null,pasajeros:null,
-   pic,sic,dual,solo,inst_h:ins,nocturno:x.noche||0,ifr:(x.ifr_real||0)+(x.ifr_sim||0),aproximaciones:x.app||0,previo:prev});
- }
- return {rows,dropped};
-}
-
-</script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1248,12 +1153,6 @@ $('fSave').onclick=async()=>{
 const num=x=>{const n=parseFloat(String(x||'').replace(',','.'));return isNaN(n)?0:n};
 const nh=h=>String(h||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
 function readBuf(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error('No pude leer el archivo'));r.readAsArrayBuffer(file)})}
-async function loadPdfjs(){
- if(window.pdfjsLib)return;
- await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';s.onload=res;s.onerror=()=>rej(new Error('No pude cargar el lector de PDF (revisa tu conexión)'));document.head.appendChild(s)});
- const code=await(await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js')).text();
- pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([code],{type:'text/javascript'}));
-}
 function setImport(rows,msg){importRows=rows&&rows.length?rows.map(r=>Object.assign({user_id:user.id},r)):null;$('iGo').classList.toggle('hidden',!importRows);note('iMsg',msg,importRows?'ok':'err')}
 function dateParser(vals){
  let dmy=null;
@@ -1419,7 +1318,7 @@ function renderMetrics(){
  sec('mxCap','mxCapH',cap,'var(--pax)',l=>`${l.length} capitanes distintos · con quién más has volado como copiloto`,'Aparece al importar un reporte que incluya Capitán y Copiloto (por ejemplo el .ics de LogTen).');
  sec('mxCop','mxCopH',cop,'var(--ok)',l=>`${l.length} copilotos distintos · con quién más has volado como capitán`,'Aparece al importar un reporte que incluya Capitán y Copiloto (por ejemplo el .ics de LogTen).');
  sec('mxJef','mxJefH',jef,'var(--prp)',l=>`${l.length} jefes de cabina distintos`,'Ningún vuelo tiene jefe de cabina registrado. El reporte .ics de LogTen no incluye ese dato.');
- [['mxCap',cap],['mxCop',cop],['mxJef',jef]].forEach(([id,l])=>{const c=$(id).closest('.card');if(c)c.classList.toggle('hidden',!l.length)});
+ [['mxCap',cap],['mxCop',cop],['mxJef',jef],['mxAlu',peopleStats(R,'alumno')]].forEach(([id,l])=>{const c=$(id).closest('.card');if(c)c.classList.toggle('hidden',!l.length)});
  // alumnos
  const alu=peopleStats(R,'alumno');
  sec('mxAlu','mxAluH',alu,'var(--dual)',l=>`${l.length} alumnos distintos · instrucción dada (top 20)`,'Sin datos todavía. Aparece al importar el reporte tabulado de LogTen (columna Student).',20);
@@ -1560,6 +1459,7 @@ $('csv').onchange=async e=>{
  try{
   if(/\.xlsx?$/i.test(f.name)){
    await loadXlsxLib();
+   await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',()=>window.XLSX);
    const wb=XLSX.read(await readBuf(f),{type:'array',cellDates:true});
    let grid=null;
    for(const n of wb.SheetNames){const g=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});if(casIsFile(g)){grid=g;break}}
@@ -1573,17 +1473,7 @@ $('csv').onchange=async e=>{
     +(rows.length?`\nSe cargarán ${rows.length} vuelos nuevos, ${fmt(sum(rows,'total'))} horas.\nPresiona Importar para guardarlos.`:'\nNo hay vuelos nuevos para importar.');
    return setImport(rows.length?rows:null,msg),rows.length?0:note('iMsg',msg,'ok');
   }
-  if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){
-   note('iMsg','Leyendo el PDF…');
-   await loadPdfjs();
-   const doc=await pdfjsLib.getDocument({data:new Uint8Array(await readBuf(f))}).promise;
-   const{rows,mismatch}=await dgacExtract(doc,async(n,t)=>{note('iMsg',`Leyendo el PDF… página ${n} de ${t}`);await new Promise(r=>setTimeout(r))});
-   if(!rows.length)throw new Error('No encontré vuelos en el PDF.');
-   const out=dgacToDb(rows);
-   const nprev=out.rows.filter(r=>r.previo).length;
-   setImport(out.rows,`Formato DGAC Chile (LogTen Pro): ${out.rows.length-nprev} vuelos${nprev?` y ${nprev} filas de experiencia previa`:''}, ${fmt(sum(out.rows,'total'))} horas.${out.dropped?`\nOmití ${out.dropped} sesiones sin tiempo total.`:''}${mismatch?`\nAviso: ${mismatch} página(s) con filas que no cuadran; revisa los totales después de importar.`:''}\nPresiona Importar para guardarlos.`);
-   return;
-  }
+  if(/\.pdf$/i.test(f.name)||f.type==='application/pdf')return setImport(null,'Los PDF no se pueden importar. Usa el Excel del Club, el reporte de LogTen Pro (tabulado o .ics) o el CSV de MyFlightbook.');
   const text=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsText(f)});
   if(/^\s*BEGIN:VCALENDAR/.test(text)){
    const o=icsRows(text);
@@ -1591,6 +1481,7 @@ $('csv').onchange=async e=>{
    const np=o.rows.filter(r=>r.previo).length,nc=o.rows.filter(r=>r.capitan||r.copiloto).length;
    return setImport(o.rows,`Reporte .ics de LogTen Pro (bitácora de ${o.owner||'¿?'}): ${o.rows.length-np} vuelos${np?` y ${np} filas de experiencia previa`:''}, ${fmt(sum(o.rows,'total'))} horas, ${nc} con Capitán/Copiloto.${o.skipped?`\nOmití ${o.skipped} filas sin tiempo.`:''}\nEste formato no trae aeronave, matrícula ni pasajeros. Si ya importaste el PDF DGAC de LogTen, no cargues también este archivo para no duplicar horas.\nPresiona Importar para guardarlos.`);
   }
+  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js',()=>window.Papa);
   const res=Papa.parse(text.replace(/^\uFEFF/,''),{header:true,skipEmptyLines:true,transformHeader:h=>String(h).replace(/^\uFEFF/,'').trim()});
   const headers=(res.meta.fields||[]).filter(Boolean);
   if(!headers.length||!res.data.length)return setImport(null,'El archivo está vacío o no tiene encabezados.');
