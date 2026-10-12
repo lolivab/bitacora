@@ -1419,6 +1419,7 @@ function renderMetrics(){
  sec('mxCap','mxCapH',cap,'var(--pax)',l=>`${l.length} capitanes distintos · con quién más has volado como copiloto`,'Aparece al importar un reporte que incluya Capitán y Copiloto (por ejemplo el .ics de LogTen).');
  sec('mxCop','mxCopH',cop,'var(--ok)',l=>`${l.length} copilotos distintos · con quién más has volado como capitán`,'Aparece al importar un reporte que incluya Capitán y Copiloto (por ejemplo el .ics de LogTen).');
  sec('mxJef','mxJefH',jef,'var(--prp)',l=>`${l.length} jefes de cabina distintos`,'Ningún vuelo tiene jefe de cabina registrado. El reporte .ics de LogTen no incluye ese dato.');
+ [['mxCap',cap],['mxCop',cop],['mxJef',jef]].forEach(([id,l])=>{const c=$(id).closest('.card');if(c)c.classList.toggle('hidden',!l.length)});
  // alumnos
  const alu=peopleStats(R,'alumno');
  sec('mxAlu','mxAluH',alu,'var(--dual)',l=>`${l.length} alumnos distintos · instrucción dada (top 20)`,'Sin datos todavía. Aparece al importar el reporte tabulado de LogTen (columna Student).',20);
@@ -1456,7 +1457,7 @@ function renderMetrics(){
  }
  // KPIs
  const nCrew=R.filter(r=>r.capitan||r.copiloto).length;
- const k=[[R.length,'vuelos'],[fmt(sum(AL,'tot'))+' h','horas totales (incluye experiencia previa y simulador)'],[cap.length,'capitanes distintos'],[cop.length,'copilotos distintos'],[pt.toLocaleString('es-CL'),'pasajeros transportados']];
+ const k=[[R.length,'vuelos'],[fmt(sum(AL,'tot'))+' h','horas totales (incluye experiencia previa y simulador)'],...(cap.length?[[cap.length,'capitanes distintos']]:[]),...(cop.length?[[cop.length,'copilotos distintos']]:[]),[pt.toLocaleString('es-CL'),'pasajeros transportados']];
  if(nCrew)k.splice(2,0,[nCrew,'vuelos con tripulación registrada']);
  if(alu.length)k.push([alu.length,'alumnos']);
  {const rl=ALL.filter(r=>!r.pv&&r.k!=='Simulador'&&r.tot>0),ga=rl.filter(r=>!isComm(r)),co=rl.filter(isComm);
