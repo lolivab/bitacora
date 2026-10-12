@@ -127,6 +127,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  <div class="field hidden" id="fName"><label for="aName">Nombre</label><input id="aName" autocomplete="name"></div>
  <div class="field"><label for="aMail">Correo</label><input id="aMail" type="email" autocomplete="email"></div>
  <div class="field"><label for="aPass">Contraseña (mínimo 8 caracteres)</label><input id="aPass" type="password" autocomplete="current-password"></div>
+ <label class="tog" for="aKeep" style="margin:0 0 12px;display:flex;align-items:center;gap:8px"><input id="aKeep" type="checkbox" checked style="width:auto">No cerrar mi sesión</label>
  <button class="btn" id="aGo" type="button" style="width:100%">Entrar</button>
  <div id="aMsg"></div>
 </div></div>
@@ -497,12 +498,12 @@ $('aGo').onclick=async()=>{
  if(!email||password.length<8)return note('aMsg','Ingresa tu correo y una contraseña de al menos 8 caracteres.','err');
  $('aGo').disabled=true;
  try{
-  if(mode==='up'){
+  if(mode==='up'){try{localStorage.setItem('keep_session',$('aKeep').checked?'1':'0')}catch(e){}
    if(!nombre){note('aMsg','Escribe tu nombre.','err');return}
    const{data,error}=await sb.auth.signUp({email,password,options:{data:{nombre}}});
    if(error)throw error;
    if(!data.session)note('aMsg','Cuenta creada. Revisa tu correo para confirmarla y luego entra.','ok');
-  }else{const{error}=await sb.auth.signInWithPassword({email,password});if(error)throw error}
+  }else{try{localStorage.setItem('keep_session',$('aKeep').checked?'1':'0')}catch(e){}const{error}=await sb.auth.signInWithPassword({email,password});if(error)throw error}
  }catch(e){note('aMsg',traduce(e.message),'err')}
  finally{$('aGo').disabled=false}
 };
@@ -1873,7 +1874,8 @@ async function onSession(session){
 if(!configured){show('vSetup')}
 else{
  let base=cfg.url.trim();try{base=new URL(base).origin}catch(e){}
- sb=supabase.createClient(base,cfg.key.trim());
+ const keepSt={getItem:k=>{try{return localStorage.getItem(k)??sessionStorage.getItem(k)}catch(e){return null}},setItem:(k,v)=>{try{if(localStorage.getItem('keep_session')==='0'){sessionStorage.setItem(k,v);localStorage.removeItem(k)}else{localStorage.setItem(k,v);sessionStorage.removeItem(k)}}catch(e){}},removeItem:k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(e){}}};
+ sb=supabase.createClient(base,cfg.key.trim(),{auth:{storage:keepSt,persistSession:true,autoRefreshToken:true}});
  let host='';try{host=new URL(base).host}catch(e){}
  $('ver').textContent='v6 · servidor: '+(host||'URL no válida');
  sb.from('vuelos').select('id,pic,previo',{head:true,count:'exact'}).then(r=>{if(r.error)note('aMsg','Falla de conexión con la base de datos: '+hintDb(r.error.message),'err')});
