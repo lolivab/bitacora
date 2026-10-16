@@ -331,6 +331,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     </div></details>
    <p><button class="btn" id="brGo" type="button">Generar briefing</button></p><div id="brMsg"></div>
   </div>
+  <div id="brOut"></div>
   <div class="card" style="max-width:760px;margin-top:14px">
    <h2>METAR recientes</h2>
    <p class="hint">Últimos 5 METAR de SCTB, SCEL, SCPD, SCSN, SCRD y SCVM (fuente: aviationweather.gov).</p>
@@ -352,7 +353,6 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
    <iframe id="wnFrame" title="Mapa del tiempo" loading="lazy" style="display:none;width:100%;height:380px;border:1px solid var(--line);border-radius:8px"></iframe>
    <p><a id="wnLink" href="https://www.windy.com/-33.450/-70.660?radar,-33.450,-70.660,8" target="_blank" rel="noopener">Abrir en Windy ↗</a> · <a href="https://www.meteochile.gob.cl/PortalDMC-web/index.xhtml" target="_blank" rel="noopener">Meteochile (DMC) ↗</a></p>
   </div>
-  <div id="brOut"></div>
   </section>
 
   <section id="s-metricas" class="hidden">
@@ -922,7 +922,7 @@ async function brGo(){
    +`<p class="hint">Elevación del terreno en el modelo: ${esc(o.c)} ${f0(wO.elevFt)} ft, ${esc(d.c)} ${f0(wD.elevFt)} ft. Base de nubes y altitud densidad son estimaciones simples (temperatura menos punto de rocío; QNH y temperatura).</p></div>`
    +`<div class="card" style="margin-top:14px"><h2>METAR / TAF</h2><div id="brMet" class="hint">Buscando…</div></div>`
    +`<p class="hint" style="margin-top:12px"><b>Orientativo.</b> Es un pronóstico de modelo numérico (Open-Meteo), no un briefing oficial. Puede subestimar nubosidad baja costera, niebla y vientos de montaña. Antes de volar confirma METAR/TAF, SIGMET y NOTAM con las fuentes oficiales (Dirección Meteorológica de Chile, meteochile.gob.cl, y AIS de la DGAC). La decisión de volar es del piloto al mando.</p>`;
-  note('brMsg','');
+  note('brMsg','');$('brOut').scrollIntoView({behavior:'smooth',block:'start'});
   const ids=[o.c,d.c].filter(c=>/^[A-Z]{4}$/.test(c));
   brMetar(ids).then(t=>{const e=$('brMet');if(!e)return;e.innerHTML=t?'<pre style="white-space:pre-wrap;font-size:12.5px;margin:0">'+esc(t)+'</pre>':'No disponible desde el navegador en este momento (o el aeródromo no emite METAR/TAF). Consulta la Dirección Meteorológica de Chile.'});
  }catch(e){note('brMsg',e.message||String(e),'err')}
