@@ -22,7 +22,7 @@ as $$
     where r.c[i] ~ '^[A-Za-z0-9]{3,4}$' and r.c[i+1] ~ '^[A-Za-z0-9]{3,4}$'
       and upper(r.c[i]) <> upper(r.c[i+1])
     group by 1, 2
-  )
+  ),
   ult as (
     select upper(c[1]) as o, upper(c[array_length(c,1)]) as d, total, fecha
     from (
