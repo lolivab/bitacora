@@ -159,6 +159,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  <div class="field"><label for="aPass">Contraseña (mínimo 8 caracteres)</label><input id="aPass" type="password" autocomplete="current-password"></div>
  <label class="tog" for="aKeep" style="margin:0 0 12px;display:flex;align-items:center;gap:8px"><input id="aKeep" type="checkbox" checked style="width:auto">No cerrar mi sesión</label>
  <button class="btn" id="aGo" type="button" style="width:100%">Entrar</button>
+ <p id="aForgot" style="text-align:center;margin:10px 0 0"><a href="#" id="aFg">¿Olvidaste tu contraseña?</a></p>
  <div id="aMsg"></div>
 </div></div>
 
@@ -498,7 +499,8 @@ function note(el,txt,kind){$(el).innerHTML=txt?`<div class="msg ${kind||''}">${e
 
 /* ---------- Auth ---------- */
 let mode='in';
-function setMode(m){mode=m;$('tIn').classList.toggle('on',m==='in');$('tUp').classList.toggle('on',m==='up');$('fName').classList.toggle('hidden',m==='in');$('fHome').classList.toggle('hidden',m==='in');$('fClub').classList.toggle('hidden',m==='in');$('aGo').textContent=m==='in'?'Entrar':'Crear cuenta';$('aPass').autocomplete=m==='in'?'current-password':'new-password';note('aMsg','')}
+function setMode(m){mode=m;$('tIn').classList.toggle('on',m==='in');$('tUp').classList.toggle('on',m==='up');$('fName').classList.toggle('hidden',m==='in');$('fHome').classList.toggle('hidden',m==='in');$('fClub').classList.toggle('hidden',m==='in');$('aForgot').classList.toggle('hidden',m!=='in');$('aGo').textContent=m==='in'?'Entrar':'Crear cuenta';$('aPass').autocomplete=m==='in'?'current-password':'new-password';note('aMsg','')}
+$('aFg').onclick=async e=>{e.preventDefault();const email=$('aMail').value.trim();if(!email)return note('aMsg','Escribe tu correo arriba y vuelve a tocar el enlace.','err');note('aMsg','Enviando…');try{const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;note('aMsg','Si el correo está registrado, te enviamos un enlace para crear una nueva contraseña. Revisa también la carpeta de spam.','ok')}catch(err){note('aMsg',traduce(err.message),'err')}};
 $('tIn').onclick=()=>setMode('in');$('tUp').onclick=()=>setMode('up');
 $('aGo').onclick=async()=>{
  const email=$('aMail').value.trim(),password=$('aPass').value,nombre=$('aName').value.trim();
@@ -1917,7 +1919,8 @@ else{
  sb=supabase.createClient(base,cfg.key.trim(),{auth:{storage:keepSt,persistSession:true,autoRefreshToken:true}});
  let host='';try{host=new URL(base).host}catch(e){}
  sb.from('vuelos').select('id,pic,previo',{head:true,count:'exact'}).then(r=>{if(r.error)note('aMsg','Falla de conexión con la base de datos: '+hintDb(r.error.message),'err')});
- sb.auth.onAuthStateChange((ev,session)=>{if(ev==='TOKEN_REFRESHED')return;setTimeout(()=>onSession(session),0)});
+ let recov=false;
+ sb.auth.onAuthStateChange((ev,session)=>{if(ev==='TOKEN_REFRESHED')return;if(ev==='PASSWORD_RECOVERY')recov=true;setTimeout(async()=>{await onSession(session);if(recov&&session){recov=false;go('cuenta');note('cuMsg','Escribe tu nueva contraseña abajo y toca "Cambiar contraseña".','ok')}},0)});
  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(user&&!$('s-resumen').classList.contains('hidden'))renderDash()});
 }
 </script></body></html>
