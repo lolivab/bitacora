@@ -1671,7 +1671,7 @@ async function renderMap(){
 document.addEventListener('click',e=>{const tr=e.target.closest('#mpTbl tr[data-c]');if(!tr||!leafMap)return;const m=mapMarkers[tr.dataset.c];if(m){leafMap.setView(m.getLatLng(),12);m.openPopup();$('mpMap').scrollIntoView({behavior:'smooth',block:'center'})}});
 
 /* ---------- Planificador ---------- */
-const FLOTA=[['C-172S',160000,122],['C-172N',122000,110],['C-172P',122000,110],['C-182T',186000,140],['C-R182',149000,145],['DA20-C1',141000,115],['PA-38-112',76000,95],['PA-28-180',120000,120],['PA-28-181',138000,125],['PA-28-181 III',138000,125],['PA-34-200T',248000,165],['PA-18',84000,85],['RV-9A1',107000,120],['RV-9A2',118000,150],['RV-10',204000,160],['8KCAB',134000,115],['A-45',142000,125]];
+const FLOTA=[['C-172S',160000,122],['C-172N',122000,110],['C-172P',122000,110],['C-182T',186000,140],['C-R182',149000,145],['DA20-C1',141000,115],['PA-38-112',76000,95],['PA-28-180',120000,120],['PA-28-181',138000,125],['PA-28-181 III',138000,125],['PA-34-200T',248000,165],['PA-18',84000,85],['RV-9A1',107000,115],['RV-9A2',118000,140],['RV-10',204000,160],['8KCAB',134000,115],['A-45',142000,125]];
 (function(){$('pfA').innerHTML=FLOTA.map((f,i)=>`<label class="tog"><input type="checkbox" value="${i}"${i===0?' checked':''}>${esc(f[0])}</label>`).join('');
 const cbs=()=>[...document.querySelectorAll('#pfA input')];$('pfAll').onclick=e=>{e.preventDefault();cbs().forEach(c=>c.checked=true)};$('pfNone').onclick=e=>{e.preventDefault();cbs().forEach(c=>c.checked=false)};
 $('pfGo').onclick=async()=>{const o=$('pfO').value.trim().toUpperCase(),d=$('pfD').value.trim().toUpperCase(),m=$('pfMsg'),out=$('pfOut');out.innerHTML='';m.textContent='';
