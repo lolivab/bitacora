@@ -680,19 +680,25 @@ $('pdfGo').onclick=async()=>{
 };
 
 /* ---------- Chequeo de vigencia (Manual Club Aéreo de Santiago) ---------- */
-function acType(m){
- m=String(m||'').toUpperCase().replace(/\s+/g,' ');
- if(/PA-?18|DECATHLON|DECA\b|BL-?30|8KCAB/.test(m))return{g:'A',f:/PA-?18/.test(m)?'PA-18':'Super Decathlon'};
- if(/DA-?20|DIAMOND/.test(m))return{g:'B',f:'DA-20'};
- if(/RV-?9/.test(m))return{g:'B',f:'RV-9A'};
- if(/RV-?10/.test(m))return{g:'D',f:'RV-10'};
- if(/MENTOR|A-?45|T-?34/.test(m))return{g:'D',f:'Mentor A-45'};
- if(/182|C82R|C82S/.test(m))return{g:'D',f:'Cessna 182'};
- if(/SENECA|PA-?34/.test(m))return{g:'E',f:'Seneca'};
- if(/TOMAHAWK|PA-?38/.test(m))return{g:'C',f:'Piper (Grupo C)'};
- if(/PA-?28|P28[AB]|CHEROKEE|ARCHER/.test(m))return{g:'C',f:'Piper (Grupo C)'};
- if(/172|C172/.test(m))return{g:'C',f:'Cessna 172'};
+function ckCode(m){
+ // Reconoce el tipo sin importar cómo se escriba: DA20, DA-20, "DA 20", da20c1, Diamond DA20…
+ const s=String(m||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''),k=s.replace(/[^A-Z0-9]/g,'');
+ if(!k)return null;
+ if(/^P?A?18([A-Z]|$)|^PA18|SUPERCUB/.test(k)&&!/182|1[89]\d\d/.test(k))return'PA18';
+ if(/DECATHLON|^DECA|^BL8|BL30|8KCAB/.test(k))return'BL30';
+ if(/DA20|DIAMOND20|^DV20/.test(k)||(/DIAMOND/.test(k)&&!/DA(4|6)|DIAMOND(4|6)/.test(k)))return'DA20';
+ if(/TOMAHAWK|PA38|^P38/.test(k))return'TOMA';
+ if(/RV9/.test(k))return'RV9';if(/RV10/.test(k))return'RV10';
+ if(/MENTOR|^A45|^B45|T34/.test(k))return'MENTOR';
+ if(/SENECA|PA34|^P34/.test(k))return'SENECA';
+ if(/182|C82[RS]/.test(k))return(/R182|182R|C82R|SKYLANERG/.test(k))?'C182RG':'C182T';
+ if(/ARCHER/.test(k))return'ARCHER';
+ if(/CHEROKEE|PA28|^P28/.test(k))return'CHER180';
+ if(/172S|C72S/.test(k))return'C172S';
+ if(/172|C72R/.test(k))return'C172N';
  return null}
+const CK_TIPO={PA18:['A','PA-18'],BL30:['A','Super Decathlon'],DA20:['B','DA-20'],RV9:['B','RV-9A'],RV10:['D','RV-10'],MENTOR:['D','Mentor A-45'],C182T:['D','Cessna 182'],C182RG:['D','Cessna 182'],SENECA:['E','Seneca'],TOMA:['C','Piper (Grupo C)'],ARCHER:['C','Piper (Grupo C)'],CHER180:['C','Piper (Grupo C)'],C172S:['C','Cessna 172'],C172N:['C','Cessna 172']};
+function acType(m){const c=ckCode(m),t=c&&CK_TIPO[c];return t?{g:t[0],f:t[1]}:null}
 const CK_COVER={A:['A'],B:['B'],C:['C','D','E'],D:['D','E'],E:['E']};
 const dayMs=864e5;
 const dayDiff=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/dayMs);
@@ -708,16 +714,7 @@ const CK_COL={ok:'#14532d',warn:'#7a4a00',bad:'#9b1c1c'};
 const ckDot=k=>`<span class="tag" style="background:${CK_COL[k]}">${k==='ok'?'Verde':k==='warn'?'Amarillo':'Rojo'}</span>`;
 
 /* ---------- Habilitaciones disponibles (Manual 4.37 y 4.38) ---------- */
-function acKey(m){
- m=String(m||'').toUpperCase().replace(/\s+/g,' ');
- if(/PA-?18/.test(m))return'PA18';if(/DECATHLON|BL-?30|8KCAB|DECA\b/.test(m))return'BL30';
- if(/DA-?20|DIAMOND/.test(m))return'DA20';if(/TOMAHAWK|PA-?38/.test(m))return'TOMA';
- if(/RV-?9/.test(m))return'RV9';if(/RV-?10/.test(m))return'RV10';
- if(/MENTOR|A-?45|T-?34/.test(m))return'MENTOR';if(/SENECA|PA-?34/.test(m))return'SENECA';
- if(/182T|C182\b/.test(m)&&!/R182|182R|C82R/.test(m))return'C182T';if(/182|C82R/.test(m))return'C182RG';
- if(/ARCHER/.test(m))return'ARCHER';if(/PA-?28|P28A|CHEROKEE/.test(m))return'CHER180';
- if(/172\s*-?S\b|172S/.test(m))return'C172S';if(/172/.test(m))return'C172N';
- return null}
+function acKey(m){return ckCode(m)}
 const HAB_CUR=['fc','am','g1000','charla','ma','noc','ifr','mm'];
 function detectCursos(R){
  const nrm=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
