@@ -19,3 +19,7 @@ PAGOS CON MERCADO PAGO - pasos de instalación (una sola vez)
 5. Probar con usuarios y tarjetas de prueba antes de usar credenciales de producción.
 
 Mientras no se ejecute accesos.sql la bitácora funciona normal (no bloquea a nadie).
+
+CÁMARAS DE WINDY (proxy)
+   supabase functions deploy camaras
+   (usa la clave windy_key guardada en la tabla app_config; no requiere secrets nuevos)
