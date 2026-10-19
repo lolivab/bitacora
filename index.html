@@ -165,6 +165,11 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
 @media(max-width:700px){.ad-kp{grid-template-columns:repeat(2,1fr)}.ad-u{grid-template-columns:40px minmax(0,1fr);gap:8px 12px}.ad-u .ad-c{grid-column:1 / -1;display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:8px}.ad-u .ad-c small{display:inline}.ad-u .ad-go{grid-column:1 / -1}.ad-u .ad-go button{width:100%}}
 #aFg,#pfAll,#pfNone,.card a[href^="http"]{color:var(--dual)}#pyCup::placeholder{text-transform:none}
 @media(max-width:560px){#pfOut .m-h{display:none}#pfOut th,#pfOut td{padding:8px 5px;font-size:13px}#pfOut table{width:100%;min-width:0}}
+.stp{margin:16px 0 0;display:grid;gap:10px}.stp-h{text-align:center;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.stp-r{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;min-height:76px}
+.stp-i{flex:none;width:48px;height:48px;border-radius:14px;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,.15)}
+.stp-t{flex:1;min-width:0}.stp-t b{display:block;font:700 28px/1.05 "Bricolage Grotesque",system-ui;letter-spacing:-.01em;font-variant-numeric:tabular-nums}.stp-t span{font-size:13px;color:var(--mute)}
+.stp-r em{font-style:normal;font-size:12px;color:var(--mute);text-align:right;max-width:110px;line-height:1.3}
 </style></head><body>
 <div class="wrap">
 
@@ -182,9 +187,13 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  <button class="btn" id="aGo" type="button" style="width:100%">Entrar</button>
  <p id="aForgot" style="text-align:center;margin:10px 0 0"><a href="#" id="aFg">¿Olvidaste tu contraseña?</a></p>
  <div id="aMsg"></div>
-</div></div>
-
-<div id="vPay" class="auth hidden"><div class="card" style="max-width:520px">
+</div>
+<div id="stPub" class="stp hidden"><div class="stp-h">Ya registrado en Maletín de vuelo</div>
+ <div class="stp-r"><span class="stp-i" style="--c:#e0782c"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg></span><div class="stp-t"><b id="stV">—</b><span>vuelos registrados</span></div><em id="stVs"></em></div>
+ <div class="stp-r"><span class="stp-i" style="--c:#2a6fb0"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg></span><div class="stp-t"><b id="stD">—</b><span>km recorridos</span></div><em id="stDs"></em></div>
+ <div class="stp-r"><span class="stp-i" style="--c:#1d8a6b"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span><div class="stp-t"><b id="stH">—</b><span>horas de vuelo</span></div><em id="stHs"></em></div>
+</div>
+</div><div id="vPay" class="auth hidden"><div class="card" style="max-width:520px">
  <h1 id="pyT">Elige tu acceso</h1><div class="muted" id="pyS"></div>
  <div style="display:grid;gap:12px;margin:16px 0">
   <div class="card" style="margin:0"><b>Acceso anual</b><div style="font-size:26px;font-weight:700;margin:4px 0" data-pr="anual">$9.990</div><div class="hint">Pago único por 12 meses de acceso a todo. Si renuevas antes, se suman a los días que te quedan.</div><button class="btn" style="width:100%;margin-top:8px" data-plan="anual" type="button">Pagar <span data-pb="anual">$9.990</span></button></div>
@@ -2012,8 +2021,26 @@ $('roExit').onclick=async()=>{
 };
 
 /* ---------- Inicio ---------- */
+
+/* ---------- Estadísticas públicas (pantalla de entrada) ---------- */
+let stDone=false;
+function stCount(el,to,dec){if(to==null){el.textContent='—';return}const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches,fm=v=>v.toLocaleString('es-CL',{maximumFractionDigits:dec||0,minimumFractionDigits:dec||0});if(reduce||to===0){el.textContent=fm(to);return}const t0=performance.now(),D=900;const f=t=>{const k=Math.min(1,(t-t0)/D),e=1-Math.pow(1-k,3);el.textContent=fm(to*e);if(k<1)requestAnimationFrame(f)};requestAnimationFrame(f)}
+function stPaint(x){const box=$('stPub');box.classList.remove('hidden');
+ stCount($('stV'),x.v);stCount($('stH'),x.h!=null?Math.round(x.h):null);
+ $('stHs').textContent=x.h?'≈ '+(x.h/24).toLocaleString('es-CL',{maximumFractionDigits:1})+' días en el aire':'';
+ if(x.d!=null){stCount($('stD'),Math.round(x.d));const v=x.d/40075;$('stDs').textContent=v>=.1?'≈ '+v.toLocaleString('es-CL',{maximumFractionDigits:1})+' vueltas a la Tierra':''}}
+async function statsPub(){
+ if(stDone||!sb)return;stDone=true;
+ try{const c=JSON.parse(localStorage.getItem('stpub')||'null');if(c&&Date.now()-c.t<6*36e5&&c.d!=null){stPaint(c);return}}catch(e){}
+ try{
+  const r=await sb.rpc('estadisticas_publicas');if(r.error||!r.data)return;
+  const x={v:+r.data.vuelos||0,h:+r.data.horas||0,d:null};stPaint(x);
+  if(!AP){const f=await fetch('airports.json');if(f.ok)AP=await f.json()}
+  if(AP){let km=0;(r.data.tramos||[]).forEach(t=>{const A=AP[t.a],B=AP[t.b];if(A&&B)km+=t.n*hav([A[0],A[1]],[B[0],B[1]])});x.d=km;stPaint(x);x.t=Date.now();try{localStorage.setItem('stpub',JSON.stringify(x))}catch(e){}}
+ }catch(e){}
+}
 async function onSession(session){
- if(!session){user=null;ALL=[];viewing=null;document.body.classList.remove('ro');$('roBar').classList.add('hidden');show('vAuth');return}
+ if(!session){user=null;ALL=[];viewing=null;document.body.classList.remove('ro');$('roBar').classList.add('hidden');show('vAuth');statsPub();return}
  if(user&&user.id===session.user.id)return;
  user=session.user;$('uName').textContent=(user.user_metadata&&user.user_metadata.nombre)||user.email;
  try{wxFetch(homeOf()).catch(()=>{})}catch(e){}
