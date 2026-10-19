@@ -1240,19 +1240,21 @@ let editKeep=null;
 function modelsList(){const c={};ALL.filter(r=>!r.pv).forEach(r=>{c[r.modelo]=(c[r.modelo]||0)+1});return Object.keys(c).sort((a,b)=>c[b]-c[a])}
 /* ---------- Lista OACI de aeronaves (autocompletar) ---------- */
 let ACL=null,acP=null,acI=-1;
-function acLoad(){if(ACL||acP)return;acP=fetch('aeronaves.json').then(r=>r.ok?r.json():[]).then(j=>{ACL=j.map(x=>({d:x[0],n:x[1],s:(x[0]+' '+x[1]).toLowerCase().replace(/[-_.\/]/g,'')}));if(document.activeElement===$('fModeloNew'))acShow()}).catch(()=>{acP=null})}
+function acLoad(){if(ACL||acP)return;acP=fetch('aeronaves.json?v=2',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{if(!Array.isArray(j)||!j.length)throw new Error('vacío');ACL=j.map(x=>({d:x[0],n:x[1],s:(x[0]+' '+x[1]).toLowerCase().replace(/[-_.\/]/g,'')}));acP=null;acErr=false;if(document.activeElement===$('fModeloNew'))acShow()}).catch(()=>{acP=null;acErr=true;if(document.activeElement===$('fModeloNew'))acShow()})}
+let acErr=false;
 function acShow(){const el=$('fModeloNew'),box=$('acList');const q=el.value.trim().toLowerCase().replace(/[-_.\/]/g,'');
- if(!ACL||!q){box.classList.add('hidden');el.setAttribute('aria-expanded','false');return}
+ if(!q){box.classList.add('hidden');el.setAttribute('aria-expanded','false');return}
+ if(!ACL){acLoad();box.innerHTML='<div style="color:var(--mute)">'+(acErr?'No pude cargar la lista OACI. Recarga la página; igual puedes escribir el tipo a mano.':'Cargando lista OACI…')+'</div>';box.classList.remove('hidden');return}
  const w=q.split(/\s+/).filter(Boolean),u=new Set(),out=[];
  const sc=x=>x.d.toLowerCase()===q?0:x.d.toLowerCase().startsWith(q)?1:x.n.toLowerCase().replace(/[-_.\/]/g,'').startsWith(q)?2:3;
  const m=ACL.filter(x=>w.every(t=>x.s.includes(t)));m.sort((a,b)=>sc(a)-sc(b));
  for(const x of m){const k=x.d+x.n;if(u.has(k))continue;u.add(k);out.push(x);if(out.length>=40)break}
- acI=-1;box.innerHTML=out.map((x,i)=>`<div role="option" data-d="${esc(x.d)}" data-i="${i}"><b>${esc(x.d)}</b><span>${esc(x.n)}</span></div>`).join('');
- box.classList.toggle('hidden',!out.length);el.setAttribute('aria-expanded',String(!!out.length))}
+ acI=-1;box.innerHTML=out.length?out.map((x,i)=>`<div role="option" data-d="${esc(x.d)}" data-i="${i}"><b>${esc(x.d)}</b><span>${esc(x.n)}</span></div>`).join(''):'<div style="color:var(--mute)">Sin coincidencias en la lista OACI. Se usará lo que escribiste.</div>';
+ box.classList.remove('hidden');el.setAttribute('aria-expanded',String(!!out.length))}
 function acPick(d){$('fModeloNew').value=d;$('acList').classList.add('hidden');$('fModeloNew').setAttribute('aria-expanded','false')}
 $('fModeloNew').addEventListener('input',acShow);
 $('fModeloNew').addEventListener('focus',()=>{acLoad();acShow()});
-$('fModeloNew').addEventListener('keydown',e=>{const o=[...$('acList').children];if(!o.length||$('acList').classList.contains('hidden'))return;
+$('fModeloNew').addEventListener('keydown',e=>{const o=[...$('acList').querySelectorAll('[data-d]')];if(!o.length||$('acList').classList.contains('hidden'))return;
  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();acI=(acI+(e.key==='ArrowDown'?1:-1)+o.length)%o.length;o.forEach((c,i)=>c.classList.toggle('on',i===acI));o[acI].scrollIntoView({block:'nearest'})}
  else if(e.key==='Enter'&&acI>=0){e.preventDefault();acPick(o[acI].dataset.d)}else if(e.key==='Escape')$('acList').classList.add('hidden')});
 $('acList').addEventListener('mousedown',e=>{const c=e.target.closest('[data-d]');if(c){e.preventDefault();acPick(c.dataset.d)}});
