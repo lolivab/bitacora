@@ -23,7 +23,17 @@ as $$
       and upper(r.c[i]) <> upper(r.c[i+1])
     group by 1, 2
   )
+  ult as (
+    select upper(c[1]) as o, upper(c[array_length(c,1)]) as d, total, fecha
+    from (
+      select string_to_array(regexp_replace(trim(ruta), '\s+', ' ', 'g'), ' ') as c, total, fecha
+      from public.vuelos
+      where not coalesce(previo,false) and tipo <> 'Simulador' and ruta is not null and trim(ruta) <> ''
+      order by fecha desc, id desc limit 1
+    ) q
+  )
   select json_build_object(
+    'ultimo', (select json_build_object('o',o,'d',d,'t',total,'f',fecha) from ult),
     'vuelos', (select count(*) from base where not previo and tipo <> 'Simulador'),
     'horas',  (select coalesce(sum(total),0) from base where tipo <> 'Simulador'),
     'tramos', (select coalesce(json_agg(json_build_object('a',a,'b',b,'n',n)), '[]'::json) from legs)
