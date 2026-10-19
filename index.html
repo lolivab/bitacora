@@ -2029,11 +2029,11 @@ function stCount(el,to,dec){if(to==null){el.textContent='—';return}const reduc
 function stPaint(x){const box=$('stPub');box.classList.remove('hidden');
  stCount($('stV'),x.v);stCount($('stH'),x.h!=null?Math.round(x.h):null);
  $('stHs').textContent=x.h?'≈ '+(x.h/24).toLocaleString('es-CL',{maximumFractionDigits:1})+' días en el aire':'';
- const u=x.u,ur=$('stU').parentNode.parentNode;ur.classList.toggle('hidden',!u);if(u){$('stU').textContent=u.o+' → '+u.d;const tt=+u.t||0,hh=Math.floor(tt),mm=Math.round((tt-hh)*60);$('stUt').textContent=(hh?hh+' h ':'')+(mm||!hh?String(mm).padStart(2,'0')+' min':'').trim();const fd=u.f?new Date(u.f+'T12:00:00'):null;$('stUs').textContent='último vuelo'+(fd&&!isNaN(fd)?' · '+fd.toLocaleDateString('es-CL',{day:'numeric',month:'short'}):'')}
+ const u=x.u,ur=$('stU').parentNode.parentNode;ur.classList.toggle('hidden',!u);if(u){$('stU').textContent=u.o+' → '+u.d;const tt=+u.t||0,hh=Math.floor(tt),mm=Math.round((tt-hh)*60);$('stUt').textContent=(hh?hh+' h ':'')+(mm||!hh?String(mm).padStart(2,'0')+' min':'').trim();$('stUs').textContent='último vuelo'+(u.m&&u.m!=='Sin modelo'?' · '+u.m:'')}
  if(x.d!=null){stCount($('stD'),Math.round(x.d));const v=x.d/40075;$('stDs').textContent=v>=.1?'≈ '+v.toLocaleString('es-CL',{maximumFractionDigits:1})+' vueltas a la Tierra':''}}
 async function statsPub(){
  if(stDone||!sb)return;stDone=true;
- try{const c=JSON.parse(localStorage.getItem('stpub')||'null');if(c&&Date.now()-c.t<6*36e5&&c.d!=null&&'u' in c){stPaint(c);return}}catch(e){}
+ try{const c=JSON.parse(localStorage.getItem('stpub')||'null');if(c&&Date.now()-c.t<6*36e5&&c.d!=null&&c.u!==undefined&&(!c.u||'m' in c.u)){stPaint(c);return}}catch(e){}
  try{
   const r=await sb.rpc('estadisticas_publicas');if(r.error||!r.data)return;
   const x={v:+r.data.vuelos||0,h:+r.data.horas||0,d:null,u:r.data.ultimo||null};stPaint(x);
