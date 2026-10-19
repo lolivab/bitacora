@@ -1956,9 +1956,12 @@ async function loadAdmin(){
  const{data,error}=await sb.rpc('admin_resumen');
  if(error){$('adSum').textContent='';return note('adMsg','No pude cargar los usuarios: '+error.message+'\n¿Ejecutaste admin.sql en Supabase?','err')}
  const tot=data.reduce((a,r)=>a+(r.horas||0),0);
+ const AC={};try{const q=await sb.from('accesos').select('user_id,plan,hasta');(q.data||[]).forEach(a=>AC[a.user_id]=a)}catch(e){}
+ const PN={prueba:'Prueba',anual:'Anual',lifetime:'Lifetime',indefinido:'Lifetime'};
+ const planTd=r=>{const a=AC[r.user_id];if(!a)return'<td>—</td><td>—</td>';const nm=PN[a.plan]||a.plan;if(!a.hasta)return`<td><b>${esc(nm)}</b></td><td>Sin vencimiento</td>`;const ms=new Date(a.hasta)-Date.now();if(ms<=0)return`<td><b>${esc(nm)}</b></td><td style="color:var(--bad,#c0392b)">Vencido</td>`;const d=Math.ceil(ms/864e5);return`<td><b>${esc(nm)}</b></td><td>${d} ${d===1?'día':'días'}</td>`};
  $('adSum').textContent=data.length+' usuarios · '+fmt(tot)+' horas en total';
- const th=['Usuario','Correo','Vuelos','Horas','Último vuelo','Último acceso','Registro',''].map((h,i)=>`<th${i>=2&&i<=3?' style="text-align:right"':''}>${h}</th>`).join('');
- t.innerHTML='<thead><tr>'+th+'</tr></thead><tbody>'+data.map(r=>`<tr><td>${esc(r.nombre||'—')}</td><td>${esc(r.email||'')}</td><td style="text-align:right">${r.vuelos}</td><td style="text-align:right"><b>${fmt(r.horas)}</b></td><td>${esc(dm(r.ultimo_vuelo)||'—')}</td><td>${(r.ultimo_acceso||r.ultimo_login)?esc(new Date([r.ultimo_acceso,r.ultimo_login].filter(Boolean).sort().pop()).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})):'—'}</td><td>${esc(dm(String(r.registrado||'').slice(0,10)))}</td><td><button class="btn ghost small" data-u="${esc(r.user_id)}" data-n="${esc(r.nombre||r.email)}" data-m="${esc(r.email)}" type="button">Ver bitácora</button></td></tr>`).join('')+'</tbody>';
+ const th=['Usuario','Correo','Plan','Le queda','Vuelos','Horas','Último vuelo','Último acceso','Registro',''].map((h,i)=>`<th${i>=4&&i<=5?' style="text-align:right"':''}>${h}</th>`).join('');
+ t.innerHTML='<thead><tr>'+th+'</tr></thead><tbody>'+data.map(r=>`<tr><td>${esc(r.nombre||'—')}</td><td>${esc(r.email||'')}</td>${planTd(r)}<td style="text-align:right">${r.vuelos}</td><td style="text-align:right"><b>${fmt(r.horas)}</b></td><td>${esc(dm(r.ultimo_vuelo)||'—')}</td><td>${(r.ultimo_acceso||r.ultimo_login)?esc(new Date([r.ultimo_acceso,r.ultimo_login].filter(Boolean).sort().pop()).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})):'—'}</td><td>${esc(dm(String(r.registrado||'').slice(0,10)))}</td><td><button class="btn ghost small" data-u="${esc(r.user_id)}" data-n="${esc(r.nombre||r.email)}" data-m="${esc(r.email)}" type="button">Ver bitácora</button></td></tr>`).join('')+'</tbody>';
 }
 
 
