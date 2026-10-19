@@ -179,7 +179,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
 
 <div id="vApp" class="hidden">
  <div class="top"><h1>Maletín de vuelo</h1><div class="who"><span id="uAv" class="av"></span><span id="uName" class="muted"></span><button class="btn ghost small" id="out" type="button">Salir</button></div></div>
- <div id="sunBar" class="muted" title="Calculado para SCTB (Eulogio Sánchez, Tobalaba). Referencia: confirma con las tablas oficiales."></div>
+ <div id="sunBar" class="muted" title="Calculado para tu base de operación. Referencia: confirma con las tablas oficiales."></div>
  <div id="roBar" class="hidden"><span id="roTxt"></span><button class="btn small" id="roExit" type="button">Volver a mi cuenta</button></div>
  <button type="button" id="burger" aria-label="Menú"><span id="burgerT">Inicio</span><span class="ic">☰</span></button>
  <div class="nav" id="nav" style="margin-bottom:16px">
@@ -852,10 +852,10 @@ function sunTime(date,lat,lon,zen,rise){
  let H=rise?360-Math.acos(cH)/R:Math.acos(cH)/R;H/=15;
  const T=H+RA-0.06571*t-6.622;let UT=((T-lh)%24+24)%24;
  return Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())+UT*36e5}
-function paintSun(){
- const el=$('sunBar');if(!el)return;
+async function paintSun(){
+ const el=$('sunBar');if(!el||!user)return;
  try{
-  const LAT=-33.4555,LON=-70.5442,now=new Date();
+  const HC=homeOf(),ll=await homeLL(HC)||[-33.4555,-70.5442],LAT=ll[0],LON=ll[1],now=new Date();
   const tz=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santiago',year:'numeric',month:'2-digit',day:'2-digit'}).format(now).split('-').map(Number);
   const d=new Date(tz[0],tz[1]-1,tz[2]);
   let ss=sunTime(d,LAT,LON,90.833,false),fc=sunTime(d,LAT,LON,96,false),cm=sunTime(d,LAT,LON,96,true);
@@ -863,10 +863,10 @@ function paintSun(){
   // el algoritmo puede devolver el día UTC siguiente/anterior: ajustar por día local
   const fix=ms=>{if(ms==null)return ms;const dl=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santiago'}).format(new Date(ms));const want=tz.join('-').replace(/-(\d)(?!\d)/g,'-0$1');return dl===want?ms:(dl<want?ms+864e5:ms-864e5)};
   ss=fix(ss);fc=fix(fc);cm=fix(cm);
-  el.innerHTML=`SCTB hoy: <b>FCCV ${f(fc)}</b> · Puesta de sol ${f(ss)} · CCCM ${f(cm)}`;
+  el.innerHTML=`${esc(HC)} hoy: <b>FCCV ${f(fc)}</b> · Puesta de sol ${f(ss)} · CCCM ${f(cm)}`;
  }catch(e){el.textContent=''}
 }
-paintSun();setInterval(paintSun,30*60*1000);
+setInterval(paintSun,30*60*1000);
 
 /* ---------- Herramientas: Briefing meteorológico (orientativo) ---------- */
 const BR_AD=[
@@ -1903,7 +1903,7 @@ function paintInicioAlert(){
  $('inAT').textContent=S.issues.length>1?`${S.issues[0]} (+${S.issues.length-1} más)`:(S.issues[0]||'Revisa tu chequeo.');
 }
 function renderInicio(){
- paintWx();
+ paintWx();paintSun();
  const h=new Date().getHours(),sal=h<12?'Buenos días':h<20?'Buenas tardes':'Buenas noches';
  const nm=viewing?(viewing.name||viewing.email):String((user&&((user.user_metadata&&user.user_metadata.nombre)||String(user.email||'').split('@')[0]))||'').trim().split(/\s+/)[0];
  $('inHi').textContent=viewing?'Bitácora de '+nm:sal+(nm?', '+nm:'');
