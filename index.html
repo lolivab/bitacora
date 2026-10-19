@@ -165,6 +165,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
 @media(max-width:700px){.ad-kp{grid-template-columns:repeat(2,1fr)}.ad-u{grid-template-columns:40px minmax(0,1fr);gap:8px 12px}.ad-u .ad-c{grid-column:1 / -1;display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:8px}.ad-u .ad-c small{display:inline}.ad-u .ad-go{grid-column:1 / -1}.ad-u .ad-go button{width:100%}}
 #aFg,#pfAll,#pfNone,.card a[href^="http"]{color:var(--dual)}#pyCup::placeholder{text-transform:none}
 @media(max-width:560px){#pfOut .m-h{display:none}#pfOut th,#pfOut td{padding:8px 5px;font-size:13px}#pfOut table{width:100%;min-width:0}}
+.aclist{position:absolute;left:0;right:0;top:100%;z-index:30;max-height:260px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);margin-top:4px}.aclist div{padding:8px 12px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:baseline}.aclist div b{font-family:ui-monospace,Menlo,monospace;min-width:44px}.aclist div span{color:var(--mute);font-size:13px}.aclist div.on,.aclist div:hover{background:var(--line)}
 .stp{margin:16px 0 0;display:grid;gap:10px}.stp-h{text-align:center;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:600}
 .stp-r{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;min-height:76px}
 .stp-i{flex:none;width:48px;height:48px;border-radius:14px;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,.15)}
@@ -278,7 +279,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <div class="form">
    <div><label for="fFecha">Fecha *</label><input id="fFecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti"></div>
    <div><label for="fTotal">Tiempo total *</label><input id="fTotal" placeholder="1:30"><span class="lblhint">1:30 = horas y minutos · 1,5 = decimal</span><div class="hint" id="fPrev" style="margin:4px 0 0"></div></div>
-   <div><label for="fModelo">Aeronave (modelo) *</label><select id="fModelo"></select><input id="fModeloNew" class="hidden" placeholder="Escribe el modelo nuevo, ej. C-182" style="margin-top:8px"></div>
+   <div><label for="fModelo">Aeronave (modelo) *</label><select id="fModelo"></select><div id="fModeloBox" class="hidden" style="position:relative;margin-top:8px"><input id="fModeloNew" placeholder="Escribe o busca: C172, Cessna 172, PA28…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="acList"><div id="acList" class="aclist hidden" role="listbox"></div><div class="hint" style="margin-top:4px">Lista OACI (Doc 8643). También puedes escribir un tipo propio.</div></div></div>
    <div><label for="fMat">Matrícula</label><select id="fMat"></select><input id="fMatNew" class="hidden" placeholder="Escribe la matrícula, ej. CC-KSZ" style="margin-top:8px"></div>
    <div class="full" id="optsWrap"><label>Tipo de vuelo (marca todo lo que corresponda)</label>
     <div class="opts">
@@ -1240,15 +1241,35 @@ $('fTotal').oninput=prev;
 let editKeep=null;
 /* aeronave y matrícula: se rellenan con lo que ya está en el registro */
 function modelsList(){const c={};ALL.filter(r=>!r.pv).forEach(r=>{c[r.modelo]=(c[r.modelo]||0)+1});return Object.keys(c).sort((a,b)=>c[b]-c[a])}
+/* ---------- Lista OACI de aeronaves (autocompletar) ---------- */
+let ACL=null,acP=null,acI=-1;
+function acLoad(){if(ACL||acP)return;acP=fetch('aeronaves.json').then(r=>r.ok?r.json():[]).then(j=>{ACL=j.map(x=>({d:x[0],n:x[1],s:(x[0]+' '+x[1]).toLowerCase().replace(/[-_.\/]/g,'')}));if(document.activeElement===$('fModeloNew'))acShow()}).catch(()=>{acP=null})}
+function acShow(){const el=$('fModeloNew'),box=$('acList');const q=el.value.trim().toLowerCase().replace(/[-_.\/]/g,'');
+ if(!ACL||!q){box.classList.add('hidden');el.setAttribute('aria-expanded','false');return}
+ const w=q.split(/\s+/).filter(Boolean),u=new Set(),out=[];
+ const sc=x=>x.d.toLowerCase()===q?0:x.d.toLowerCase().startsWith(q)?1:x.n.toLowerCase().replace(/[-_.\/]/g,'').startsWith(q)?2:3;
+ const m=ACL.filter(x=>w.every(t=>x.s.includes(t)));m.sort((a,b)=>sc(a)-sc(b));
+ for(const x of m){const k=x.d+x.n;if(u.has(k))continue;u.add(k);out.push(x);if(out.length>=40)break}
+ acI=-1;box.innerHTML=out.map((x,i)=>`<div role="option" data-d="${esc(x.d)}" data-i="${i}"><b>${esc(x.d)}</b><span>${esc(x.n)}</span></div>`).join('');
+ box.classList.toggle('hidden',!out.length);el.setAttribute('aria-expanded',String(!!out.length))}
+function acPick(d){$('fModeloNew').value=d;$('acList').classList.add('hidden');$('fModeloNew').setAttribute('aria-expanded','false')}
+$('fModeloNew').addEventListener('input',acShow);
+$('fModeloNew').addEventListener('focus',()=>{acLoad();acShow()});
+$('fModeloNew').addEventListener('keydown',e=>{const o=[...$('acList').children];if(!o.length||$('acList').classList.contains('hidden'))return;
+ if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();acI=(acI+(e.key==='ArrowDown'?1:-1)+o.length)%o.length;o.forEach((c,i)=>c.classList.toggle('on',i===acI));o[acI].scrollIntoView({block:'nearest'})}
+ else if(e.key==='Enter'&&acI>=0){e.preventDefault();acPick(o[acI].dataset.d)}else if(e.key==='Escape')$('acList').classList.add('hidden')});
+$('acList').addEventListener('mousedown',e=>{const c=e.target.closest('[data-d]');if(c){e.preventDefault();acPick(c.dataset.d)}});
+document.addEventListener('click',e=>{if(!e.target.closest('#fModeloBox'))$('acList').classList.add('hidden')});
+
 function fillModels(sel){
  const ms=modelsList();
- $('fModelo').innerHTML=ms.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')+'<option value="__new">＋ Nuevo tipo de aeronave…</option>';
+ $('fModelo').innerHTML=ms.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')+'<option value="__new">＋ Otro tipo (lista OACI)…</option>';
  $('fModelo').value=ms.includes(sel)?sel:(ms.length?(ms.includes($('fModelo').value)?$('fModelo').value:ms[0]):'__new');
  onModel();
 }
 function onModel(keepTail){
  const isNew=$('fModelo').value==='__new';
- $('fModeloNew').classList.toggle('hidden',!isNew);
+ $('fModeloBox').classList.toggle('hidden',!isNew);if(isNew)acLoad();
  const tails=isNew?[]:[...new Set(ALL.filter(r=>r.modelo===$('fModelo').value&&r.matricula).map(r=>r.matricula))];
  $('fMat').innerHTML=['<option value="">Sin matrícula</option>',...tails.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`),'<option value="__new">＋ Otra matrícula…</option>'].join('');
  if(isNew||!tails.length){$('fMat').classList.add('hidden');$('fMatNew').classList.remove('hidden')}
