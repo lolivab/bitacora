@@ -1,6 +1,6 @@
 {
- "name": "Bitácora de vuelo",
- "short_name": "Bitácora",
+ "name": "Maletín de vuelo",
+ "short_name": "Maletín",
  "start_url": "./",
  "display": "standalone",
  "background_color": "#2a8de0",
