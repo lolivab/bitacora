@@ -23,11 +23,18 @@ Deno.serve(async(req)=>{
     if(!r.ok)return new Response('no pude leer el pago',{status:500})
     const pay=await r.json()
     if(pay.status!=='approved')return new Response('no aprobado',{status:200})
-    const[uid,plan]=String(pay.external_reference??'').split('|')
-    if(!uid||!PRECIOS[plan]||Number(pay.transaction_amount)!==PRECIOS[plan]||pay.currency_id!=='CLP')return new Response('datos no coinciden',{status:200})
+    const[uid,plan,code]=String(pay.external_reference??'').split('|')
     const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+    let esperado=PRECIOS[plan]
+    let cup:any=null
+    if(code){
+      const{data:c}=await sb.from('cupones').select('precio,usos').eq('codigo',code).maybeSingle()
+      if(c){cup=c;esperado=Math.min(c.precio,esperado)}
+    }
+    if(!uid||!PRECIOS[plan]||Number(pay.transaction_amount)!==esperado||pay.currency_id!=='CLP')return new Response('datos no coinciden',{status:200})
     const ins=await sb.from('pagos').insert({mp_payment_id:dataId,user_id:uid,plan,monto:pay.transaction_amount})
     if(ins.error)return new Response('ya procesado',{status:200})   // idempotencia
+    if(cup)await sb.from('cupones').update({usos:cup.usos+1}).eq('codigo',code)
     const{data:a}=await sb.from('accesos').select('plan,hasta').eq('user_id',uid).maybeSingle()
     if(plan==='lifetime'){
       await sb.from('accesos').upsert({user_id:uid,plan:'lifetime',hasta:null})

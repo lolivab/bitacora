@@ -12,15 +12,24 @@ Deno.serve(async(req)=>{
     const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:req.headers.get('Authorization')??''}}})
     const{data:{user}}=await sb.auth.getUser()
     if(!user)return new Response(JSON.stringify({error:'No autenticado'}),{status:401,headers:cors})
-    const{plan}=await req.json()
+    const{plan,cupon,accion}=await req.json()
     const p=PLANES[plan]
+    const code=String(cupon??'').trim().toUpperCase()
+    let precio=p?.precio
+    if(code){
+      const adm=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+      const{data:c}=await adm.from('cupones').select('precio,usos,usos_max,activo').eq('codigo',code).maybeSingle()
+      if(!c||!c.activo||(c.usos_max!=null&&c.usos>=c.usos_max))return new Response(JSON.stringify({error:'Cupón no válido o agotado'}),{status:400,headers:cors})
+      precio=Math.min(c.precio,p?.precio??c.precio)
+      if(accion==='validar')return new Response(JSON.stringify({precio:c.precio}),{headers:{...cors,'Content-Type':'application/json'}})
+    }
     if(!p)return new Response(JSON.stringify({error:'Plan inválido'}),{status:400,headers:cors})
     const app=(Deno.env.get('APP_URL')??'').replace(/\/?$/,'/')
     const r=await fetch('https://api.mercadopago.com/checkout/preferences',{method:'POST',
       headers:{'Authorization':'Bearer '+Deno.env.get('MP_ACCESS_TOKEN'),'Content-Type':'application/json'},
       body:JSON.stringify({
-        items:[{title:p.titulo,quantity:1,unit_price:p.precio,currency_id:'CLP'}],
-        external_reference:`${user.id}|${plan}`,
+        items:[{title:p.titulo,quantity:1,unit_price:precio,currency_id:'CLP'}],
+        external_reference:`${user.id}|${plan}|${code}`,
         payer:{email:user.email},
         notification_url:Deno.env.get('SUPABASE_URL')+'/functions/v1/mp-webhook',
         back_urls:{success:app+'?pago=ok',pending:app+'?pago=pendiente',failure:app+'?pago=error'},
