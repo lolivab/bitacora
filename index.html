@@ -310,7 +310,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <section id="s-planificador" class="hidden">
   <div class="card" style="max-width:760px">
    <h2>Planificador de vuelo</h2>
-   <p class="hint">Estimación simple: distancia en línea recta entre aeródromos, tiempo según la velocidad del avión y costo según la tarifa por hora del Club. Puedes elegir varios aviones para compararlos. No reemplaza tu planificación ni el briefing.</p>
+   <p class="hint">Estimación simple: distancia en línea recta entre aeródromos, tiempo según la velocidad del avión y, para socios del Club Aéreo de Santiago, costo según las tarifas del Club. Puedes elegir varios aviones para compararlos. No reemplaza tu planificación ni el briefing.</p>
    <div class="form">
     <div class="field"><label for="pfO">Origen (ICAO)</label><input id="pfO" maxlength="4" placeholder="SCTB" style="text-transform:uppercase"></div>
     <div class="field"><label for="pfD">Destino (ICAO)</label><input id="pfD" maxlength="4" placeholder="SCVM" style="text-transform:uppercase"></div>
@@ -318,10 +318,12 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     <div class="field"><label for="pfX">Tiempo extra por rodaje y circuito (min)</label><input id="pfX" type="number" min="0" step="5" value="15" inputmode="numeric"></div>
    </div>
    <div class="field"><label>Aviones <a href="#" id="pfAll" style="font-size:13px;margin-left:8px">Todos</a> <a href="#" id="pfNone" style="font-size:13px;margin-left:8px">Ninguno</a></label><div class="filters" id="pfA"></div></div>
+   <div class="field" id="pfOtro"><label class="tog" for="pfOc" style="margin-bottom:6px"><input id="pfOc" type="checkbox">Otro avión (no está en la lista)</label>
+    <div class="form" style="max-width:none"><div class="field"><label for="pfOn">Nombre o tipo</label><input id="pfOn" maxlength="20" placeholder="Ej. C-150"></div><div class="field"><label for="pfOv">Velocidad aérea verdadera (kt)</label><input id="pfOv" type="number" min="40" step="1" inputmode="numeric"></div><div class="field"><label for="pfOt">Tarifa por hora, opcional (CLP)</label><input id="pfOt" type="number" min="0" step="1000" inputmode="numeric"></div></div></div>
    <label class="tog" for="pfR"><input id="pfR" type="checkbox">Ida y vuelta</label>
    <p><button class="btn" id="pfGo" type="button">Calcular</button></p>
    <div id="pfMsg" class="hint"></div><div id="pfOut"></div>
-   <p class="hint">Tarifas según el listado de aviones del Club (referencia). Las velocidades son aproximadas de crucero típico y puedes editarlas. Distancia directa; la ruta real puede ser mayor.</p>
+   <p class="hint">Las tarifas son las del Club Aéreo de Santiago y solo se muestran a sus socios. Las velocidades son aproximadas de crucero típico y puedes editarlas. Distancia directa; la ruta real puede ser mayor.</p>
   </div>
   </section>
 
@@ -1695,14 +1697,16 @@ const FLOTA=[['C-172S',160000,122],['C-172N',122000,110],['C-172P',122000,110],[
 const cbs=()=>[...document.querySelectorAll('#pfA input')];$('pfAll').onclick=e=>{e.preventDefault();cbs().forEach(c=>c.checked=true)};$('pfNone').onclick=e=>{e.preventDefault();cbs().forEach(c=>c.checked=false)};
 $('pfGo').onclick=async()=>{const o=$('pfO').value.trim().toUpperCase(),d=$('pfD').value.trim().toUpperCase(),m=$('pfMsg'),out=$('pfOut');out.innerHTML='';m.textContent='';
  if(!/^[A-Z]{4}$/.test(o)||!/^[A-Z]{4}$/.test(d))return note('pfMsg','Escribe origen y destino con código ICAO de 4 letras.','err');
- const sel=cbs().filter(c=>c.checked).map(c=>FLOTA[c.value]);if(!sel.length)return note('pfMsg','Selecciona al menos un avión.','err');
+ const sel=cbs().filter(c=>c.checked).map(c=>FLOTA[c.value]);
  try{if(!AP){const r=await fetch('airports.json');if(!r.ok)throw 0;AP=await r.json()}}catch(e){return note('pfMsg','No pude cargar la base de aeródromos.','err')}
  if(!AP[o]||!AP[d])return note('pfMsg','No encuentro '+(!AP[o]?o:d)+' en la base de aeródromos.','err');
  const rt=$('pfR').checked,km=hav([AP[o][0],AP[o][1]],[AP[d][0],AP[d][1]])*(rt?2:1),nm=km/1.852,w=Number($('pfW').value)||0,x=Number($('pfX').value)||0;
- const rows=sel.map(f=>{const gs=f[2]-w;if(!(gs>0))return null;const h=nm/gs+x/60,t=Math.round(h*60);return{n:f[0],v:f[2],gs,tar:f[1],t,c:h*f[1]}}).filter(Boolean).sort((a,b)=>a.c-b.c);
+ const club=!!clubOf();if($('pfOc').checked){const v=Number($('pfOv').value);if(!(v>0))return note('pfMsg','Escribe la velocidad aérea verdadera del otro avión.','err');sel.push([($('pfOn').value.trim()||'Otro avión'),Number($('pfOt').value)||0,v,1])}
+ if(!sel.length)return note('pfMsg','Selecciona al menos un avión.','err');
+ const rows=sel.map(f=>{const gs=f[2]-w;if(!(gs>0))return null;const h=nm/gs+x/60,t=Math.round(h*60),tar=(club||f[3])&&f[1]?f[1]:null;return{n:f[0],v:f[2],gs,tar,t,c:tar?h*tar:null,h}}).filter(Boolean).sort((a,b)=>a.c!=null&&b.c!=null?a.c-b.c:a.t-b.t);const cost=rows.some(r=>r.tar);
  if(!rows.length)return note('pfMsg','Con ese viento ningún avión avanza.','err');
  const $$=n=>'$'+Math.round(n).toLocaleString('es-CL');
- out.innerHTML=`<p><b>${Math.round(nm)} NM</b> · ${Math.round(km)} km${rt?' (ida y vuelta)':''}<br><span class="hint">${esc(o)} (${esc(AP[o][2])}) → ${esc(d)} (${esc(AP[d][2])})</span></p><div style="overflow-x:auto"><table><thead><tr><th>Avión</th><th style="text-align:right">Vel. (kt)</th><th style="text-align:right">Tarifa/h</th><th style="text-align:right">Tiempo</th><th style="text-align:right">Costo</th><th style="text-align:right">Costo/NM</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.n)}</b></td><td style="text-align:right">${r.v}</td><td style="text-align:right">${$$(r.tar)}</td><td style="text-align:right">${Math.floor(r.t/60)} h ${String(r.t%60).padStart(2,'0')} min</td><td style="text-align:right"><b>${$$(r.c)}</b></td><td style="text-align:right">${$$(r.c/nm)}</td></tr>`).join('')}</tbody></table></div><p class="hint">Ordenado de menor a mayor costo.</p>`}})();
+ out.innerHTML=`<p><b>${Math.round(nm)} NM</b> · ${Math.round(km)} km${rt?' (ida y vuelta)':''}<br><span class="hint">${esc(o)} (${esc(AP[o][2])}) → ${esc(d)} (${esc(AP[d][2])})</span></p><div style="overflow-x:auto"><table><thead><tr><th>Avión</th><th style="text-align:right">Vel. (kt)</th>${cost?'<th style="text-align:right">Tarifa/h</th>':''}<th style="text-align:right">Tiempo</th>${cost?'<th style="text-align:right">Costo</th><th style="text-align:right">Costo/NM</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.n)}</b></td><td style="text-align:right">${r.v}</td>${cost?`<td style="text-align:right">${r.tar?$$(r.tar):'—'}</td>`:''}<td style="text-align:right">${Math.floor(r.t/60)} h ${String(r.t%60).padStart(2,'0')} min</td>${cost?`<td style="text-align:right">${r.tar?'<b>'+$$(r.c)+'</b>':'—'}</td><td style="text-align:right">${r.tar?$$(r.c/nm):'—'}</td>`:''}</tr>`).join('')}</tbody></table></div><p class="hint">${cost?'Ordenado de menor a mayor costo.':'Ordenado de menor a mayor tiempo.'}</p>`}})();
 /* ---------- Pasaporte de vuelo ---------- */
 let WORLD=null;
 const hav=(a,b)=>{const R=6371,t=x=>x*Math.PI/180,dl=t(b[0]-a[0]),dn=t(b[1]-a[1]),h=Math.sin(dl/2)**2+Math.cos(t(a[0]))*Math.cos(t(b[0]))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
