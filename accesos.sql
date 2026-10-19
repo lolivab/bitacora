@@ -18,9 +18,9 @@ drop policy if exists "ver mi acceso" on public.accesos;
 create policy "ver mi acceso" on public.accesos for select to authenticated using (user_id = auth.uid());
 -- (pagos: sin políticas; solo accede el servicio)
 
--- Usuarios actuales: acceso indefinido
+-- Usuarios actuales: Lifetime (sin vencimiento)
 insert into public.accesos(user_id,plan,hasta)
-select id,'indefinido',null from auth.users
+select id,'lifetime',null from auth.users
 on conflict (user_id) do nothing;
 
 -- Usuarios nuevos: 5 días de prueba
