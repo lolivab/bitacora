@@ -450,7 +450,6 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <button class="btn hidden" id="iGo" type="button" style="margin-top:12px">Importar</button>
  </div></section>
 </div>
-<div id="ver" class="muted" style="margin-top:18px;font-size:12px;text-align:center"></div>
 </div>
 
 <script src="config.js?v=6"></script>
@@ -1872,7 +1871,6 @@ else{
  const keepSt={getItem:k=>{try{return localStorage.getItem(k)??sessionStorage.getItem(k)}catch(e){return null}},setItem:(k,v)=>{try{if(localStorage.getItem('keep_session')==='0'){sessionStorage.setItem(k,v);localStorage.removeItem(k)}else{localStorage.setItem(k,v);sessionStorage.removeItem(k)}}catch(e){}},removeItem:k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(e){}}};
  sb=supabase.createClient(base,cfg.key.trim(),{auth:{storage:keepSt,persistSession:true,autoRefreshToken:true}});
  let host='';try{host=new URL(base).host}catch(e){}
- $('ver').textContent='v6 · servidor: '+(host||'URL no válida');
  sb.from('vuelos').select('id,pic,previo',{head:true,count:'exact'}).then(r=>{if(r.error)note('aMsg','Falla de conexión con la base de datos: '+hintDb(r.error.message),'err')});
  sb.auth.onAuthStateChange((ev,session)=>{if(ev==='TOKEN_REFRESHED')return;setTimeout(()=>onSession(session),0)});
  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(user&&!$('s-resumen').classList.contains('hidden'))renderDash()});
