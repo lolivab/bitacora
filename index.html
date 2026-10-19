@@ -161,6 +161,17 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  <div id="aMsg"></div>
 </div></div>
 
+<div id="vPay" class="auth hidden"><div class="card" style="max-width:520px">
+ <h1 id="pyT">Elige tu acceso</h1><div class="muted" id="pyS"></div>
+ <div style="display:grid;gap:12px;margin:16px 0">
+  <div class="card" style="margin:0"><b>Acceso anual</b><div style="font-size:26px;font-weight:700;margin:4px 0">$5.990</div><div class="hint">Pago único por 12 meses de acceso a todo. Si renuevas antes, se suman a los días que te quedan.</div><button class="btn" style="width:100%;margin-top:8px" data-plan="anual" type="button">Pagar $5.990</button></div>
+  <div class="card" style="margin:0"><b>Acceso de por vida</b><div style="font-size:26px;font-weight:700;margin:4px 0">$29.990</div><div class="hint">Pago único, sin vencimiento.</div><button class="btn" style="width:100%;margin-top:8px" data-plan="lifetime" type="button">Pagar $29.990</button></div>
+ </div>
+ <div id="pyMsg"></div>
+ <p style="text-align:center;margin:8px 0 0"><button class="btn ghost small" id="pyBack" type="button">Volver</button> <button class="btn ghost small" id="pyOut" type="button">Cerrar sesión</button></p>
+ <p class="hint" style="text-align:center">El pago se realiza en Mercado Pago.</p>
+</div></div>
+
 <div id="vApp" class="hidden">
  <div class="top"><h1>Bitácora de vuelo</h1><div class="who"><span id="uAv" class="av"></span><span id="uName" class="muted"></span><button class="btn ghost small" id="out" type="button">Salir</button></div></div>
  <div id="sunBar" class="muted" title="Calculado para SCTB (Eulogio Sánchez, Tobalaba). Referencia: confirma con las tablas oficiales."></div>
@@ -179,6 +190,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     <div class="in-cta"><button class="btn" data-go="nuevo" type="button">+ Registrar vuelo</button><button class="btn ghost" data-go="vuelos" type="button">Ver mis vuelos</button></div></div>
    <div class="in-stats"><div><b id="inH1">–</b><span>horas totales</span></div><div><b id="inH2">–</b><span>horas últimos 90 días</span></div><div class="in-hab"><b id="inH3">–</b><span id="inH3l">próximo vencimiento</span></div><div id="inWx" class="in-wx hidden"></div></div>
   </div>
+  <a class="in-alert hidden" id="inAcc" href="#" onclick="return false"><span class="in-dot"></span><span id="inAccT" style="flex:1"></span><b>Ver planes →</b></a>
   <a class="in-alert hidden" id="inAlert" data-go="chequeo" href="#" onclick="return false"><span class="in-dot" id="inDot"></span><span id="inAT" style="flex:1"></span><b>Ver chequeo →</b></a>
   <div class="in-grid">
    <div class="card"><h3>Bitácora</h3><p class="hint">Registrar, importar y sacar tus vuelos</p><div class="in-t">
@@ -420,7 +432,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <div style="overflow-x:auto;margin-top:14px"><table id="mpTbl" style="width:100%;border-collapse:collapse"></table></div>
  </div></section>
  <section id="s-cuenta" class="hidden"><div class="card" style="max-width:420px">
-  <h2>Mi cuenta</h2><div class="hint" id="cuMail"></div>
+  <h2>Mi cuenta</h2><div class="hint" id="cuMail"></div><div class="hint" id="cuPlan"></div>
   <div class="avrow"><span id="cuAv" class="av big"></span><div><div class="avbtns"><label class="btn ghost small" for="cuFile" style="margin:0;cursor:pointer">Subir foto</label><button class="btn ghost small" id="cuDel" type="button">Quitar foto</button></div><input id="cuFile" type="file" accept="image/*" class="hidden"><div class="hint" style="margin:8px 0 0">Se recorta en cuadrado y se guarda en tu cuenta.</div></div></div>
   <div id="avMsg"></div>
   <div class="field"><label for="cuClub">Club</label><select id="cuClub"><option value="">No soy socio de un club</option><option value="CAS">Club Aéreo de Santiago</option></select><p class="hint">Si tu club está en la lista, se activan las habilitaciones y alertas según su manual.</p></div>
@@ -478,7 +490,7 @@ const configured=cfg.url&&cfg.key&&!cfg.url.startsWith('PEGA')&&!cfg.key.startsW
 let sb,user=null,ALL=[],editId=null,importRows=null,importCtx=null,charts={},famCount={};
 let grpPref=true;try{grpPref=localStorage.getItem('grp')!=='0'}catch(e){}
 const st={y:'Todo',a:'Todas',n:25,grp:grpPref};
-function show(id){['vSetup','vAuth','vApp'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function show(id){['vSetup','vAuth','vPay','vApp'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
 function note(el,txt,kind){$(el).innerHTML=txt?`<div class="msg ${kind||''}">${esc(txt)}</div>`:''}
 
 /* ---------- Auth ---------- */
@@ -1774,6 +1786,19 @@ async function paintWx(){const el=$('inWx');if(viewing||!user){el.classList.add(
 $('cuHomeSave').onclick=async()=>{const v=$('cuHome').value.trim().toUpperCase();if(!/^[A-Z]{4}$/.test(v))return note('cuHomeMsg','Código ICAO de 4 letras.','err');
  try{if(!AP){const r=await fetch('airports.json');if(r.ok)AP=await r.json()}if(AP&&!AP[v])return note('cuHomeMsg','No encuentro ese aeródromo.','err');
   const{data,error}=await sb.auth.updateUser({data:{home:v,club:$('cuClub').value}});if(error)throw error;user=data.user||user;wxKey='';applyClub();note('cuHomeMsg','Guardado.','ok')}catch(e){note('cuHomeMsg','No pude guardar: '+(e.message||e),'err')}};
+/* ---------- Acceso y pagos ---------- */
+let ACC=null;
+async function loadAcceso(){try{const r=await sb.from('accesos').select('plan,hasta').maybeSingle();ACC=r.error||!r.data?null:r.data}catch(e){ACC=null}}
+const accDias=()=>ACC&&ACC.hasta?Math.ceil((new Date(ACC.hasta)-Date.now())/864e5):Infinity;
+const accVencido=()=>!!ACC&&!!ACC.hasta&&new Date(ACC.hasta)<=new Date()&&String(user&&user.email||'').toLowerCase()!==ADMIN_EMAIL;
+function accTexto(){if(!ACC)return '';if(!ACC.hasta)return ACC.plan==='lifetime'?'Acceso de por vida.':'Acceso sin vencimiento.';const d=accDias();return d<=0?'Tu acceso venció.':(ACC.plan==='prueba'?'Período de prueba: ':'Acceso anual: ')+'te quedan '+d+(d===1?' día':' días')+' (hasta '+dm(String(ACC.hasta).slice(0,10))+').'}
+function paintAcc(){const b=$('inAcc');if(!b)return;const d=accDias(),show=!viewing&&ACC&&ACC.hasta&&(ACC.plan==='prueba'||d<=30);b.classList.toggle('hidden',!show);if(show)$('inAccT').textContent=accTexto();$('cuPlan').textContent=accTexto()}
+function openPlans(){const v=accVencido();$('pyT').textContent=v?'Tu acceso terminó':'Elige tu acceso';$('pyS').textContent=v?'Para seguir usando la bitácora elige un plan. Tus vuelos siguen guardados.':accTexto();$('pyBack').classList.toggle('hidden',v);note('pyMsg','');show('vPay')}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-plan]');if(!b||!sb)return;b.disabled=true;note('pyMsg','Abriendo Mercado Pago…');try{const{data,error}=await sb.functions.invoke('crear-pago',{body:{plan:b.dataset.plan}});if(error)throw error;if(!data||!data.init_point)throw new Error((data&&data.error)||'No se pudo crear el pago');location.href=data.init_point}catch(err){note('pyMsg','No pude iniciar el pago: '+(err.message||err),'err');b.disabled=false}});
+$('inAcc').onclick=openPlans;$('pyBack').onclick=()=>show('vApp');$('pyOut').onclick=()=>sb.auth.signOut();
+async function pagoVuelta(){let p='';try{p=new URLSearchParams(location.search).get('pago')||''}catch(e){}if(!p)return;try{history.replaceState(null,'',location.pathname)}catch(e){}
+ if(p==='ok'||p==='pendiente'){const antes=ACC&&ACC.hasta;note('inAccT','');for(let i=0;i<8;i++){await loadAcceso();if(!ACC||ACC.hasta!==antes||ACC.plan==='lifetime')break;await new Promise(r=>setTimeout(r,2000))}paintAcc();alert(p==='ok'?'¡Gracias! Tu pago fue recibido. '+accTexto():'Tu pago quedó pendiente. Cuando Mercado Pago lo confirme, tu acceso se activará solo.')}
+ else alert('El pago no se completó. Puedes intentarlo de nuevo desde Inicio o Mi cuenta.')}
 /* ---------- Inicio ---------- */
 function paintInicioAlert(){
  const S=CKSUM,a=$('inAlert'),b=$('inChk');
@@ -1792,7 +1817,7 @@ function renderInicio(){
  $('inQ').textContent=viewing?'Estás viendo esta bitácora en modo lectura':'¿Qué quieres hacer hoy?';
  const T=todayS(),lim=addDays(T,-90),real=ALL.filter(r=>!r.pv&&r.k!=='Simulador'&&r.d<=T);
  $('inH1').textContent=fmt(sum(ALL,'tot'))+' h';$('inH2').textContent=fmt(sum(real.filter(r=>r.d>=lim),'tot'))+' h';
- loadChk();paintChk();paintInicioAlert();
+ loadChk();paintChk();paintInicioAlert();paintAcc();
  loadChkDb().then(ok=>{if(ok!==false){paintChk();paintInicioAlert()}});
 }
 $('inOut').onclick=e=>{e.preventDefault();sb.auth.signOut()};
@@ -1866,10 +1891,11 @@ async function onSession(session){
  if(!session){user=null;ALL=[];viewing=null;document.body.classList.remove('ro');$('roBar').classList.add('hidden');show('vAuth');return}
  if(user&&user.id===session.user.id)return;
  user=session.user;$('uName').textContent=(user.user_metadata&&user.user_metadata.nombre)||user.email;
+ await loadAcceso();if(accVencido()){openPlans();return}
  show('vApp');applyClub();paintAvatar();loadAvatar();touchAcceso();
  $('navAdmin').classList.toggle('hidden',String(user.email||'').toLowerCase()!==ADMIN_EMAIL);$('inAdm').classList.toggle('hidden',String(user.email||'').toLowerCase()!==ADMIN_EMAIL);
  try{await loadAll()}catch(e){alert('No pude cargar tus vuelos: '+hintDb(e.message)+'\n¿Ejecutaste supabase.sql (instalación nueva) o migracion_v2.sql?')}
- st.y='Todo';st.a='Todas';resetForm();go('inicio');
+ st.y='Todo';st.a='Todas';resetForm();go('inicio');pagoVuelta();
 }
 if(!configured){show('vSetup')}
 else{
