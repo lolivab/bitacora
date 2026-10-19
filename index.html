@@ -336,6 +336,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <section id="s-exportar" class="hidden"><div class="card" style="max-width:520px">
    <h2>Exportar bitácora a PDF</h2>
    <p class="hint">Genera un documento con el resumen de tus horas y el listado completo de vuelos.</p>
+   <div class="field"><label for="pdfFmt">Formato</label><select id="pdfFmt"><option value="res">Bitácora resumen (con estadísticas)</option><option value="jepp">Jeppesen Logbook (hoja de 13 líneas)</option></select></div>
    <div class="field"><label for="pdfY">Período</label><select id="pdfY"></select></div>
    <div class="field"><label for="pdfK">Tipo de vuelo</label><select id="pdfK"></select></div>
    <label class="tog" for="pdfObs"><input id="pdfObs" type="checkbox" checked>Incluir observaciones, instructor y pasajeros</label>
@@ -660,18 +661,129 @@ function prepPdf(){
  $('pdfK').innerHTML='<option value="">Todos los tipos</option>'+KORDER.filter(k=>ALL.some(r=>r.k===k)).map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('');
  if(ys.includes(cy))$('pdfY').value=cy;$('pdfK').value=ck;note('pdfMsg','');
 }
+/* ---------- Exportar en formato Jeppesen Logbook ---------- */
+function isMultiEng(m){const k=String(m||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+ return /PA34|SENECA|PA44|SEMINOLE|PA30|PA31|PA23|PA60|DA42|DA62|BE5[58]|BARON|BE76|BE9[0-9]|BE1900|B190|KINGAIR|BE20|BE30|BE99|C310|C340|C402|C404|C414|C421|C441|C208B?TWIN|TWIN|^B7[0-9]{2}|^B3[789]M|^A3[1-8][0-9]|^A2[01]N|^A19N|ATR|CRJ|^E[12][0-9]{2}|^EMB1|DHC8|DASH8|SF34|L410/.test(k)}
+function buildJeppesenPdf(jsPDF,rows,o){
+ const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+ const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
+ const T=pdfTxt,t10=x=>Math.round((+x||0)*10);
+ // ---- geometría (unidades relativas; se escala al ancho de la hoja)
+ const PAPER=[216,243,212],LIGHT=[181,212,177],MID=[170,195,163],DARK=[150,173,143],INK=[20,35,18],LINE=[44,66,40];
+ const L=[ // [clave,w,tenths,sombreado,grupo,etiqueta]
+  ['date',24,0,0,null,'DATE'],['type',44,0,0,null,'AIRCRAFT TYPE'],['ident',40,0,0,null,'AIRCRAFT IDENT'],
+  ['from',46,0,0,'ROUTE OF FLIGHT','FROM'],['to',46,0,0,'ROUTE OF FLIGHT','TO'],
+  ['app',17,0,1,null,'NR INST. APP.'],['rem',136,0,0,null,'REMARKS AND ENDORSEMENTS'],
+  ['tko',17,0,1,null,'NR T/O'],['ldg',17,0,1,null,'NR LDG'],
+  ['se',30,16,0,'AIRCRAFT CATEGORY','SINGLE-|ENGINE LAND'],['me',30,16,0,'AIRCRAFT CATEGORY','MULTI-|ENGINE LAND']];
+ const R=[
+  ['c1',30,14,2,'AND CLASS',''],['c2',30,14,2,'AND CLASS',''],
+  ['night',30,14,0,'CONDITIONS OF FLIGHT','NIGHT'],['act',30,14,0,'CONDITIONS OF FLIGHT','ACTUAL INSTRUMENT'],['simh',30,14,0,'CONDITIONS OF FLIGHT','SIMULATED INSTRUMENT (HOOD)'],
+  ['fsim',30,14,0,null,'FLIGHT SIMULATOR'],
+  ['xc',30,14,0,'TYPE OF PILOTING TIME','CROSS COUNTRY'],['solo',30,14,0,'TYPE OF PILOTING TIME','SOLO'],['dual',30,14,0,'TYPE OF PILOTING TIME','DUAL RECEIVED'],['pic',30,14,0,'TYPE OF PILOTING TIME','PILOT IN COMMAND'],
+  ['tot',30,14,0,null,'TOTAL DURATION OF FLIGHT']];
+ const wsum=a=>a.reduce((s,c)=>s+c[1]+c[2],0),MX=12,SP=8,s=(W-2*MX-SP)/(wsum(L)+wsum(R));
+ const lx=MX,rx=MX+wsum(L)*s+SP,TOP=26,GH=14,HH=54,RH=32,FH=20,NR=13;
+ const ytab=TOP+HH,yfoot=ytab+NR*RH,yend=yfoot+3*FH;
+ const place=(cols,x0)=>{let x=x0;return cols.map(c=>{const o2={k:c[0],x,w:c[1]*s,tw:c[2]*s,sh:c[3],g:c[4],l:c[5]};x+=o2.w+o2.tw;return o2})};
+ const CL=place(L,lx),CR=place(R,rx),CA=CL.concat(CR);
+ const colOf=k=>CA.find(c=>c.k===k);
+ const TIME=['se','me','c1','c2','night','act','simh','fsim','xc','solo','dual','pic','tot'],CNT=['app','tko','ldg'];
+ const vals=r=>{const v={};const sim=r.k==='Simulador',multi=isMultiEng(r.m),n=t10(r.tot);
+  v.app=sim?0:(+r.ap||0);v.tko=sim?0:(+r.l||0);v.ldg=sim?0:(+r.l||0);
+  if(sim){v.fsim=n}else{v.tot=n;v[multi?'me':'se']=n;v.night=t10(r.ni);v.act=t10(r.ifr);v.simh=t10(r.ins);v.xc=t10(r.xc);v.solo=t10(r.so);v.dual=t10(r.di);v.pic=t10(r.pic)}
+  return v};
+ const addV=(a,b)=>{[...TIME,...CNT].forEach(k=>{a[k]=(a[k]||0)+(b[k]||0)});return a};
+ const prev=rows.filter(r=>r.pv),real=rows.filter(r=>!r.pv).slice().sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
+ let fwd={};prev.forEach(r=>addV(fwd,vals(r)));
+ const pages=Math.max(1,Math.ceil(real.length/NR));
+ const fmtD=d=>{const m=String(d||'').match(/^(\d{4})-(\d\d)-(\d\d)/);return m?[m[3]+'/'+m[2],m[1]]:['','']};
+ const tk=x=>x==null?['','']:[String(Math.floor(x/10)),String(x%10)];
+ const stroke=(w)=>{doc.setLineWidth(w);doc.setDrawColor(...LINE)};
+ const txt=(t,x,y,sz,bold,al)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);doc.setTextColor(...INK);doc.text(T(t),x,y,{align:al||'left',baseline:'middle'})};
+ const wrapC=(lines,x,y,w,h,sz,bold)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);let L2=[];lines.forEach(t=>L2=L2.concat(doc.splitTextToSize(T(t),w-2)));const lh=sz*1.12,y0=y+h/2-(L2.length-1)*lh/2;L2.forEach((t,i)=>{doc.setTextColor(...INK);doc.text(t,x+w/2,y0+i*lh,{align:'center',baseline:'middle'})})};
+ for(let p=0;p<pages;p++){
+  if(p)doc.addPage();
+  const chunk=real.slice(p*NR,p*NR+NR),page={};chunk.forEach(r=>addV(page,vals(r)));
+  const toDate={};[...TIME,...CNT].forEach(k=>{toDate[k]=(fwd[k]||0)+(page[k]||0)});
+  // papel y sombreados
+  doc.setFillColor(...PAPER);doc.rect(0,0,W,H,'F');
+  doc.setFillColor(...PAPER);doc.rect(lx,TOP,rx-SP-lx+wsum(R)*s+SP,yend-TOP,'F');
+  CA.forEach(c=>{const col=c.sh===1?LIGHT:c.sh===2?MID:null;
+   if(col){doc.setFillColor(...col);doc.rect(c.x,ytab,c.w+c.tw,yend-ytab,'F')}
+   if(c.tw){doc.setFillColor(...DARK);doc.rect(c.x+c.w,ytab,c.tw,yend-ytab,'F')}});
+  // lomo
+  doc.setFillColor(120,150,115);doc.rect(rx-SP,TOP,SP,yend-TOP,'F');doc.setFillColor(196,224,192);doc.rect(rx-SP+SP*0.35,TOP,SP*0.3,yend-TOP,'F');
+  // zona de pie: celdas sin uso se vuelven a cubrir de papel a la izquierda (certificación + etiquetas)
+  const cDate=colOf('date'),cRem=colOf('rem'),cTko=colOf('tko'),cApp=colOf('app');
+  const labX=cRem.x+cRem.w*0.4;
+  doc.setFillColor(...PAPER);doc.rect(cDate.x,yfoot,labX-cDate.x,3*FH,'F');
+  // cabecera
+  CA.forEach(c=>{const full=c.w+c.tw;
+   if(c.g){}else wrapC(c.l.split('|'),c.x,TOP,full,HH,5,true)});
+  const groups={};CA.forEach(c=>{if(c.g)(groups[c.g]=groups[c.g]||[]).push(c)});
+  Object.keys(groups).forEach(g=>{const a=groups[g],x0=a[0].x,x1=a[a.length-1].x+a[a.length-1].w+a[a.length-1].tw;
+   wrapC([g],x0,TOP,x1-x0,GH,5.4,true);stroke(0.5);doc.line(x0,TOP+GH,x1,TOP+GH);
+   a.forEach(c=>wrapC(c.l.split('|'),c.x,TOP+GH,c.w+c.tw,HH-GH,4.8,true))});
+  // líneas
+  stroke(0.45);
+  for(let i=0;i<NR;i++){const y=ytab+i*RH;doc.line(lx,y,rx-SP,y);doc.line(rx,y,rx+wsum(R)*s,y)}
+  doc.line(lx,ytab,rx-SP,ytab);doc.line(rx,ytab,rx+wsum(R)*s,ytab);
+  CA.forEach(c=>{
+   const top=c.g?TOP+GH:TOP;stroke(0.55);doc.line(c.x,c.g?TOP+GH:TOP,c.x,yend);
+   if(c.tw){stroke(0.3);doc.line(c.x+c.w,ytab,c.x+c.w,yend)}});
+  stroke(0.55);[rx-SP,rx+wsum(R)*s].forEach(x=>doc.line(x,TOP,x,yend));
+  // pie: 3 filas
+  for(let i=0;i<=3;i++){const y=yfoot+i*FH;stroke(i===0?0.9:0.5);doc.line(labX,y,rx-SP,y);doc.line(rx,y,rx+wsum(R)*s,y)}
+  stroke(0.9);doc.line(cDate.x,yfoot,labX,yfoot);doc.line(cDate.x,yend,rx-SP,yend);doc.line(rx,yend,rx+wsum(R)*s,yend);
+  // quita separadores verticales dentro del bloque de certificación
+  doc.setFillColor(...PAPER);doc.rect(cDate.x+0.6,yfoot+0.6,labX-cDate.x-1.2,3*FH-1.2,'F');
+  stroke(0.9);doc.line(cDate.x,yfoot,cDate.x,yend);doc.line(labX,yfoot,labX,yend);
+  // borde exterior de la cabecera
+  stroke(1);doc.line(lx,TOP,rx-SP,TOP);doc.line(rx,TOP,rx+wsum(R)*s,TOP);doc.line(lx,TOP,lx,yend);
+  // encabezados de pie
+  txt('TOTALS THIS PAGE',labX+3,yfoot+FH*0.5,5.6,true);txt('AMT. FORWARDED',labX+3,yfoot+FH*1.5,5.6,true);txt('TOTALS TO DATE',labX+3,yfoot+FH*2.5,5.6,true);
+  txt('I certify that the entries in this log are true,',cDate.x+6,yfoot+13,6.4,true);
+  stroke(0.6);doc.line(cDate.x+6,yfoot+FH*2.2,labX-10,yfoot+FH*2.2);
+  txt('PILOT SIGNATURE',cDate.x+6,yfoot+FH*2.65,5.8,true);
+  // filas
+  chunk.forEach((r,i)=>{const y=ytab+i*RH,cy=y+RH/2,v=vals(r);
+   const dd=fmtD(r.d);const cd=colOf('date');txt(dd[0],cd.x+cd.w/2,cy-3.2,5.8,false,'center');txt(dd[1],cd.x+cd.w/2,cy+3.4,5.4,false,'center');
+   const put=(k,t,sz,lines)=>{const c=colOf(k);doc.setFont('helvetica','normal');doc.setFontSize(sz||7);const a=doc.splitTextToSize(T(t),c.w-3).slice(0,lines||2);const lh=(sz||7)*1.1,y0=cy-(a.length-1)*lh/2;a.forEach((q,j)=>{doc.setTextColor(...INK);doc.text(q,c.x+c.w/2,y0+j*lh,{align:'center',baseline:'middle'})})};
+   put('type',r.m,6.6);put('ident',r.t||'',6.6);
+   const tok=String(r.rt||'').toUpperCase().split(/\s+/).filter(x=>/^[A-Z0-9]{3,4}$/.test(x));
+   const fr=tok[0]||'',to=tok.length?tok[tok.length-1]:'';put('from',fr,7.4,1);put('to',to,7.4,1);
+   const rem=[];if(tok.length>2)rem.push('Ruta: '+tok.join(' '));if(r.k==='Como instructor')rem.push('Instrucción dada');if(r.k==='Copiloto')rem.push('SIC');if(o.obs){if(r.c)rem.push(r.c);if(r.instr)rem.push('Instr.: '+r.instr);if(r.pn)rem.push('Pax: '+r.pn)}
+   const cr=colOf('rem');doc.setFont('helvetica','normal');doc.setFontSize(5.6);const ra=doc.splitTextToSize(T(rem.join(' - ')),cr.w-4).slice(0,3);const lh=6.1,y0=cy-(ra.length-1)*lh/2;ra.forEach((q,j)=>{doc.setTextColor(...INK);doc.text(q,cr.x+2,y0+j*lh,{baseline:'middle'})});
+   CNT.forEach(k=>{if(v[k]){const c=colOf(k);txt(String(v[k]),c.x+c.w/2,cy,7,false,'center')}});
+   TIME.forEach(k=>{if(v[k]>0){const c=colOf(k),a=tk(v[k]);txt(a[0],c.x+c.w/2,cy,7.4,false,'center');txt(a[1],c.x+c.w+c.tw/2,cy,7.4,false,'center')}})});
+  // totales
+  const rowsT=[page,fwd,toDate];
+  rowsT.forEach((tt,i)=>{const cy=yfoot+i*FH+FH/2;
+   CNT.forEach(k=>{if(k==='app')return;const c=colOf(k);txt(String(tt[k]||0),c.x+c.w/2,cy,7,true,'center')});
+   TIME.forEach(k=>{const c=colOf(k);if(c.sh===2)return;const a=tk(tt[k]||0);txt(a[0],c.x+c.w/2,cy,7.4,true,'center');txt(a[1],c.x+c.w+c.tw/2,cy,7.4,true,'center')})});
+  // pie fuera de la hoja
+  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(70,95,66);
+  doc.text(T((o.name||'')+' - Maletín de vuelo'),MX,H-14);doc.text('Hoja '+(p+1)+' de '+pages,W-MX,H-14,{align:'right'});
+  fwd=toDate;
+ }
+ return doc;
+}
+$('pdfFmt').onchange=()=>{$('pdfDesc').closest('label').style.display=$('pdfFmt').value==='jepp'?'none':''};
 $('pdfGo').onclick=async()=>{
  const y=$('pdfY').value,k=$('pdfK').value;
  let rows=ALL.filter(r=>(!y||(!r.pv&&r.y===y))&&(!k||r.k===k)&&($('pdfPrev').checked||!r.pv));
  if(!rows.length)return note('pdfMsg','No hay vuelos con ese filtro.','err');
  rows=rows.slice().sort((a,b)=>(a.pv?-1:0)-(b.pv?-1:0)||(a.d<b.d?-1:a.d>b.d?1:0));
- if($('pdfDesc').checked){const pv=rows.filter(r=>r.pv),rest=rows.filter(r=>!r.pv).reverse();rows=rest.concat(pv)}
+ const jepp=$('pdfFmt').value==='jepp';
+ if(!jepp&&$('pdfDesc').checked){const pv=rows.filter(r=>r.pv),rest=rows.filter(r=>!r.pv).reverse();rows=rest.concat(pv)}
  $('pdfGo').disabled=true;note('pdfMsg','Generando PDF…');
  try{
-  await loadPdfLib();
+  if(jepp)await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',()=>window.jspdf&&window.jspdf.jsPDF);else await loadPdfLib();
   let logo=null;try{const b=await(await fetch('icon-192.png')).blob();logo=await new Promise(res=>{const f=new FileReader();f.onload=()=>res(f.result);f.readAsDataURL(b)})}catch(e){}
   const name=viewing?viewing.name:((user.user_metadata&&user.user_metadata.nombre)||user.email||'');
   const now=new Date(),ds=String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
+  if(jepp){const dj=buildJeppesenPdf(window.jspdf.jsPDF,rows,{name,obs:$('pdfObs').checked});dj.save('Jeppesen-'+pdfTxt(name).replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+now.toISOString().slice(0,10)+'.pdf');note('pdfMsg','PDF Jeppesen descargado ('+rows.filter(r=>!r.pv).length+' vuelos, '+Math.max(1,Math.ceil(rows.filter(r=>!r.pv).length/13))+' hojas).','ok');$('pdfGo').disabled=false;return}
   const doc=buildLogPdf(window.jspdf.jsPDF,rows,{name,period:y?('Año '+y):'Todos los vuelos',filter:k?('Tipo: '+k):'',date:ds,obs:$('pdfObs').checked,logo});
   doc.save('Bitacora-'+pdfTxt(name).replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+now.toISOString().slice(0,10)+'.pdf');
   note('pdfMsg','PDF descargado ('+rows.length+' filas).','ok');
