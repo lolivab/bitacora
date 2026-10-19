@@ -103,7 +103,7 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #subnav
 .in-alert.bad{background:#fde8e6;border-color:#f3b8b2;color:#6b1a14}.in-alert.bad b{color:var(--bad)}
 .in-dot{width:10px;height:10px;border-radius:50%;background:#e8a317;flex:none}.in-alert.bad .in-dot{background:var(--bad)}
 .ckrows{display:flex;flex-direction:column}.ckgh{font-weight:700;font-size:16px;margin:14px 0 6px;padding-bottom:6px;border-bottom:1px solid var(--line)}.ckgh:first-child{margin-top:0}.ckr{display:grid;grid-template-columns:210px 150px 1fr;gap:6px 16px;align-items:start;padding:8px 0}.ckr label{margin:0;padding-top:10px;color:var(--ink);font-weight:500}.ckr input{width:100%;box-sizing:border-box}.ckn{display:flex;flex-direction:column;gap:2px;padding-top:9px}.ckn .hint{margin:0}@media(max-width:640px){.ckr{grid-template-columns:1fr 150px}.ckr label{grid-column:1/-1;padding-top:0}.ckn{grid-column:1/-1;padding-top:0}}
-.in-wx{display:flex;align-items:center;gap:14px;background:#17335a;border-radius:14px;padding:10px 16px;margin:0 0 14px;max-width:460px}.in-wx .ic{font-size:44px;line-height:1}.in-wx .tx{display:flex;flex-direction:column;gap:2px;min-width:0}.in-wx .tt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#f2a86b;font-weight:600}.in-wx .tm{font-size:22px;font-weight:700}.in-wx .tm small{font-size:15px;font-weight:500;color:#b9cbe3}.in-wx .ds{font-size:13px;color:#d6e2f2}
+.in-stats .in-wx{flex:1 1 100%;flex-direction:row;align-items:center;gap:14px}.in-wx .ic{font-size:40px;line-height:1;flex:none}.in-wx .tx{display:flex;flex-direction:column;gap:2px;min-width:0}.in-wx .tt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#f2a86b;font-weight:600}.in-wx .tm{font-size:24px;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;color:#fff}.in-wx .tm small{font-size:15px;font-weight:500;color:#b9cbe3}.in-wx .ds{font-size:13px;color:#d6e2f2}
 .in-grid{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .in-grid .card h3{margin:0 0 2px;font-family:'Bricolage Grotesque',sans-serif;font-size:20px}.in-grid .card .hint{margin:0 0 12px}
 .in-t{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}.in-t.one{grid-template-columns:1fr}
@@ -174,9 +174,8 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  <section id="s-inicio">
   <div class="in-hero">
    <div class="in-hl"><span class="in-eyebrow" id="inHi">Hola</span><h2 id="inQ">¿Qué quieres hacer hoy?</h2>
-    <div id="inWx" class="in-wx hidden"></div>
     <div class="in-cta"><button class="btn" data-go="nuevo" type="button">+ Registrar vuelo</button><button class="btn ghost" data-go="vuelos" type="button">Ver mis vuelos</button></div></div>
-   <div class="in-stats"><div><b id="inH1">–</b><span>horas totales</span></div><div><b id="inH2">–</b><span>horas últimos 90 días</span></div><div><b id="inH3">–</b><span id="inH3l">próximo vencimiento</span></div></div>
+   <div class="in-stats"><div><b id="inH1">–</b><span>horas totales</span></div><div><b id="inH2">–</b><span>horas últimos 90 días</span></div><div><b id="inH3">–</b><span id="inH3l">próximo vencimiento</span></div><div id="inWx" class="in-wx hidden"></div></div>
   </div>
   <a class="in-alert hidden" id="inAlert" data-go="chequeo" href="#" onclick="return false"><span class="in-dot" id="inDot"></span><span id="inAT" style="flex:1"></span><b>Ver chequeo →</b></a>
   <div class="in-grid">
