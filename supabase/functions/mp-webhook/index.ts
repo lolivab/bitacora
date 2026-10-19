@@ -1,7 +1,7 @@
 // Recibe avisos de Mercado Pago, valida la firma, confirma el pago y activa el acceso.
 // Desplegar con --no-verify-jwt. Secrets: MP_ACCESS_TOKEN, MP_WEBHOOK_SECRET
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0'
-const PRECIOS: Record<string,number> = {lifetime:29990,anual:5990}
+const PRECIOS: Record<string,number> = {lifetime:29990,anual:9990}
 const hex=(b:ArrayBuffer)=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')
 async function firmaOk(req:Request,dataId:string){
   const sig=req.headers.get('x-signature')??'',rid=req.headers.get('x-request-id')??''

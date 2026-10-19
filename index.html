@@ -168,11 +168,11 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
 <div id="vPay" class="auth hidden"><div class="card" style="max-width:520px">
  <h1 id="pyT">Elige tu acceso</h1><div class="muted" id="pyS"></div>
  <div style="display:grid;gap:12px;margin:16px 0">
-  <div class="card" style="margin:0"><b>Acceso anual</b><div style="font-size:26px;font-weight:700;margin:4px 0">$5.990</div><div class="hint">Pago único por 12 meses de acceso a todo. Si renuevas antes, se suman a los días que te quedan.</div><button class="btn" style="width:100%;margin-top:8px" data-plan="anual" type="button">Pagar $5.990</button></div>
+  <div class="card" style="margin:0"><b>Acceso anual</b><div style="font-size:26px;font-weight:700;margin:4px 0">$9.990</div><div class="hint">Pago único por 12 meses de acceso a todo. Si renuevas antes, se suman a los días que te quedan.</div><button class="btn" style="width:100%;margin-top:8px" data-plan="anual" type="button">Pagar $9.990</button></div>
   <div class="card" style="margin:0"><b>Acceso de por vida</b><div style="font-size:26px;font-weight:700;margin:4px 0">$29.990</div><div class="hint">Pago único, sin vencimiento.</div><button class="btn" style="width:100%;margin-top:8px" data-plan="lifetime" type="button">Pagar $29.990</button></div>
  </div>
  <div id="pyMsg"></div>
- <p style="text-align:center;margin:8px 0 0"><button class="btn ghost small" id="pyBack" type="button">Volver</button> <button class="btn ghost small" id="pyOut" type="button">Cerrar sesión</button></p>
+ <p style="text-align:center;margin:8px 0 0"><button class="btn small" id="pyTry" type="button">Probar 5 días gratis</button> <button class="btn ghost small" id="pyBack" type="button">Volver</button> <button class="btn ghost small" id="pyOut" type="button">Cerrar sesión</button></p>
  <p class="hint" style="text-align:center">El pago se realiza en Mercado Pago.</p>
 </div></div>
 
@@ -1881,9 +1881,10 @@ const accVencido=()=>!!ACC&&!!ACC.hasta&&new Date(ACC.hasta)<=new Date()&&String
 function accTexto(){if(!ACC)return '';if(!ACC.hasta)return ACC.plan==='lifetime'?'Acceso de por vida.':'Acceso sin vencimiento.';const d=accDias();return d<=0?'Tu acceso venció.':(ACC.plan==='prueba'?'Período de prueba: ':'Acceso anual: ')+'te quedan '+d+(d===1?' día':' días')+' (hasta '+dm(String(ACC.hasta).slice(0,10))+').'}
 function accSub(){if(!ACC||!ACC.hasta)return '<b>Tu suscripción: Lifetime</b> · acceso de por vida.';const d=accDias(),f=dm(String(ACC.hasta).slice(0,10));return ACC.plan==='prueba'?'<b>Tu suscripción: Período de prueba</b> · '+(d<=0?'terminó':'quedan '+d+(d===1?' día':' días'))+' (hasta '+f+').':'<b>Tu suscripción: Anual</b> · '+(d<=0?'venció':'vence')+' el '+f+(d>0?' ('+d+(d===1?' día':' días')+').':'.')}
 function paintAcc(){const b=$('inAcc');if(!b)return;const d=accDias(),show=!viewing&&ACC&&ACC.hasta&&(ACC.plan==='prueba'||d<=30);b.classList.toggle('hidden',!show);if(show)$('inAccT').textContent=accTexto();$('cuPlan').innerHTML=accSub()}
-function openPlans(){const v=accVencido();$('pyT').textContent=v?'Tu acceso terminó':'Elige tu acceso';$('pyS').textContent=v?'Para seguir usando la bitácora elige un plan. Tus vuelos siguen guardados.':accTexto();$('pyBack').classList.toggle('hidden',v);note('pyMsg','');show('vPay')}
+function openPlans(onb){const v=accVencido();$('pyT').textContent=v?'Tu acceso terminó':onb===true?'Bienvenido a Maletín de vuelo':'Elige tu acceso';$('pyS').textContent=v?'Para seguir usando la bitácora elige un plan. Tus vuelos siguen guardados.':onb===true?'Elige cómo quieres acceder. Es un pago único, sin cobros automáticos. También puedes probarlo 5 días gratis.':accTexto();$('pyBack').classList.toggle('hidden',v||onb===true);$('pyTry').classList.toggle('hidden',onb!==true);note('pyMsg','');show('vPay')}
+$('pyTry').onclick=async()=>{$('pyTry').disabled=true;try{const{error}=await sb.auth.updateUser({data:{onb_plan:true}});if(error)throw error;location.reload()}catch(e){note('pyMsg','No pude continuar: '+(e.message||e),'err');$('pyTry').disabled=false}};
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-plan]');if(!b||!sb)return;b.disabled=true;note('pyMsg','Abriendo Mercado Pago…');try{const{data,error}=await sb.functions.invoke('crear-pago',{body:{plan:b.dataset.plan}});if(error)throw error;if(!data||!data.init_point)throw new Error((data&&data.error)||'No se pudo crear el pago');location.href=data.init_point}catch(err){note('pyMsg','No pude iniciar el pago: '+(err.message||err),'err');b.disabled=false}});
-$('inAcc').onclick=openPlans;$('pyBack').onclick=()=>show('vApp');$('pyOut').onclick=()=>sb.auth.signOut();
+$('inAcc').onclick=()=>openPlans();$('pyBack').onclick=()=>show('vApp');$('pyOut').onclick=()=>sb.auth.signOut();
 async function pagoVuelta(){let p='';try{p=new URLSearchParams(location.search).get('pago')||''}catch(e){}if(!p)return;try{history.replaceState(null,'',location.pathname)}catch(e){}
  if(p==='ok'||p==='pendiente'){const antes=ACC&&ACC.hasta;note('inAccT','');for(let i=0;i<8;i++){await loadAcceso();if(!ACC||ACC.hasta!==antes||ACC.plan==='lifetime')break;await new Promise(r=>setTimeout(r,2000))}paintAcc();alert(p==='ok'?'¡Gracias! Tu pago fue recibido. '+accTexto():'Tu pago quedó pendiente. Cuando Mercado Pago lo confirme, tu acceso se activará solo.')}
  else alert('El pago no se completó. Puedes intentarlo de nuevo desde Inicio o Mi cuenta.')}
@@ -1981,6 +1982,7 @@ async function onSession(session){
  user=session.user;$('uName').textContent=(user.user_metadata&&user.user_metadata.nombre)||user.email;
  try{wxFetch(homeOf()).catch(()=>{})}catch(e){}
  await loadAcceso();if(accVencido()){openPlans();return}
+ if(ACC&&ACC.plan==='prueba'&&!(user.user_metadata&&user.user_metadata.onb_plan)&&String(user.email||'').toLowerCase()!==ADMIN_EMAIL){openPlans(true);return}
  show('vApp');applyClub();paintAvatar();loadAvatar();touchAcceso();
  $('navAdmin').classList.toggle('hidden',String(user.email||'').toLowerCase()!==ADMIN_EMAIL);$('inAdm').classList.toggle('hidden',String(user.email||'').toLowerCase()!==ADMIN_EMAIL);
  try{await loadAll()}catch(e){alert('No pude cargar tus vuelos: '+hintDb(e.message)+'\n¿Ejecutaste supabase.sql (instalación nueva) o migracion_v2.sql?')}
