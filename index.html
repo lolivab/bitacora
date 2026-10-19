@@ -257,13 +257,16 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
    <div class="card c12"><h2>Último vuelo por avión</h2><div style="overflow-x:auto"><table id="ckT"></table></div></div>
    <div class="card c12"><h2>Habilitaciones a las que puedes acceder</h2><p class="hint" id="ckHabH"></p><div id="ckHab"></div></div>
    <div class="card c12"><h2>Documentos y condición personal</h2>
-    <div class="grid" style="gap:10px">
-     <div class="field c4"><label>Vencimiento certificado médico</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckMed"></div>
-     <div class="field c4"><label>Vencimiento licencia</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckLic"></div>
-     <div class="field c4"><label>Último curso aprobado (Básico, Área Media, Mono Avanzados, IFR, Multi; vence Bienal a 2 años)</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckBie"><p class="hint" id="ckBieAuto"></p></div>
-     <div class="field c4"><label>Fecha de obtención de la licencia de piloto</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckLicF"><p class="hint" id="ckLicFA"></p></div>
-     <div class="field c4"><label>Fecha de aprobación del Curso de Área Media</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckAmF"></div>
-     <div class="field c12"><label>Cursos y requisitos ya aprobados (se marcan solos si lo detecto en tus comentarios)</label>
+    <div class="grid" style="gap:14px 16px">
+     <h3 class="c12" style="margin:4px 0 0">Vencimientos</h3>
+     <div class="field c6"><label for="ckMed">Certificado médico</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckMed"><p class="hint">Fecha de vencimiento</p></div>
+     <div class="field c6"><label for="ckLic">Licencia</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckLic"><p class="hint">Fecha de vencimiento</p></div>
+     <h3 class="c12" style="margin:10px 0 0">Fechas de hitos</h3>
+     <div class="field c4"><label for="ckLicF">Obtención de la licencia</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckLicF"><p class="hint" id="ckLicFA"></p></div>
+     <div class="field c4"><label for="ckAmF">Curso de Área Media</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckAmF"><p class="hint">Fecha de aprobación</p></div>
+     <div class="field c4"><label for="ckBie">Último curso aprobado</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckBie"><p class="hint">Básico, Área Media, Mono Avanzados, IFR o Multi; vence a los 2 años (Bienal).</p><p class="hint" id="ckBieAuto"></p></div>
+     <h3 class="c12" style="margin:10px 0 0">Cursos y condición</h3>
+     <div class="field c12"><label>Cursos y requisitos ya aprobados</label><p class="hint">Se marcan solos si los detecto en tus comentarios.</p>
       <div class="filters" id="ckCur"><label class="tog"><input type="checkbox" data-c="fc">Inspección Fuera de Cancha</label><label class="tog"><input type="checkbox" data-c="cost">Chequeo pistas costeras</label><label class="tog"><input type="checkbox" data-c="am">Área Media</label><label class="tog"><input type="checkbox" data-c="rv2">Habilitado en RV-9A II</label><label class="tog"><input type="checkbox" data-c="g1000">Ramo/curso Garmin 1000</label><label class="tog"><input type="checkbox" data-c="charla">Charla paso variable e inyección</label><label class="tog"><input type="checkbox" data-c="ma">Monomotores Avanzados</label><label class="tog"><input type="checkbox" data-c="noc">VFR Nocturno</label><label class="tog"><input type="checkbox" data-c="ifr">Vuelo por Instrumentos (IFR)</label><label class="tog"><input type="checkbox" data-c="mm">Multimotores</label></div></div>
      <div class="c12 filters"><label class="tog" for="ckIns"><input type="checkbox" id="ckIns">Soy instructor o instructor ayudante (360 días en todos los grupos)</label></div>
     </div>
@@ -592,7 +595,7 @@ function winDays(g,tot,hA,inst){
  if(g==='A')return (hA>=20||tot>250)?90:(tot<150?30:60);
  return tot<100?30:(tot<=200?60:90)}
 function ckStat(left,warn){return left<0?['bad','VENCIDO']:left<=warn?['warn','POR VENCER']:['ok','VIGENTE']}
-const CK_COL={ok:'var(--ok)',warn:'#e0a100',bad:'var(--bad)'};
+const CK_COL={ok:'#14532d',warn:'#7a4a00',bad:'#9b1c1c'};
 const ckDot=k=>`<span class="tag" style="background:${CK_COL[k]}">${k==='ok'?'Verde':k==='warn'?'Amarillo':'Rojo'}</span>`;
 
 /* ---------- Habilitaciones disponibles (Manual 4.37 y 4.38) ---------- */
@@ -664,7 +667,7 @@ function paintHab(R,tot,C,licD,amD){
  const ok=L.filter(a=>a.ok&&!a.done),dn=L.filter(a=>a.done),no=L.filter(a=>!a.ok&&!a.done);
  const li=(a,t)=>`<li><b>${esc(a.n)}</b> <span class="hint">(Manual ${a.ref})</span>${t||''}</li>`;
  $('ckHabH').textContent=`${ok.length} disponibles, ${dn.length} ya realizadas, ${no.length} con requisitos pendientes. Es una estimación: "autorizado" se deduce de que hayas volado ese modelo.`;
- $('ckHab').innerHTML=(ok.length?'<h3 style="margin:6px 0">Disponibles para ti</h3><ul style="margin:0 0 12px 18px">'+ok.map(a=>li(a,' '+'<span class="tag" style="background:var(--ok)">Cumples</span>')).join('')+'</ul>':'<p class="hint">Por ahora no hay habilitaciones nuevas disponibles con los datos registrados.</p>')
+ $('ckHab').innerHTML=(ok.length?'<h3 style="margin:6px 0">Disponibles para ti</h3><ul style="margin:0 0 12px 18px">'+ok.map(a=>li(a,' '+'<span class="tag" style="background:#14532d">Cumples</span>')).join('')+'</ul>':'<p class="hint">Por ahora no hay habilitaciones nuevas disponibles con los datos registrados.</p>')
  +(dn.length?'<details style="margin-bottom:10px"><summary>Ya realizadas ('+dn.length+')</summary><ul style="margin:6px 0 0 18px">'+dn.map(a=>li(a)).join('')+'</ul></details>':'')
  +(no.length?'<details><summary>Aún no cumples los requisitos ('+no.length+')</summary><ul style="margin:6px 0 0 18px">'+no.map(a=>li(a,'<div class="hint">Falta: '+a.miss.map(esc).join('; ')+'</div>')).join('')+'</ul></details>':'');
 }
