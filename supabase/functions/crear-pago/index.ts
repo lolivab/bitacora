@@ -24,6 +24,18 @@ Deno.serve(async(req)=>{
       if(accion==='validar')return new Response(JSON.stringify({precio:c.precio}),{headers:{...cors,'Content-Type':'application/json'}})
     }
     if(!p)return new Response(JSON.stringify({error:'Plan inválido'}),{status:400,headers:cors})
+    if(code&&precio===0){
+      // Cupón 100%: no pasa por Mercado Pago. Se canjea y se activa el acceso aquí mismo.
+      const adm=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+      const{data:c}=await adm.from('cupones').select('usos').eq('codigo',code).maybeSingle()
+      const u=await adm.from('cupones').update({usos:(c?.usos??0)+1}).eq('codigo',code).eq('usos',c?.usos??0).select('codigo')
+      if(u.error||!u.data?.length)return new Response(JSON.stringify({error:'Cupón no válido o agotado'}),{status:400,headers:cors})
+      await adm.from('pagos').insert({mp_payment_id:`cupon-${code}-${user.id}`,user_id:user.id,plan,monto:0})
+      const{data:a}=await adm.from('accesos').select('plan,hasta').eq('user_id',user.id).maybeSingle()
+      if(plan==='lifetime')await adm.from('accesos').upsert({user_id:user.id,plan:'lifetime',hasta:null})
+      else if(!(a&&!a.hasta)){const b=a?.hasta&&new Date(a.hasta)>new Date()?new Date(a.hasta):new Date();b.setDate(b.getDate()+365);await adm.from('accesos').upsert({user_id:user.id,plan:'anual',hasta:b.toISOString()})}
+      return new Response(JSON.stringify({gratis:true}),{headers:{...cors,'Content-Type':'application/json'}})
+    }
     const app=(Deno.env.get('APP_URL')??'').replace(/\/?$/,'/')
     const r=await fetch('https://api.mercadopago.com/checkout/preferences',{method:'POST',
       headers:{'Authorization':'Bearer '+Deno.env.get('MP_ACCESS_TOKEN'),'Content-Type':'application/json'},
