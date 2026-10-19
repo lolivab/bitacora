@@ -103,6 +103,7 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #subnav
 .in-alert.bad{background:#fde8e6;border-color:#f3b8b2;color:#6b1a14}.in-alert.bad b{color:var(--bad)}
 .in-dot{width:10px;height:10px;border-radius:50%;background:#e8a317;flex:none}.in-alert.bad .in-dot{background:var(--bad)}
 .ckrows{display:flex;flex-direction:column}.ckgh{font-weight:700;font-size:16px;margin:14px 0 6px;padding-bottom:6px;border-bottom:1px solid var(--line)}.ckgh:first-child{margin-top:0}.ckr{display:grid;grid-template-columns:210px 150px 1fr;gap:6px 16px;align-items:start;padding:8px 0}.ckr label{margin:0;padding-top:10px;color:var(--ink);font-weight:500}.ckr input{width:100%;box-sizing:border-box}.ckn{display:flex;flex-direction:column;gap:2px;padding-top:9px}.ckn .hint{margin:0}@media(max-width:640px){.ckr{grid-template-columns:1fr 150px}.ckr label{grid-column:1/-1;padding-top:0}.ckn{grid-column:1/-1;padding-top:0}}
+.in-wx{display:flex;align-items:center;gap:14px;background:#17335a;border-radius:14px;padding:10px 16px;margin:0 0 14px;max-width:460px}.in-wx .ic{font-size:44px;line-height:1}.in-wx .tx{display:flex;flex-direction:column;gap:2px;min-width:0}.in-wx .tt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#f2a86b;font-weight:600}.in-wx .tm{font-size:22px;font-weight:700}.in-wx .tm small{font-size:15px;font-weight:500;color:#b9cbe3}.in-wx .ds{font-size:13px;color:#d6e2f2}
 .in-grid{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .in-grid .card h3{margin:0 0 2px;font-family:'Bricolage Grotesque',sans-serif;font-size:20px}.in-grid .card .hint{margin:0 0 12px}
 .in-t{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}.in-t.one{grid-template-columns:1fr}
@@ -150,6 +151,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  <h1>Bitácora de vuelo</h1><div class="muted">Tus horas de vuelo, ordenadas y a la mano.</div>
  <div class="tabs"><button id="tIn" class="on" type="button">Entrar</button><button id="tUp" type="button">Crear cuenta</button></div>
  <div class="field hidden" id="fName"><label for="aName">Nombre</label><input id="aName" autocomplete="name"></div>
+ <div class="field hidden" id="fHome"><label for="aHome">Base de operación (ICAO)</label><input id="aHome" maxlength="4" value="SCTB" style="text-transform:uppercase" autocomplete="off"></div>
  <div class="field"><label for="aMail">Correo</label><input id="aMail" type="email" autocomplete="email"></div>
  <div class="field"><label for="aPass">Contraseña (mínimo 8 caracteres)</label><input id="aPass" type="password" autocomplete="current-password"></div>
  <label class="tog" for="aKeep" style="margin:0 0 12px;display:flex;align-items:center;gap:8px"><input id="aKeep" type="checkbox" checked style="width:auto">No cerrar mi sesión</label>
@@ -172,6 +174,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  <section id="s-inicio">
   <div class="in-hero">
    <div class="in-hl"><span class="in-eyebrow" id="inHi">Hola</span><h2 id="inQ">¿Qué quieres hacer hoy?</h2>
+    <div id="inWx" class="in-wx hidden"></div>
     <div class="in-cta"><button class="btn" data-go="nuevo" type="button">+ Registrar vuelo</button><button class="btn ghost" data-go="vuelos" type="button">Ver mis vuelos</button></div></div>
    <div class="in-stats"><div><b id="inH1">–</b><span>horas totales</span></div><div><b id="inH2">–</b><span>horas últimos 90 días</span></div><div><b id="inH3">–</b><span id="inH3l">próximo vencimiento</span></div></div>
   </div>
@@ -419,6 +422,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <h2>Mi cuenta</h2><div class="hint" id="cuMail"></div>
   <div class="avrow"><span id="cuAv" class="av big"></span><div><div class="avbtns"><label class="btn ghost small" for="cuFile" style="margin:0;cursor:pointer">Subir foto</label><button class="btn ghost small" id="cuDel" type="button">Quitar foto</button></div><input id="cuFile" type="file" accept="image/*" class="hidden"><div class="hint" style="margin:8px 0 0">Se recorta en cuadrado y se guarda en tu cuenta.</div></div></div>
   <div id="avMsg"></div>
+  <div class="field"><label for="cuHome">Base de operación (ICAO)</label><input id="cuHome" maxlength="4" style="text-transform:uppercase" autocomplete="off"><p class="hint">Se usa para el pronóstico de Inicio.</p><button class="btn ghost small" id="cuHomeSave" type="button">Guardar base</button> <span id="cuHomeMsg"></span></div>
   <div class="field"><label for="cuP1">Nueva contraseña (mínimo 8 caracteres)</label><input id="cuP1" type="password" autocomplete="new-password"></div>
   <div class="field"><label for="cuP2">Repite la nueva contraseña</label><input id="cuP2" type="password" autocomplete="new-password"></div>
   <button class="btn" id="cuSave" type="button">Cambiar contraseña</button>
@@ -478,7 +482,7 @@ function note(el,txt,kind){$(el).innerHTML=txt?`<div class="msg ${kind||''}">${e
 
 /* ---------- Auth ---------- */
 let mode='in';
-function setMode(m){mode=m;$('tIn').classList.toggle('on',m==='in');$('tUp').classList.toggle('on',m==='up');$('fName').classList.toggle('hidden',m==='in');$('aGo').textContent=m==='in'?'Entrar':'Crear cuenta';$('aPass').autocomplete=m==='in'?'current-password':'new-password';note('aMsg','')}
+function setMode(m){mode=m;$('tIn').classList.toggle('on',m==='in');$('tUp').classList.toggle('on',m==='up');$('fName').classList.toggle('hidden',m==='in');$('fHome').classList.toggle('hidden',m==='in');$('aGo').textContent=m==='in'?'Entrar':'Crear cuenta';$('aPass').autocomplete=m==='in'?'current-password':'new-password';note('aMsg','')}
 $('tIn').onclick=()=>setMode('in');$('tUp').onclick=()=>setMode('up');
 $('aGo').onclick=async()=>{
  const email=$('aMail').value.trim(),password=$('aPass').value,nombre=$('aName').value.trim();
@@ -487,7 +491,8 @@ $('aGo').onclick=async()=>{
  try{
   if(mode==='up'){try{localStorage.setItem('keep_session',$('aKeep').checked?'1':'0')}catch(e){}
    if(!nombre){note('aMsg','Escribe tu nombre.','err');return}
-   const{data,error}=await sb.auth.signUp({email,password,options:{data:{nombre}}});
+   const home=$('aHome').value.trim().toUpperCase();if(!/^[A-Z]{4}$/.test(home)){note('aMsg','Escribe tu base de operación con código ICAO de 4 letras (ej. SCTB).','err');return}
+   const{data,error}=await sb.auth.signUp({email,password,options:{data:{nombre,home}}});
    if(error)throw error;
    if(!data.session)note('aMsg','Cuenta creada. Revisa tu correo para confirmarla y luego entra.','ok');
   }else{try{localStorage.setItem('keep_session',$('aKeep').checked?'1':'0')}catch(e){}const{error}=await sb.auth.signInWithPassword({email,password});if(error)throw error}
@@ -980,7 +985,7 @@ function go(v){
  if(v==='chequeo')renderChequeo();
  if(v==='exportar')prepPdf();
  if(v==='briefing')brFill();
- if(v==='cuenta'){note('avMsg','');paintAvatar();$('cuMail').textContent=user.email||'';$('cuP1').value=$('cuP2').value='';note('cuMsg','')}
+ if(v==='cuenta'){note('avMsg','');paintAvatar();$('cuMail').textContent=user.email||'';$('cuHome').value=homeOf();note('cuHomeMsg','');$('cuP1').value=$('cuP2').value='';note('cuMsg','')}
 }
 document.addEventListener('input',e=>{const t=e.target;if(!t.classList||!t.classList.contains('dti'))return;if(e.inputType&&e.inputType.startsWith('delete'))return;let v=t.value.replace(/[^\d]/g,'').slice(0,8);if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);else if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);t.value=v});
 (()=>{const a=$('laAudio'),m=$('laMount'),msg=$('laMsg');try{m.value=localStorage.getItem('la_mount')||'scel'}catch(e){}
@@ -1752,6 +1757,19 @@ $('ppDl').onclick=()=>{$('ppCv').toBlob(b=>{const a=document.createElement('a');
 $('ppSh').onclick=()=>{$('ppCv').toBlob(async b=>{const f=new File([b],'pasaporte-de-vuelo.png',{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],title:'Mi pasaporte de vuelo'});else note('ppMsg','Tu navegador no permite compartir; usa Descargar imagen.','err')}catch(e){}})};
 
 
+/* ---------- Base de operación y pronóstico ---------- */
+const homeOf=()=>{const h=String((user&&user.user_metadata&&user.user_metadata.home)||'SCTB').toUpperCase();return /^[A-Z]{4}$/.test(h)?h:'SCTB'};
+async function homeLL(c){if(c==='SCTB')return[-33.4564,-70.5469];try{const k=JSON.parse(localStorage.getItem('homeLL')||'{}');if(k[c])return k[c]}catch(e){}
+ if(!AP){const r=await fetch('airports.json');if(!r.ok)throw 0;AP=await r.json()}if(!AP[c])return null;const v=[AP[c][0],AP[c][1]];try{const k=JSON.parse(localStorage.getItem('homeLL')||'{}');k[c]=v;localStorage.setItem('homeLL',JSON.stringify(k))}catch(e){}return v}
+const WX=c=>c===0?['☀️','Despejado']:c===1?['🌤️','Mayormente despejado']:c===2?['⛅','Parcialmente nublado']:c===3?['☁️','Nublado']:c===45||c===48?['🌫️','Niebla']:c>=51&&c<=57?['🌦️','Llovizna']:c>=61&&c<=67?['🌧️','Lluvia']:c>=71&&c<=77?['🌨️','Nieve']:c>=80&&c<=82?['🌦️','Chubascos']:c===85||c===86?['🌨️','Nevadas']:c>=95?['⛈️','Tormenta']:['⛅','Variable'];
+let wxKey='';
+async function paintWx(){const el=$('inWx');if(viewing||!user){el.classList.add('hidden');return}const c=homeOf(),k=c+todayS();if(k===wxKey&&!el.classList.contains('hidden'))return;
+ try{const ll=await homeLL(c);if(!ll)throw 0;const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${ll[0]}&longitude=${ll[1]}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max&wind_speed_unit=kn&timezone=auto&forecast_days=2`);if(!r.ok)throw 0;const j=(await r.json()).daily;if(!j||j.time.length<2)throw 0;
+  const w=WX(j.weather_code[1]),p=j.precipitation_probability_max[1];
+  el.innerHTML=`<span class="ic">${w[0]}</span><span class="tx"><span class="tt">Mañana en ${esc(c)}</span><span class="tm">${Math.round(j.temperature_2m_max[1])}° <small>/ ${Math.round(j.temperature_2m_min[1])}°</small></span><span class="ds">${w[1]}${p!=null?' · lluvia '+p+'%':''} · viento hasta ${Math.round(j.wind_speed_10m_max[1])} kt</span></span>`;el.classList.remove('hidden');wxKey=k}catch(e){el.classList.add('hidden')}}
+$('cuHomeSave').onclick=async()=>{const v=$('cuHome').value.trim().toUpperCase();if(!/^[A-Z]{4}$/.test(v))return note('cuHomeMsg','Código ICAO de 4 letras.','err');
+ try{if(!AP){const r=await fetch('airports.json');if(r.ok)AP=await r.json()}if(AP&&!AP[v])return note('cuHomeMsg','No encuentro ese aeródromo.','err');
+  const{data,error}=await sb.auth.updateUser({data:{home:v}});if(error)throw error;user=data.user||user;wxKey='';note('cuHomeMsg','Guardado.','ok')}catch(e){note('cuHomeMsg','No pude guardar: '+(e.message||e),'err')}};
 /* ---------- Inicio ---------- */
 function paintInicioAlert(){
  const S=CKSUM,a=$('inAlert'),b=$('inChk');
@@ -1763,6 +1781,7 @@ function paintInicioAlert(){
  $('inAT').textContent=S.issues.length>1?`${S.issues[0]} (+${S.issues.length-1} más)`:(S.issues[0]||'Revisa tu chequeo.');
 }
 function renderInicio(){
+ paintWx();
  const h=new Date().getHours(),sal=h<12?'Buenos días':h<20?'Buenas tardes':'Buenas noches';
  const nm=viewing?(viewing.name||viewing.email):String((user&&((user.user_metadata&&user.user_metadata.nombre)||String(user.email||'').split('@')[0]))||'').trim().split(/\s+/)[0];
  $('inHi').textContent=viewing?'Bitácora de '+nm:sal+(nm?', '+nm:'');
