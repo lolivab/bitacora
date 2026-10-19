@@ -23,11 +23,11 @@ insert into public.accesos(user_id,plan,hasta)
 select id,'lifetime',null from auth.users
 on conflict (user_id) do nothing;
 
--- Usuarios nuevos: 5 días de prueba
+-- Usuarios nuevos: 3 días de prueba
 create or replace function public.nuevo_acceso() returns trigger
 language plpgsql security definer set search_path=public as $$
 begin
-  insert into public.accesos(user_id,plan,hasta) values (new.id,'prueba',now()+interval '5 days')
+  insert into public.accesos(user_id,plan,hasta) values (new.id,'prueba',now()+interval '3 days')
   on conflict (user_id) do nothing;
   return new;
 end $$;

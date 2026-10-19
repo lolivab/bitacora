@@ -172,7 +172,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <div class="card" style="margin:0"><b>Acceso de por vida</b><div style="font-size:26px;font-weight:700;margin:4px 0">$29.990</div><div class="hint">Pago único, sin vencimiento.</div><button class="btn" style="width:100%;margin-top:8px" data-plan="lifetime" type="button">Pagar $29.990</button></div>
  </div>
  <div id="pyMsg"></div>
- <p style="text-align:center;margin:8px 0 0"><button class="btn small" id="pyTry" type="button">Probar 5 días gratis</button> <button class="btn ghost small" id="pyBack" type="button">Volver</button> <button class="btn ghost small" id="pyOut" type="button">Cerrar sesión</button></p>
+ <p style="text-align:center;margin:8px 0 0"><button class="btn small" id="pyTry" type="button">Probar 3 días gratis</button> <button class="btn ghost small" id="pyBack" type="button">Volver</button> <button class="btn ghost small" id="pyOut" type="button">Cerrar sesión</button></p>
  <p class="hint" style="text-align:center">El pago se realiza en Mercado Pago.</p>
 </div></div>
 
@@ -928,7 +928,7 @@ function brSun(ds,lat,lon,zen,rise){const[y,m,d]=ds.split('-').map(Number);let m
 const BR_VARS='temperature_2m,dew_point_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,precipitation,precipitation_probability,weather_code,pressure_msl,freezing_level_height,cape,wind_speed_925hPa,wind_direction_925hPa,wind_speed_850hPa,wind_direction_850hPa,wind_speed_700hPa,wind_direction_700hPa';
 async function brFetch(pt,d0,d1){
  const u=`https://api.open-meteo.com/v1/forecast?latitude=${pt.lat.toFixed(4)}&longitude=${pt.lon.toFixed(4)}&hourly=${BR_VARS}&wind_speed_unit=kn&timezone=${encodeURIComponent(BR_TZ)}&start_date=${d0}&end_date=${d1}`;
- const r=await fetch(u);if(!r.ok)throw new Error('El servicio de pronóstico respondió '+r.status+'. Revisa que la fecha esté dentro de los próximos 15 días.');
+ const r=await fetch(u);if(!r.ok)throw new Error('El servicio de pronóstico respondió '+r.status+'. Revisa que la fecha esté dentro de los próximos 13 días.');
  return r.json()}
 function brAt(data,ms){
  const h=data.hourly,i=h.time.indexOf(brHourKey(ms));if(i<0)return null;
@@ -974,7 +974,7 @@ async function brGo(){
   const lvl=alt<3800?925:alt<7500?850:700,uw=wm0.up[lvl];
   const head=uw&&uw[0]!=null?uw[0]*Math.cos(brRad(uw[1]-crs)):0,gs=Math.max(40,tas-head),ete=dist/gs*60*6e4;
   const arr=dep+ete,wO=brAt(dO,dep),wM=brAt(dM,dep+ete/2),wD=brAt(dD,arr);
-  if(!wO||!wD||!wM)throw new Error('El pronóstico no cubre toda la hora del vuelo (usa una fecha de hoy a 15 días).');
+  if(!wO||!wD||!wM)throw new Error('El pronóstico no cubre toda la hora del vuelo (usa una fecha de hoy a 13 días).');
   const P=[['Salida '+o.c,wO,rwO,dep],['Ruta (punto medio)',wM,'',dep+ete/2],['Llegada '+d.c,wD,rwD,arr]];
   const alerts=[];
   P.forEach(([n,w,rw,t])=>brEval(w,m,rw,n==='Ruta (punto medio)'?alt:null).forEach(a=>alerts.push({k:a.k,t:n+': '+a.t})));
@@ -1881,7 +1881,7 @@ const accVencido=()=>!!ACC&&!!ACC.hasta&&new Date(ACC.hasta)<=new Date()&&String
 function accTexto(){if(!ACC)return '';if(!ACC.hasta)return ACC.plan==='lifetime'?'Acceso de por vida.':'Acceso sin vencimiento.';const d=accDias();return d<=0?'Tu acceso venció.':(ACC.plan==='prueba'?'Período de prueba: ':'Acceso anual: ')+'te quedan '+d+(d===1?' día':' días')+' (hasta '+dm(String(ACC.hasta).slice(0,10))+').'}
 function accSub(){if(!ACC||!ACC.hasta)return '<b>Tu suscripción: Lifetime</b> · acceso de por vida.';const d=accDias(),f=dm(String(ACC.hasta).slice(0,10));return ACC.plan==='prueba'?'<b>Tu suscripción: Período de prueba</b> · '+(d<=0?'terminó':'quedan '+d+(d===1?' día':' días'))+' (hasta '+f+').':'<b>Tu suscripción: Anual</b> · '+(d<=0?'venció':'vence')+' el '+f+(d>0?' ('+d+(d===1?' día':' días')+').':'.')}
 function paintAcc(){const b=$('inAcc');if(!b)return;const d=accDias(),show=!viewing&&ACC&&ACC.hasta&&(ACC.plan==='prueba'||d<=30);b.classList.toggle('hidden',!show);if(show)$('inAccT').textContent=accTexto();$('cuPlan').innerHTML=accSub()}
-function openPlans(onb){const v=accVencido();$('pyT').textContent=v?'Tu acceso terminó':onb===true?'Bienvenido a Maletín de vuelo':'Elige tu acceso';$('pyS').textContent=v?'Para seguir usando la bitácora elige un plan. Tus vuelos siguen guardados.':onb===true?'Elige cómo quieres acceder. Es un pago único, sin cobros automáticos. También puedes probarlo 5 días gratis.':accTexto();$('pyBack').classList.toggle('hidden',v||onb===true);$('pyTry').classList.toggle('hidden',onb!==true);note('pyMsg','');show('vPay')}
+function openPlans(onb){const v=accVencido();$('pyT').textContent=v?'Tu acceso terminó':onb===true?'Bienvenido a Maletín de vuelo':'Elige tu acceso';$('pyS').textContent=v?'Para seguir usando la bitácora elige un plan. Tus vuelos siguen guardados.':onb===true?'Elige cómo quieres acceder. Es un pago único, sin cobros automáticos. También puedes probarlo 3 días gratis.':accTexto();$('pyBack').classList.toggle('hidden',v||onb===true);$('pyTry').classList.toggle('hidden',onb!==true);note('pyMsg','');show('vPay')}
 $('pyTry').onclick=async()=>{$('pyTry').disabled=true;try{const{error}=await sb.auth.updateUser({data:{onb_plan:true}});if(error)throw error;location.reload()}catch(e){note('pyMsg','No pude continuar: '+(e.message||e),'err');$('pyTry').disabled=false}};
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-plan]');if(!b||!sb)return;b.disabled=true;note('pyMsg','Abriendo Mercado Pago…');try{const{data,error}=await sb.functions.invoke('crear-pago',{body:{plan:b.dataset.plan}});if(error)throw error;if(!data||!data.init_point)throw new Error((data&&data.error)||'No se pudo crear el pago');location.href=data.init_point}catch(err){note('pyMsg','No pude iniciar el pago: '+(err.message||err),'err');b.disabled=false}});
 $('inAcc').onclick=()=>openPlans();$('pyBack').onclick=()=>show('vApp');$('pyOut').onclick=()=>sb.auth.signOut();

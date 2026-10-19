@@ -1,7 +1,7 @@
 PAGOS CON MERCADO PAGO - pasos de instalación (una sola vez)
 
 1. Supabase > SQL Editor: ejecutar accesos.sql completo.
-   (Usuarios actuales quedan "indefinido"; nuevos tienen 5 días de prueba.)
+   (Usuarios actuales quedan "indefinido"; nuevos tienen 3 días de prueba.)
 
 2. Mercado Pago > Tus integraciones > crear aplicación (Checkout Pro). Copiar:
    - Access Token de PRODUCCIÓN (o de prueba para probar)
