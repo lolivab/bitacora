@@ -204,7 +204,7 @@ async function perfil(pts,vav,alt,rc,rd){
  <svg id="rtSvg" viewBox="0 0 900 430" style="width:100%;height:auto;touch-action:none;color:inherit" role="img" aria-label="Perfil vertical de la ruta"></svg>
  <div id="rtRead" class="hint" style="min-height:1.4em">Toca o pasa el cursor sobre el gráfico para ver el detalle.</div>
  <p><button class="btn ghost small" id="rtWindBtn" type="button">Actualizar viento</button> <span id="rtWindMsg" class="hint"></span></p>
- <p class="hint">Terreno desde el modelo digital de elevación (AWS Terrain Tiles); es referencial y no incluye obstáculos. Ascenso y descenso con la VAV constante y los ritmos indicados (el tiempo de la tabla no cambia). Viento: modelo meteorológico (Open-Meteo) a la altitud de la ruta y a la hora estimada de cada punto, según la fecha y hora de despegue del bloque Exportar. La flecha apunta hacia donde sopla; el texto es dirección de donde viene / nudos; HW = viento de frente, TW = de cola. Es referencial y no reemplaza el pronóstico oficial. Altitud en pies sobre el nivel del mar; salida y destino se toman a la elevación del terreno en el aeródromo.</p>`;
+ <p class="hint">Terreno desde el modelo digital de elevación (AWS Terrain Tiles); es referencial y no incluye obstáculos. Ascenso y descenso con la VAV constante y los ritmos indicados (el tiempo de la tabla no cambia). Viento: modelo meteorológico (Open-Meteo) a la altitud de la ruta y a la hora estimada de cada punto, según la fecha y hora de despegue del bloque Exportar. Las flechas muestran hacia dónde sopla el viento relativo al rumbo general salida-llegada: hacia la derecha es viento de cola, hacia la izquierda de frente, hacia abajo empuja hacia la derecha del avión. El texto es dirección de donde viene / nudos; HW = viento de frente, TW = de cola, según el rumbo de cada tramo. Es referencial y no reemplaza el pronóstico oficial. Altitud en pies sobre el nivel del mar; salida y destino se toman a la elevación del terreno en el aeródromo.</p>`;
  dibujarPerfil(P,pts);
  $('rtWindBtn').onclick=()=>actualizarViento(P,vav);
  actualizarViento(P,vav,tok);
@@ -305,20 +305,21 @@ async function cargarViento(P,vav,progreso){
  const idx=ds.map(d=>{let i=0;while(i<sm.pts.length-1&&sm.pts[i+1].d<=d)i++;return i}),
   curso=ds.map(d=>{const l=legs.find(x=>d<=x.accD+1e-9)||legs[legs.length-1];return l.tc});
  const tFin=t0+D/vav*36e5,hIni=hIso(Math.floor(t0/36e5)*36e5),hFin=hIso(Math.ceil(tFin/36e5)*36e5),niv=nivelesPara(Math.max(P.top,P.alt||0));
+ const A0=[lastPts[0].lat,lastPts[0].lon],A1=[lastPts[lastPts.length-1].lat,lastPts[lastPts.length-1].lon],rumbo=distNM(A0,A1)<5?legs[0].tc:bearing(A0,A1);
  const out=new Array(ds.length).fill(null);let hechos=0,fallos=0,ult='';
  const uno=async k=>{try{const j=await pedirPunto([sm.pts[idx[k]].lat,sm.pts[idx[k]].lon],hIni,hFin,niv),o=j.hourly,h=hIso(Math.round((t0+ds[k]/vav*36e5)/36e5)*36e5),jj=o&&o.time?o.time.indexOf(h):-1;if(jj<0)throw new Error('sin datos para esa hora');
    const n=niv.map(l=>({h:o['geopotential_height_'+l+'hPa']&&o['geopotential_height_'+l+'hPa'][jj],s:o['wind_speed_'+l+'hPa']&&o['wind_speed_'+l+'hPa'][jj],d:o['wind_direction_'+l+'hPa']&&o['wind_direction_'+l+'hPa'][jj]})),
    alt=P.path[idx[k]],w=vientoInterp(n,alt*0.3048);if(!w)throw new Error('sin datos');out[k]={d:ds[k],dir:w.dir,spd:w.spd,hw:compFrente(w.spd,w.dir,curso[k]),alt}}catch(e){fallos++;ult=e.message}
-  hechos++;if(progreso)progreso({pts:out.slice(),paso,t0,hechos,total:ds.length,fallos})};
+  hechos++;if(progreso)progreso({pts:out.slice(),paso,t0,rumbo,hechos,total:ds.length,fallos})};
  let sig=0;await Promise.all([...Array(Math.min(3,ds.length))].map(async()=>{while(sig<ds.length){const k=sig++;await uno(k)}}));
  if(!out.some(Boolean))throw new Error(ult||'sin datos');
- return{pts:out,paso,t0,fallos}}
+ return{pts:out,paso,t0,rumbo,fallos}}
 function pintarViento(W){
  const g=$('rtWind');if(!g||!geom)return;const{X,L,W:Wd,R,AX}=geom,f=n=>n.toFixed(1),y0=AX+112;
  if(W&&W.pts&&!W.pts.some(Boolean)&&!W.error){g.innerHTML=`<text x="${L}" y="${AX+74}" font-size="11" fill="currentColor" opacity=".7">Viento estimado: consultando (${W.hechos||0}/${W.total||''})…</text>`;return}
  if(!W||!W.pts||!W.pts.some(Boolean)){g.innerHTML=`<text x="${L}" y="${AX+74}" font-size="11" fill="#b00020">Viento no disponible${W&&W.error?': '+E(W.error):''}</text>`;return}
- let h=`<text x="${L}" y="${AX+74}" font-size="11" fill="currentColor" opacity=".7">Viento estimado cada ${W.paso} NM, a la altitud de la ruta (de donde viene / nudos)</text>`;
- W.pts.forEach(p=>{if(!p)return;const x=Math.min(Wd-R-22,Math.max(L+22,X(p.d))),hw=p.hw,col=hw>=2?'#c0392b':hw<=-2?'#2e8b57':'currentColor',to=(p.dir+180)%360,
+ let h=`<text x="${L}" y="${AX+74}" font-size="11" fill="currentColor" opacity=".7">Viento cada ${W.paso} NM a la altitud de la ruta (de donde viene / kt). Flechas relativas al rumbo general ${hdg(W.rumbo)}°: → cola, ← frente</text>`;
+ W.pts.forEach(p=>{if(!p)return;const x=Math.min(Wd-R-22,Math.max(L+22,X(p.d))),hw=p.hw,col=hw>=2?'#c0392b':hw<=-2?'#2e8b57':'currentColor',to=((p.dir+180-W.rumbo+90)%360+360)%360,
   tx=p.spd<0.5?'calma':hdg(p.dir)+'°/'+Math.round(p.spd),cp=Math.abs(hw)<2?'':(hw>0?'HW ':'TW ')+Math.round(Math.abs(hw));
   h+=(p.spd<0.5?`<circle cx="${f(x)}" cy="${y0}" r="4" fill="none" stroke="currentColor" opacity=".6"/>`:`<g transform="translate(${f(x)},${y0}) rotate(${f(to)})"><line x1="0" y1="13" x2="0" y2="-11" stroke="${col}" stroke-width="2"/><path d="M0,-15 L-5,-6 L5,-6 Z" fill="${col}"/></g>`)+
    `<text x="${f(x)}" y="${y0+28}" font-size="10.5" text-anchor="middle" fill="currentColor">${tx}</text><text x="${f(x)}" y="${y0+40}" font-size="10.5" font-weight="700" text-anchor="middle" fill="${col}">${cp}</text>`});
