@@ -162,6 +162,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
 .ad-p.anual{background:#1e4f86}.ad-p.prueba{background:#8a5a00}.ad-p.x{background:#6b7280}
 .ad-lv{display:block}@media(max-width:700px){.ad-lv{display:inline!important}}
 .ad-warn{color:var(--bad);font-weight:600}
+#adS{align-items:center}#adS>span{font-size:12px;color:var(--mute);margin-right:2px}.ad-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#2ecc71;box-shadow:0 0 0 3px rgba(46,204,113,.25);margin-right:6px;vertical-align:middle}.ad-dot.off{background:#9aa3b2;box-shadow:none;opacity:.5}
 @media(max-width:700px){.ad-kp{grid-template-columns:repeat(2,1fr)}.ad-u{grid-template-columns:40px minmax(0,1fr);gap:8px 12px}.ad-u .ad-c{grid-column:1 / -1;display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:8px}.ad-u .ad-c small{display:inline}.ad-u .ad-go{grid-column:1 / -1}.ad-u .ad-go button{width:100%}}
 #aFg,#pfAll,#pfNone,.card a[href^="http"]{color:var(--dual)}#pyCup::placeholder{text-transform:none}
 @media(max-width:560px){#pfOut .m-h{display:none}#pfOut th,#pfOut td{padding:8px 5px;font-size:13px}#pfOut table{width:100%;min-width:0}}
@@ -513,6 +514,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <h2 style="margin:0 0 2px">Administrador</h2><div class="hint">Usuarios, planes y actividad. Las horas incluyen experiencia previa.</div>
   <div id="adKp" class="ad-kp"></div>
   <div class="ad-bar"><input id="adQ" type="search" placeholder="Buscar por nombre o correo…" autocomplete="off"><div id="adF" class="ad-chips"></div></div>
+  <div id="adS" class="ad-chips" style="margin:0 0 10px"></div>
   <div id="adSum" class="hint"></div>
   <div id="adTbl" class="ad-list"></div>
   <div id="adMsg"></div>
@@ -2148,6 +2150,7 @@ function paintAvatar(){
   if(avatar){el.style.background='url('+avatar+') center/cover no-repeat'}else{el.style.background='';el.textContent=initials()}});
  const d=$('cuDel');if(d)d.classList.toggle('hidden',!avatar);
 }
+setInterval(()=>{if(!user||viewing||document.hidden)return;touchAcceso();if(!$('s-admin').classList.contains('hidden'))loadAdmin()},60000);
 async function touchAcceso(){
  try{await sb.from('perfiles').upsert({user_id:user.id,ultimo_acceso:new Date().toISOString()})}catch(e){}
 }
@@ -2175,13 +2178,17 @@ $('cuDel').onclick=async()=>{if(await saveAvatar(null))note('avMsg','Foto elimin
 
 /* ---------- Administrador ---------- */
 const ADMIN_EMAIL='jolivab@gmail.com';
-let ADD=[],ADQ='',ADFL='todos';
+let ADD=[],ADQ='',ADFL='todos',ADSK='reg',ADSD=-1;
+const AD_SORTS=[['reg','Registro'],['nom','Nombre'],['plan','Plan'],['vue','Vuelos'],['hrs','Horas'],['uv','Último vuelo'],['con','Conexión']];
+const adKey=(k,r)=>k==='reg'?+new Date(r.registrado||0):k==='nom'?(r.nombre||r.email||'').toLowerCase():k==='plan'?(r._a?(r._a.hasta?+new Date(r._a.hasta):9e15):-1):k==='vue'?(r.vuelos||0):k==='hrs'?(r.horas||0):k==='uv'?+new Date(r.ultimo_vuelo||0):(adLast(r)?+adLast(r):0);
+const adOnline=r=>{const l=adLast(r);return !!l&&Date.now()-l.getTime()<5*60*1000};
+function adSortBar(){$('adS').innerHTML='<span>Ordenar:</span>'+AD_SORTS.map(x=>`<button type="button" data-s="${x[0]}" class="${x[0]===ADSK?'on':''}">${x[1]}${x[0]===ADSK?(ADSD<0?' ↓':' ↑'):''}</button>`).join('')}
 const adAcc=r=>{const a=r._a;if(!a)return{k:'x',n:'Sin plan',t:'—'};const n={prueba:'Prueba',anual:'Anual',lifetime:'Lifetime',indefinido:'Lifetime'}[a.plan]||a.plan,k=a.plan==='indefinido'?'lifetime':a.plan;if(!a.hasta)return{k,n,t:'Sin vencimiento'};const ms=new Date(a.hasta)-Date.now();if(ms<=0)return{k,n,t:'Vencido',w:1};const d=Math.ceil(ms/864e5);return{k,n,t:d+(d===1?' día':' días')}};
 const adLast=r=>{const x=[r.ultimo_acceso,r.ultimo_login].filter(Boolean).sort().pop();return x?new Date(x):null};
 function adRender(){
- const q=ADQ.toLowerCase(),rows=ADD.filter(r=>(ADFL==='todos'||adAcc(r).k===ADFL)&&(!q||((r.nombre||'')+' '+(r.email||'')).toLowerCase().includes(q)));
+ const q=ADQ.toLowerCase(),rows=ADD.filter(r=>(ADFL==='todos'||adAcc(r).k===ADFL)&&(!q||((r.nombre||'')+' '+(r.email||'')).toLowerCase().includes(q))).sort((a,b)=>{const x=adKey(ADSK,a),y=adKey(ADSK,b);return (x<y?-1:x>y?1:0)*ADSD});adSortBar();
  $('adSum').textContent=rows.length===ADD.length?ADD.length+' usuarios':rows.length+' de '+ADD.length+' usuarios';
- $('adTbl').innerHTML=rows.length?rows.map(r=>{const c=adAcc(r),l=adLast(r),nm=r.nombre||r.email||'?';return `<div class="ad-u"><div class="ad-av">${esc(String(nm).trim().charAt(0).toUpperCase())}</div><div class="ad-n"><b>${esc(r.nombre||'—')}</b><span>${esc(r.email||'')}</span></div><div class="ad-c"><small>Plan</small><div><span class="ad-p ${esc(c.k)}">${esc(c.n)}</span> <span class="${c.w?'ad-warn':'muted'}" style="font-size:13px">${esc(c.t)}</span></div></div><div class="ad-c"><small>Vuelos · horas</small><div>${r.vuelos} · <b>${fmt(r.horas)}</b> <span class="muted ad-lv" style="font-size:12px">· último ${esc(dm(r.ultimo_vuelo)||'—')}</span></div></div><div class="ad-go"><button class="btn ghost small" data-u="${esc(r.user_id)}" data-n="${esc(r.nombre||r.email)}" data-m="${esc(r.email)}" type="button">Ver bitácora</button><div class="muted" style="font-size:11.5px;margin-top:4px;text-align:right">${l?'Conectado '+esc(l.toLocaleDateString('es-CL',{day:'2-digit',month:'short'})):'Sin conexión'}</div></div></div>`}).join(''):'<div class="hint">Ningún usuario coincide.</div>'
+ $('adTbl').innerHTML=rows.length?rows.map(r=>{const c=adAcc(r),l=adLast(r),nm=r.nombre||r.email||'?';return `<div class="ad-u"><div class="ad-av">${esc(String(nm).trim().charAt(0).toUpperCase())}</div><div class="ad-n"><b><span class="ad-dot ${adOnline(r)?'':'off'}" title="${adOnline(r)?'En línea (últimos 5 min)':'Sin actividad reciente'}"></span>${esc(r.nombre||'—')}</b><span>${esc(r.email||'')}</span></div><div class="ad-c"><small>Plan</small><div><span class="ad-p ${esc(c.k)}">${esc(c.n)}</span> <span class="${c.w?'ad-warn':'muted'}" style="font-size:13px">${esc(c.t)}</span></div></div><div class="ad-c"><small>Vuelos · horas</small><div>${r.vuelos} · <b>${fmt(r.horas)}</b> <span class="muted ad-lv" style="font-size:12px">· último ${esc(dm(r.ultimo_vuelo)||'—')}</span></div></div><div class="ad-go"><button class="btn ghost small" data-u="${esc(r.user_id)}" data-n="${esc(r.nombre||r.email)}" data-m="${esc(r.email)}" type="button">Ver bitácora</button><div class="muted" style="font-size:11.5px;margin-top:4px;text-align:right">${adOnline(r)?'<b style="color:#2ecc71">En línea</b>':l?'Conectado '+esc(l.toLocaleDateString('es-CL',{day:'2-digit',month:'short'})):'Sin conexión'}</div></div></div>`}).join(''):'<div class="hint">Ningún usuario coincide.</div>'
 }
 async function loadAdmin(){
  note('adMsg','');$('adSum').textContent='Cargando…';
@@ -2194,6 +2201,7 @@ async function loadAdmin(){
  $('adF').innerHTML=[['todos','Todos'],['lifetime','Lifetime'],['anual','Anual'],['prueba','Prueba']].map(x=>`<button type="button" data-f="${x[0]}" class="${x[0]===ADFL?'on':''}">${x[1]}</button>`).join('');
  adRender()
 }
+$('adS').onclick=e=>{const b=e.target.closest('[data-s]');if(!b)return;if(ADSK===b.dataset.s)ADSD=-ADSD;else{ADSK=b.dataset.s;ADSD=ADSK==='nom'?1:-1}adRender()};
 $('adQ').oninput=e=>{ADQ=e.target.value.trim();adRender()};
 $('adF').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;ADFL=b.dataset.f;$('adF').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));adRender()};
 
