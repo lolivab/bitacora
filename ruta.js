@@ -25,14 +25,36 @@ function muestrear(pts){const legs=[];let tot=0;for(let i=0;i<pts.length-1;i++){
  for(let i=0;i<legs.length;i++){const n=Math.max(1,Math.ceil(legs[i]/step)),g=gcPts([pts[i].lat,pts[i].lon],[pts[i+1].lat,pts[i+1].lon],n);for(let k=(i?1:0);k<=n;k++)out.push({lat:g[k][0],lon:((g[k][1]+540)%360)-180,d:base+legs[i]*k/n});base+=legs[i]}
  return{pts:out,total:tot,cum:legs.reduce((a,d)=>(a.push((a.length?a[a.length-1]:0)+d),a),[0])}}
 /* e: terreno (ft) en cada muestra; alt: altitud de crucero (ft MSL); rc/rd: ft/min; vav: kt. */
-function perfilCalc(sm,e,vav,alt,rc,rd){
- const D=sm.total,e0=e[0],e1=e[e.length-1],k=vav/60;
- let top=alt,dc=alt>e0?(alt-e0)/rc*k:0,dd=alt>e1?(alt-e1)/rd*k:0,llega=true;
- if(dc+dd>D){llega=false;top=Math.max(Math.max(e0,e1),(D/k+e0/rc+e1/rd)/(1/rc+1/rd));dc=Math.max(0,(top-e0)/rc*k);dd=Math.max(0,(top-e1)/rd*k)}
- const at=d=>d<dc?e0+(top-e0)*(dc?d/dc:1):d>D-dd?e1+(top-e1)*(dd?(D-d)/dd:1):top;
+function perfilCalc(sm,e,vav,alt,rc,rd,cams){
+ const D=sm.total,e0=e[0],e1=e[e.length-1],k=vav/60,
+  cs=(cams||[]).filter(c=>c&&isFinite(c.alt)&&c.d>0&&c.d<D-1e-9).sort((a,b)=>a.d-b.d);
+ let top=alt,dc,dd,llega=true,key,at,avisos=[],marcas=[];
+ if(!cs.length){
+  dc=alt>e0?(alt-e0)/rc*k:0;dd=alt>e1?(alt-e1)/rd*k:0;
+  if(dc+dd>D){llega=false;top=Math.max(Math.max(e0,e1),(D/k+e0/rc+e1/rd)/(1/rc+1/rd));dc=Math.max(0,(top-e0)/rc*k);dd=Math.max(0,(top-e1)/rd*k)}
+  at=d=>d<dc?e0+(top-e0)*(dc?d/dc:1):d>D-dd?e1+(top-e1)*(dd?(D-d)/dd:1):top;
+  key=[[0,at(0)],[dc,top],[D-dd,top],[D,at(D)]];
+ }else{
+  dc=alt>e0?(alt-e0)/rc*k:0;key=[[0,dc?e0:alt],[dc,alt]];
+  let cur=alt,ult=dc;
+  cs.forEach(c=>{const dh=c.alt-cur;if(Math.abs(dh)<1){return}
+   const dur=Math.abs(dh)/(dh>0?rc:rd)*k,s0=Math.max(c.modo==='cru'?c.d-dur:c.d,ult),fin=Math.min(D,s0+dur);
+   if(c.modo==='cru'&&s0+dur>c.d+0.05)avisos.push({d:c.d,falta:s0+dur-c.d,alt:c.alt});
+   if(s0>ult+1e-9)key.push([Math.min(D,s0),cur]);
+   key.push([fin,c.alt]);marcas.push({d:c.d,d0:Math.min(D,s0),d1:fin,alt:c.alt,modo:c.modo,sube:dh>0});
+   top=Math.max(top,c.alt);cur=c.alt;ult=fin});
+  dd=cur>e1?(cur-e1)/rd*k:0;const sd=Math.max(ult,D-dd);
+  if(sd>D-dd+0.05)avisos.push({d:D,falta:sd-(D-dd),alt:null});
+  key.push([Math.min(D,sd),cur]);key.push([D,dd?e1:cur]);dd=Math.max(0,D-sd);
+  at=d=>{if(d<=key[0][0])return key[0][1];for(let i=1;i<key.length;i++)if(d<=key[i][0]){const a=key[i-1],b=key[i],w=b[0]-a[0];return w<1e-9?b[1]:a[1]+(b[1]-a[1])*(d-a[0])/w}return key[key.length-1][1]};
+ }
  const path=sm.pts.map(p=>at(p.d)),marg=path.map((h,i)=>h-e[i]);
  let minM=Infinity,minD=0,bajo=0;sm.pts.forEach((p,i)=>{if(p.d<3||p.d>D-3)return;if(marg[i]<minM){minM=marg[i];minD=p.d}if(marg[i]<1000)bajo++});
- return{dc,dd,top,llega,path,marg,minM:minM===Infinity?null:minM,minD,bajo,tMax:Math.max.apply(null,e),tocMin:dc/k,todMin:dd/k,D}}
+ return{dc,dd,top,llega,path,marg,minM:minM===Infinity?null:minM,minD,bajo,tMax:Math.max.apply(null,e),tocMin:dc/k,todMin:dd/k,D,key,avisos,marcas}}
+/* altitud objetivo de cada tramo: "ini" en el punto de partida del tramo, "cru" en el punto de llegada. cams[i] alineado con los puntos. */
+function altsTramos(alt,cams,nPts){const o=[];let cur=alt;for(let j=0;j<nPts-1;j++){const a=cams&&cams[j],b=cams&&cams[j+1];
+ if(j>0&&a&&a.modo==='ini'&&isFinite(a.alt))cur=a.alt;
+ if(j+1<nPts-1&&b&&b.modo==='cru'&&isFinite(b.alt))cur=b.alt;o.push(cur)}return o}
 
 /* ---------- viento estimado (funciones puras) ---------- */
 /* niv: [{h (m MSL), s (kt), d (° de donde sopla)}]. Interpola por componentes a la altura altM. */
@@ -45,13 +67,13 @@ function vientoInterp(niv,altM){const n=niv.filter(x=>x&&isFinite(x.h)&&isFinite
 const compFrente=(spd,dir,curso)=>spd*Math.cos((dir-curso)*RAD);
 /* distancias (NM) donde se estima el viento: 0, cada paso y el final si queda un tramo largo. */
 function distViento(D,paso){const o=[];for(let d=0;d<=D+1e-9;d+=paso)o.push(d);if(D-o[o.length-1]>=paso/2)o.push(D);return o}
-if(typeof module!=='undefined')module.exports={distNM,bearing,midpoint,decl,calcRuta,hhmm,hdg,elevFt,tileXY,muestrear,perfilCalc,vientoInterp,compFrente,distViento,_setGrid:g=>{GRID=g}};
+if(typeof module!=='undefined')module.exports={distNM,bearing,midpoint,decl,calcRuta,hhmm,hdg,elevFt,tileXY,muestrear,perfilCalc,altsTramos,vientoInterp,compFrente,distViento,_setGrid:g=>{GRID=g}};
 if(typeof document==='undefined')return;
 
 /* ---------- interfaz ---------- */
 const $=id=>document.getElementById(id);
 const E=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let lastIn=null,lastP=null,built=false,map=null,layer=null,wps=['',''],editId=null,saved=[],lastLegs=null,lastPts=null;
+let lastIn=null,lastP=null,built=false,map=null,layer=null,wps=['',''],cams=[null,null],lastCams=null,lastAlts=null,editId=null,saved=[],lastLegs=null,lastPts=null;
 const OTRO='__otro__';
 
 function build(){
@@ -60,6 +82,10 @@ function build(){
  #s-ruta .rt-wp{display:flex;gap:6px;align-items:center;margin-bottom:6px}
  #s-ruta .rt-wp input{flex:1;text-transform:uppercase;min-width:0}
  #s-ruta .rt-wp .rt-n{width:22px;text-align:center;font-weight:600;color:var(--muted,#667)}
+ #s-ruta .rt-wp{flex-wrap:wrap}
+ #s-ruta .rt-cm{display:flex;gap:6px;flex:1 0 100%;margin:0 0 4px 28px}
+ #s-ruta .rt-cm select{flex:1;min-width:0}
+ #s-ruta .rt-cm input{flex:0 0 120px;text-transform:none}
  #s-ruta .rt-mini{padding:4px 8px;min-width:32px}
  #s-ruta table.rt td,#s-ruta table.rt th{white-space:nowrap}
  #s-ruta .rt-saved{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line,#ddd)}
@@ -73,7 +99,7 @@ function build(){
   <div class="form">
    <div class="field"><label for="rtAv">Avión</label><select id="rtAv"></select></div>
    <div class="field"><label for="rtV">VAV (kt) — editable</label><input id="rtV" type="number" min="30" max="600" step="1" inputmode="numeric"></div>
-   <div class="field"><label for="rtAlt">Altitud (ft)</label><input id="rtAlt" type="number" min="0" max="60000" step="500" value="5500" inputmode="numeric"></div>
+   <div class="field"><label for="rtAlt">Altitud inicial (ft)</label><input id="rtAlt" type="number" min="0" max="60000" step="500" value="5500" inputmode="numeric"></div>
    <div class="field"><label for="rtRc">Ascenso (ft/min)</label><input id="rtRc" type="number" min="100" max="5000" step="50" value="700" inputmode="numeric"></div>
    <div class="field"><label for="rtRd">Descenso (ft/min)</label><input id="rtRd" type="number" min="100" max="5000" step="50" value="500" inputmode="numeric"></div>
   </div>
@@ -108,22 +134,25 @@ function build(){
  sel.innerHTML=(typeof FLOTA!=='undefined'?FLOTA:[]).map((f,i)=>`<option value="${i}">${E(f[0])}</option>`).join('')+`<option value="${OTRO}">Otro avión…</option>`;
  const setV=()=>{const v=sel.value;$('rtOtroBox').style.display=v===OTRO?'':'none';if(v!==OTRO&&typeof FLOTA!=='undefined')$('rtV').value=FLOTA[+v][2]};
  sel.onchange=setV;setV();
- $('rtAdd').onclick=()=>{readWps();if(wps.length>=20)return;wps.splice(wps.length-1,0,'');drawWps()};
+ $('rtAdd').onclick=()=>{readWps();if(wps.length>=20)return;wps.splice(wps.length-1,0,'');cams.splice(wps.length-2,0,null);drawWps()};
  $('rtGo').onclick=calcular;$('rtPdf').onclick=exportarPdf;{const t=new Date();$('rtFecha').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
  $('rtSv').onclick=guardar;$('rtCp').onclick=copiar;
- $('rtNew').onclick=()=>{editId=null;wps=['',''];$('rtNom').value='';$('rtOut').innerHTML='';$('rtProf').innerHTML='';$('rtSave').style.display='none';$('rtExp').style.display='none';$('rtMap').style.display='none';msg('');drawWps();drawList()};
+ $('rtNew').onclick=()=>{editId=null;wps=['',''];cams=[null,null];$('rtNom').value='';$('rtOut').innerHTML='';$('rtProf').innerHTML='';$('rtSave').style.display='none';$('rtExp').style.display='none';$('rtMap').style.display='none';msg('');drawWps();drawList()};
  drawWps();
 }
 function msg(t,k){const m=$('rtMsg');if(m)m.innerHTML=t?`<div class="msg ${k||''}">${E(t)}</div>`:''}
-function readWps(){const r=[...document.querySelectorAll('#rtWps input')].map(i=>i.value.trim().toUpperCase());if(r.length)wps=r}
+function readWps(){const r=[...document.querySelectorAll('#rtWps input[data-i]')].map(i=>i.value.trim().toUpperCase());
+ if(r.length){wps=r;cams=r.map((_,i)=>{const q=document.querySelector('#rtWps [data-cm="'+i+'"]'),a=document.querySelector('#rtWps [data-ca="'+i+'"]');return q&&q.value?{modo:q.value,alt:a&&a.value!==''?Number(a.value):NaN}:null})}}
 function drawWps(){
- const last=wps.length-1;
- $('rtWps').innerHTML=wps.map((c,i)=>{const lab=i===0?'Salida':i===last?'Destino':'Punto '+i;return`<div class="rt-wp"><span class="rt-n">${i+1}</span><input list="rtDl" maxlength="4" placeholder="${lab} (ICAO)" value="${E(c)}" aria-label="${lab}" data-i="${i}" autocomplete="off">`+
- (i>0&&i<last?`<button class="btn ghost small rt-mini" type="button" data-up="${i}" title="Subir">↑</button><button class="btn ghost small rt-mini" type="button" data-dn="${i}" title="Bajar">↓</button><button class="btn ghost small rt-mini" type="button" data-rm="${i}" title="Quitar">✕</button>`:'')+`</div>`}).join('');
- document.querySelectorAll('#rtWps input').forEach(inp=>inp.oninput=()=>sugerir(inp.value));
- document.querySelectorAll('#rtWps [data-up]').forEach(b=>b.onclick=()=>{readWps();const i=+b.dataset.up;if(i>1){[wps[i-1],wps[i]]=[wps[i],wps[i-1]];drawWps()}});
- document.querySelectorAll('#rtWps [data-dn]').forEach(b=>b.onclick=()=>{readWps();const i=+b.dataset.dn;if(i<wps.length-2){[wps[i+1],wps[i]]=[wps[i],wps[i+1]];drawWps()}});
- document.querySelectorAll('#rtWps [data-rm]').forEach(b=>b.onclick=()=>{readWps();wps.splice(+b.dataset.rm,1);drawWps()});
+ const last=wps.length-1;cams.length=wps.length;for(let i=0;i<cams.length;i++)if(cams[i]===undefined)cams[i]=null;
+ $('rtWps').innerHTML=wps.map((c,i)=>{const lab=i===0?'Salida':i===last?'Destino':'Punto '+i,cm=cams[i],mid=i>0&&i<last;return`<div class="rt-wp"><span class="rt-n">${i+1}</span><input list="rtDl" maxlength="4" placeholder="${lab} (ICAO)" value="${E(c)}" aria-label="${lab}" data-i="${i}" autocomplete="off">`+
+ (mid?`<button class="btn ghost small rt-mini" type="button" data-up="${i}" title="Subir">↑</button><button class="btn ghost small rt-mini" type="button" data-dn="${i}" title="Bajar">↓</button><button class="btn ghost small rt-mini" type="button" data-rm="${i}" title="Quitar">✕</button>`:'')+
+ (mid?`<div class="rt-cm"><select data-cm="${i}" aria-label="Cambio de altitud en ${E(c||lab)}"><option value="">Sin cambio de altitud</option><option value="ini"${cm&&cm.modo==='ini'?' selected':''}>Iniciar cambio de altitud a…</option><option value="cru"${cm&&cm.modo==='cru'?' selected':''}>Cruzar a…</option></select><input type="number" min="0" max="60000" step="500" inputmode="numeric" placeholder="ft" data-ca="${i}" value="${cm&&isFinite(cm.alt)?cm.alt:''}" aria-label="Altitud del cambio (ft)"${cm?'':' style="display:none"'}></div>`:'')+`</div>`}).join('');
+ document.querySelectorAll('#rtWps input[data-i]').forEach(inp=>inp.oninput=()=>sugerir(inp.value));
+ document.querySelectorAll('#rtWps [data-cm]').forEach(q=>q.onchange=()=>{const a=document.querySelector('#rtWps [data-ca="'+q.dataset.cm+'"]');a.style.display=q.value?'':'none';if(q.value)a.focus()});
+ document.querySelectorAll('#rtWps [data-up]').forEach(b=>b.onclick=()=>{readWps();const i=+b.dataset.up;if(i>1){[wps[i-1],wps[i]]=[wps[i],wps[i-1]];[cams[i-1],cams[i]]=[cams[i],cams[i-1]];drawWps()}});
+ document.querySelectorAll('#rtWps [data-dn]').forEach(b=>b.onclick=()=>{readWps();const i=+b.dataset.dn;if(i<wps.length-2){[wps[i+1],wps[i]]=[wps[i],wps[i+1]];[cams[i+1],cams[i]]=[cams[i],cams[i+1]];drawWps()}});
+ document.querySelectorAll('#rtWps [data-rm]').forEach(b=>b.onclick=()=>{readWps();wps.splice(+b.dataset.rm,1);cams.splice(+b.dataset.rm,1);drawWps()});
 }
 async function cargarDatos(){
  if(typeof AP!=='undefined'&&!AP){const r=await fetch('airports.json');if(!r.ok)throw new Error('airports');AP=await r.json()}
@@ -145,13 +174,15 @@ async function calcular(){
  const alt=Number($('rtAlt').value);if(!(alt>=0&&alt<=60000))return msg('La altitud debe estar entre 0 y 60.000 ft.','err');
  const rc=Number($('rtRc').value),rd=Number($('rtRd').value);if(!(rc>=100&&rc<=5000)||!(rd>=100&&rd<=5000))return msg('Ascenso y descenso deben estar entre 100 y 5.000 ft/min.','err');
  const pts=cods.map(c=>({c,lat:AP[c][0],lon:AP[c][1]}));
+ let cm=[];for(let i=0;i<pts.length;i++){const c=cams[i];if(!c||i===0||i===pts.length-1){cm.push(null);continue}if(!(c.alt>=0&&c.alt<=60000))return msg('Punto '+(i+1)+' ('+pts[i].c+'): escribe la altitud del cambio (0 a 60.000 ft).','err');cm.push({modo:c.modo,alt:Math.round(c.alt)})}
+ lastCams=cm;lastAlts=altsTramos(alt,cm,pts.length);
  for(let i=0;i<pts.length-1;i++)if(pts[i].c===pts[i+1].c)return msg('Dos puntos consecutivos son iguales ('+pts[i].c+').','err');
  const legs=calcRuta(pts,vav);lastLegs=legs;lastPts=pts;
  const tot=legs[legs.length-1];
  $('rtOut').innerHTML=`<p><b>${Math.round(tot.accD)} NM</b> · <b>${hhmm(tot.accR)}</b> de vuelo · VAV ${Math.round(vav)} kt · ${Math.round(alt).toLocaleString('es-CL')} ft · ${E(avionActual())}</p>
- <table class="rt"><thead><tr><th>#</th><th>Tramo</th><th style="text-align:right">Rumbo mag.</th><th style="text-align:right">Dist. (NM)</th><th style="text-align:right">Tiempo</th><th style="text-align:right">Acumulado</th></tr></thead><tbody>`+
- legs.map((l,i)=>`<tr><td>${i+1}</td><td><b>${E(l.de)}</b> → <b>${E(l.a)}</b></td><td style="text-align:right">${hdg(l.mh)}°</td><td style="text-align:right">${l.d.toFixed(1)}</td><td style="text-align:right">${hhmm(l.tr)}</td><td style="text-align:right">${hhmm(l.accR)}</td></tr>`).join('')+
- `<tr><td></td><td><b>Total</b></td><td></td><td style="text-align:right"><b>${tot.accD.toFixed(1)}</b></td><td style="text-align:right"><b>${hhmm(tot.accR)}</b></td><td></td></tr></tbody></table>
+ <table class="rt"><thead><tr><th>#</th><th>Tramo</th><th style="text-align:right">Alt. (ft)</th><th style="text-align:right">Rumbo mag.</th><th style="text-align:right">Dist. (NM)</th><th style="text-align:right">Tiempo</th><th style="text-align:right">Acumulado</th></tr></thead><tbody>`+
+ legs.map((l,i)=>`<tr><td>${i+1}</td><td><b>${E(l.de)}</b> → <b>${E(l.a)}</b>${cm[i+1]?` <span class="hint">(${cm[i+1].modo==='cru'?'cruzar '+E(l.a)+' a':'iniciar cambio en '+E(l.a)+' a'} ${cm[i+1].alt.toLocaleString('es-CL')} ft)</span>`:''}</td><td style="text-align:right">${Math.round(lastAlts[i]).toLocaleString('es-CL')}</td><td style="text-align:right">${hdg(l.mh)}°</td><td style="text-align:right">${l.d.toFixed(1)}</td><td style="text-align:right">${hhmm(l.tr)}</td><td style="text-align:right">${hhmm(l.accR)}</td></tr>`).join('')+
+ `<tr><td></td><td><b>Total</b></td><td></td><td></td><td style="text-align:right"><b>${tot.accD.toFixed(1)}</b></td><td style="text-align:right"><b>${hhmm(tot.accR)}</b></td><td></td></tr></tbody></table>
  <p class="hint">Rumbo magnético = rumbo verdadero en el punto medio de cada tramo menos la declinación (WMM2025). Tiempos por tramo redondeados al minuto, sin viento ni rodaje o circuito.</p>`;
  $('rtSave').style.display='';$('rtExp').style.display='';lastIn={avion:avionActual(),vav,alt};
  if(!$('rtNom').value)$('rtNom').value=cods[0]+' – '+cods[cods.length-1];
@@ -170,7 +201,7 @@ async function dibujar(pts){
 function copiar(){
  if(!lastLegs)return;const t=lastLegs[lastLegs.length-1];
  const txt=['Plan de ruta · '+avionActual()+' · VAV '+$('rtV').value+' kt · '+$('rtAlt').value+' ft','']
-  .concat(lastLegs.map((l,i)=>`${i+1}. ${l.de}→${l.a}  RM ${hdg(l.mh)}°  ${l.d.toFixed(1)} NM  ${hhmm(l.tr)}  (acum. ${hhmm(l.accR)})`))
+  .concat(lastLegs.map((l,i)=>`${i+1}. ${l.de}→${l.a}  ${lastAlts?Math.round(lastAlts[i])+' ft  ':''}RM ${hdg(l.mh)}°  ${l.d.toFixed(1)} NM  ${hhmm(l.tr)}  (acum. ${hhmm(l.accR)})`))
   .concat(['','Total: '+t.accD.toFixed(1)+' NM · '+hhmm(t.accR)]).join('\n');
  const ok=()=>msg('Resumen copiado.','ok'),fail=()=>msg('No pude copiar. Selecciona la tabla y cópiala manualmente.','err');
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fail);else fail();
@@ -193,14 +224,15 @@ async function perfil(pts,vav,alt,rc,rd){
  const box=$('rtProf'),tok=++profTok;box.innerHTML='<p class="hint">Cargando terreno…</p>';
  let sm,e;try{sm=muestrear(pts);e=await terrenoEn(sm.pts)}catch(err){if(tok===profTok)box.innerHTML='<div class="msg err">No pude cargar el terreno para el perfil vertical (necesita conexión a internet).</div>';return}
  if(tok!==profTok)return;
- const P=perfilCalc(sm,e,vav,alt,rc,rd);P.e=e;P.sm=sm;P.alt=alt;lastP=P;
+ const P=perfilCalc(sm,e,vav,alt,rc,rd,(lastCams||[]).map((c,i)=>c?{d:sm.cum[i],alt:c.alt,modo:c.modo}:null));P.e=e;P.sm=sm;P.alt=alt;lastP=P;
  const fl=n=>Math.round(n).toLocaleString('es-CL');
- let alerta='';
- if(P.minM!==null){if(P.minM<0)alerta=`<div class="msg err">La ruta cruza el terreno (margen ${fl(P.minM)} ft cerca de la NM ${Math.round(P.minD)}). Sube la altitud o cambia la ruta.</div>`;
-  else if(P.minM<1000)alerta=`<div class="msg err">Margen sobre el terreno menor a 1.000 ft: mínimo ${fl(P.minM)} ft cerca de la NM ${Math.round(P.minD)}.</div>`;
-  else alerta=`<div class="msg ok">Margen mínimo sobre el terreno: ${fl(P.minM)} ft (cerca de la NM ${Math.round(P.minD)}).</div>`}
+ let alerta='';const nomP=d=>{let j=0;while(j<pts.length-1&&sm.cum[j]<d-0.5)j++;return pts[j].c};
+ P.avisos.forEach(a=>{alerta+=`<div class="msg err">${a.alt==null?'No alcanza a descender hasta el destino':'No alcanza a completar el cambio a '+fl(a.alt)+' ft antes de '+E(nomP(a.d))}: faltan ≈ ${a.falta.toFixed(0)} NM con el ritmo indicado.</div>`});
+ if(P.minM!==null){if(P.minM<0)alerta+=`<div class="msg err">La ruta cruza el terreno (margen ${fl(P.minM)} ft cerca de la NM ${Math.round(P.minD)}). Sube la altitud o cambia la ruta.</div>`;
+  else if(P.minM<1000)alerta+=`<div class="msg err">Margen sobre el terreno menor a 1.000 ft: mínimo ${fl(P.minM)} ft cerca de la NM ${Math.round(P.minD)}.</div>`;
+  else alerta+=`<div class="msg ok">Margen mínimo sobre el terreno: ${fl(P.minM)} ft (cerca de la NM ${Math.round(P.minD)}).</div>`}
  box.innerHTML=`<h3 style="margin:8px 0">Perfil vertical</h3>
- <p>${P.llega?'':'<b>No alcanza la altitud elegida</b>: la ruta es muy corta; máxima ≈ '+fl(P.top)+' ft. '}Ascenso: <b>${P.dc.toFixed(0)} NM</b> · ${hhmm(P.tocMin)} · Crucero: <b>${Math.max(0,P.D-P.dc-P.dd).toFixed(0)} NM</b> · Descenso: <b>${P.dd.toFixed(0)} NM</b> · ${hhmm(P.todMin)} · Terreno máx.: <b>${fl(P.tMax)} ft</b></p>${alerta}
+ <p>${P.llega?'':'<b>No alcanza la altitud elegida</b>: la ruta es muy corta; máxima ≈ '+fl(P.top)+' ft. '}Ascenso: <b>${P.dc.toFixed(0)} NM</b> · ${hhmm(P.tocMin)} · Crucero: <b>${Math.max(0,P.D-P.dc-P.dd).toFixed(0)} NM</b>${P.marcas.length?' (con '+P.marcas.length+' cambio(s) de altitud)':''} · Descenso: <b>${P.dd.toFixed(0)} NM</b> · ${hhmm(P.todMin)} · Terreno máx.: <b>${fl(P.tMax)} ft</b></p>${alerta}
  <svg id="rtSvg" viewBox="0 0 900 430" style="width:100%;height:auto;touch-action:none;color:inherit" role="img" aria-label="Perfil vertical de la ruta"></svg>
  <div id="rtRead" class="hint" style="min-height:1.4em">Toca o pasa el cursor sobre el gráfico para ver el detalle.</div>
  <p><button class="btn ghost small" id="rtWindBtn" type="button">Actualizar viento</button> <span id="rtWindMsg" class="hint"></span></p>
@@ -220,13 +252,14 @@ function dibujarPerfil(P,pts){
  g+=`<text x="${W/2}" y="${AX+54}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">Distancia (NM)</text><text x="12" y="${T+ph/2}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7" transform="rotate(-90 12 ${T+ph/2})">Altitud (ft)</text>`;
  const terr=sm.pts.map((p,i)=>f(X(p.d))+','+f(Y(P.e[i]))).join(' ');
  g+=`<polygon points="${f(X(0))},${f(Y(0))} ${terr} ${f(X(D))},${f(Y(0))}" fill="#b9a98a" fill-opacity=".85" stroke="#8a7a5c" stroke-width="1"/>`;
- const key=[[0,P.path[0]],[P.dc,P.top],[D-P.dd,P.top],[D,P.path[P.path.length-1]]];
+ const key=P.key;
  g+=`<polyline points="${key.map(k=>f(X(k[0]))+','+f(Y(k[1]))).join(' ')}" fill="none" stroke="#c2306e" stroke-width="2.5" stroke-linejoin="round"/>`;
  let red='';sm.pts.forEach((p,i)=>{if(i&&p.d>=3&&p.d<=D-3&&(P.marg[i]<1000||P.marg[i-1]<1000)&&sm.pts[i-1].d>=3)red+=`<line x1="${f(X(sm.pts[i-1].d))}" y1="${f(Y(P.path[i-1]))}" x2="${f(X(p.d))}" y2="${f(Y(P.path[i]))}"/>`});
  if(red)g+=`<g stroke="#d00" stroke-width="5" stroke-linecap="round" opacity=".9">${red}</g>`;
- const lab=(d,t,dy)=>`<circle cx="${f(X(d))}" cy="${f(Y(d===P.dc?P.top:P.top))}" r="3.5" fill="#c2306e"/><text x="${f(X(d))}" y="${f(Y(P.top)+dy)}" font-size="11" text-anchor="middle" fill="currentColor">${t}</text>`;
- if(P.dc>0.5&&P.dc<D)g+=lab(P.dc,'TOC '+hhmm(P.tocMin),-8);
- if(P.dd>0.5&&D-P.dd>0)g+=lab(D-P.dd,'TOD',-8);
+ const lab=(d,h,t,dy)=>`<circle cx="${f(X(d))}" cy="${f(Y(h))}" r="3.5" fill="#c2306e"/><text x="${f(X(d))}" y="${f(Y(h)+dy)}" font-size="11" text-anchor="middle" fill="currentColor">${t}</text>`;
+ if(P.dc>0.5&&P.dc<D)g+=lab(P.dc,key[1][1],'TOC '+hhmm(P.tocMin),-8);
+ if(P.dd>0.5&&D-P.dd>0)g+=lab(D-P.dd,key[key.length-2][1],'TOD',-8);
+ P.marcas.forEach(m=>{g+=lab(m.d1,m.alt,Math.round(m.alt).toLocaleString('es-CL')+' ft',-8);g+=`<text x="${f(X(m.d))}" y="${f(Y(m.alt)+(m.sube?16:-20))}" font-size="10" text-anchor="middle" fill="currentColor" opacity=".75">${m.modo==='cru'?'cruzar':'iniciar'}</text>`});
  pts.forEach((p,i)=>{const d=sm.cum[i];g+=`<line x1="${f(X(d))}" x2="${f(X(d))}" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".35" stroke-dasharray="4 4"/><text x="${f(Math.min(W-R-14,Math.max(L+14,X(d))))}" y="${T-6}" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">${E(p.c)}</text>`});
  {let ultX=-1e9,fila=0;pts.forEach((p,i)=>{const x=X(sm.cum[i]),cx=Math.min(W-R-16,Math.max(L+16,x));fila=(cx-ultX<38)?1-fila:0;ultX=cx;g+=`<path d="M${f(x-5)},${AX+8} L${f(x+5)},${AX+8} L${f(x)},${AX} Z" fill="#c2306e"/><text x="${f(cx)}" y="${AX+27+fila*12}" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">${E(p.c)}</text>`})}
  g+=`<g id="rtWind"><text x="${L}" y="${AX+74}" font-size="11" fill="currentColor" opacity=".7">Viento estimado: cargando…</text></g>`;
@@ -253,11 +286,12 @@ async function exportarPdf(){
  if(cons<0||extra<0)return msg('Consumo y combustible extra no pueden ser negativos.','err');
  let horaMin=null;if(hora){const m=/^(\d{2}):(\d{2})$/.exec(hora);if(!m)return msg('Hora de despegue inválida.','err');horaMin=+m[1]*60+ +m[2]}
  const notas={};
+ (lastCams||[]).forEach((c,i)=>{if(c&&i>0){const t=(c.modo==='cru'?'Cruzar a ':'Inic. cambio a ')+c.alt;notas[i-1]=(notas[i-1]?notas[i-1]+' / ':'')+t}});
  if(lastP&&lastP.sm){const cum=lastP.sm.cum,at=x=>{for(let i=0;i<cum.length-1;i++)if(x>=cum[i]&&x<cum[i+1]+1e-9)return i;return cum.length-2};
   if(lastP.dc>0.5){const i=at(lastP.dc);notas[i]=(notas[i]?notas[i]+' / ':'')+'TOC'}
   if(lastP.dd>0.5){const i=at(lastP.D-lastP.dd);notas[i]=(notas[i]?notas[i]+' / ':'')+'TOD'}}
  const nombres=lastLegs.map(l=>{const a=AP[l.a];return (l.a+' '+String(a&&(a[3]||a[2])||'').toUpperCase()).trim()});
- const fil=N.filas(lastLegs,{vav:lastIn.vav,altitud:Math.round(lastIn.alt),consumo:cons,horaMin,notas,nombres});
+ const fil=N.filas(lastLegs,{vav:lastIn.vav,altitud:Math.round(lastIn.alt),alts:lastAlts,consumo:cons,horaMin,notas,nombres});
  const totMin=lastLegs[lastLegs.length-1].accR,quema=cons>0?cons*totMin/60:0,dest=lastPts[lastPts.length-1].c;
  const ads=[];lastPts.forEach(p=>{if(!ads.includes(p.c))ads.push(p.c)});if(alt&&!ads.includes(alt))ads.push(alt);
  const fc=N.fccv(AP[dest],fecha),fd=fecha.split('-');
@@ -336,7 +370,7 @@ async function actualizarViento(P,vav,tok){
 async function guardar(){
  if(!lastPts||!user||!sb)return;msg('');
  const nombre=$('rtNom').value.trim();if(!nombre)return msg('Ponle un nombre a la ruta.','err');
- const v=$('rtAv').value,row={nombre,puntos:lastPts.map(p=>p.c),avion:avionActual(),vav:Number($('rtV').value),altitud:Math.round(Number($('rtAlt').value)),alternativa:($('rtAlter').value.trim().toUpperCase()||null),consumo:Number($('rtCons').value)>0?Number($('rtCons').value):null,extra:Number($('rtExtra').value)>0?Number($('rtExtra').value):null,ascenso:Math.round(Number($('rtRc').value))||null,descenso:Math.round(Number($('rtRd').value))||null,updated_at:new Date().toISOString()};
+ const v=$('rtAv').value,row={nombre,puntos:lastPts.map(p=>p.c),cambios:(lastCams&&lastCams.some(Boolean))?lastCams:null,avion:avionActual(),vav:Number($('rtV').value),altitud:Math.round(Number($('rtAlt').value)),alternativa:($('rtAlter').value.trim().toUpperCase()||null),consumo:Number($('rtCons').value)>0?Number($('rtCons').value):null,extra:Number($('rtExtra').value)>0?Number($('rtExtra').value):null,ascenso:Math.round(Number($('rtRc').value))||null,descenso:Math.round(Number($('rtRd').value))||null,updated_at:new Date().toISOString()};
  let r;
  if(editId)r=await sb.from('rutas').update(row).eq('id',editId).select('id').single();
  else r=await sb.from('rutas').insert(row).select('id').single();
@@ -345,7 +379,7 @@ async function guardar(){
 }
 async function cargarLista(){
  if(!sb||!user)return;
- const r=await sb.from('rutas').select('id,nombre,puntos,avion,vav,altitud,ascenso,descenso,alternativa,consumo,extra,updated_at').order('updated_at',{ascending:false}).limit(100);
+ const r=await sb.from('rutas').select('id,nombre,puntos,cambios,avion,vav,altitud,ascenso,descenso,alternativa,consumo,extra,updated_at').order('updated_at',{ascending:false}).limit(100);
  if(r.error){saved=[];$('rtList').textContent='No pude cargar tus rutas: '+r.error.message;return}
  saved=r.data||[];drawList();
 }
@@ -359,7 +393,7 @@ function drawList(){
 }
 function abrir(id){
  const s=saved.find(x=>x.id===id);if(!s)return;
- editId=s.id;wps=(s.puntos||[]).slice();$('rtNom').value=s.nombre;
+ editId=s.id;wps=(s.puntos||[]).slice();cams=wps.map((_,i)=>(s.cambios&&s.cambios[i])||null);$('rtNom').value=s.nombre;
  const i=typeof FLOTA!=='undefined'?FLOTA.findIndex(f=>f[0]===s.avion):-1,sel=$('rtAv');
  if(i>=0)sel.value=String(i);else{sel.value=OTRO;$('rtOtroN').value=s.avion||''}
  sel.onchange();if(s.vav)$('rtV').value=s.vav;if(s.altitud!=null)$('rtAlt').value=s.altitud;$('rtAlter').value=s.alternativa||'';$('rtCons').value=s.consumo||'';$('rtExtra').value=s.extra||'';if(s.ascenso)$('rtRc').value=s.ascenso;if(s.descenso)$('rtRd').value=s.descenso;

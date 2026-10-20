@@ -30,7 +30,7 @@ const f1=n=>(Math.round(n*10)/10).toFixed(1).replace('.',',');
 /* legs: salida de calcRuta (con tr = minutos redondeados). o: {vav,altitud,consumo,extra,hora,tosHoraEnMin} */
 function filas(legs,o){let ac=0,tm=0,fb=0;const dr=legs.map(l=>Math.round(l.d)),tot=dr.reduce((a,b)=>a+b,0),et=o.horaMin;
  return legs.map((l,i)=>{ac+=dr[i];tm+=l.tr;return{
-  nombre:(o.nombres&&o.nombres[i])||l.a,cusR:h3(l.tc),alt:o.altitud,cusMg:h3(l.mh),
+  nombre:(o.nombres&&o.nombres[i])||l.a,cusR:h3(l.tc),alt:(o.alts&&o.alts[i]!=null?Math.round(o.alts[i]):o.altitud),cusMg:h3(l.mh),
   p:dr[i],a:ac,r:i===legs.length-1?'':tot-ac,vt:Math.round(o.vav),te:l.tr,tt:hm(tm),
   he:et==null?'':hm((et+tm)%1440),fb:o.consumo>0?f1(o.consumo*tm/60):'',obs:(o.notas&&o.notas[i])||''}})}
 
