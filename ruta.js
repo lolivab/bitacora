@@ -22,7 +22,7 @@ function tileXY(lat,lon,z){const n=2**z,la=Math.max(-85.0511,Math.min(85.0511,la
 /* Puntos equiespaciados a lo largo de toda la ruta (círculo máximo por tramo), con distancia acumulada en NM. */
 function muestrear(pts){const legs=[];let tot=0;for(let i=0;i<pts.length-1;i++){const d=distNM([pts[i].lat,pts[i].lon],[pts[i+1].lat,pts[i+1].lon]);legs.push(d);tot+=d}
  const step=Math.max(0.5,tot/300),out=[];let base=0;
- for(let i=0;i<legs.length;i++){const n=Math.max(1,Math.ceil(legs[i]/step)),g=gcPts([pts[i].lat,pts[i].lon],[pts[i+1].lat,pts[i+1].lon],n);for(let k=(i?1:0);k<=n;k++)out.push({lat:g[k][0],lon:((g[k][1]+540)%360)-180,d:base+legs[i]*k/n})}
+ for(let i=0;i<legs.length;i++){const n=Math.max(1,Math.ceil(legs[i]/step)),g=gcPts([pts[i].lat,pts[i].lon],[pts[i+1].lat,pts[i+1].lon],n);for(let k=(i?1:0);k<=n;k++)out.push({lat:g[k][0],lon:((g[k][1]+540)%360)-180,d:base+legs[i]*k/n});base+=legs[i]}
  return{pts:out,total:tot,cum:legs.reduce((a,d)=>(a.push((a.length?a[a.length-1]:0)+d),a),[0])}}
 /* e: terreno (ft) en cada muestra; alt: altitud de crucero (ft MSL); rc/rd: ft/min; vav: kt. */
 function perfilCalc(sm,e,vav,alt,rc,rd){
@@ -33,7 +33,19 @@ function perfilCalc(sm,e,vav,alt,rc,rd){
  const path=sm.pts.map(p=>at(p.d)),marg=path.map((h,i)=>h-e[i]);
  let minM=Infinity,minD=0,bajo=0;sm.pts.forEach((p,i)=>{if(p.d<3||p.d>D-3)return;if(marg[i]<minM){minM=marg[i];minD=p.d}if(marg[i]<1000)bajo++});
  return{dc,dd,top,llega,path,marg,minM:minM===Infinity?null:minM,minD,bajo,tMax:Math.max.apply(null,e),tocMin:dc/k,todMin:dd/k,D}}
-if(typeof module!=='undefined')module.exports={distNM,bearing,midpoint,decl,calcRuta,hhmm,hdg,elevFt,tileXY,muestrear,perfilCalc,_setGrid:g=>{GRID=g}};
+
+/* ---------- viento estimado (funciones puras) ---------- */
+/* niv: [{h (m MSL), s (kt), d (° de donde sopla)}]. Interpola por componentes a la altura altM. */
+function vientoInterp(niv,altM){const n=niv.filter(x=>x&&isFinite(x.h)&&isFinite(x.s)&&isFinite(x.d)).sort((a,b)=>a.h-b.h);if(!n.length)return null;
+ const uv=x=>[-x.s*Math.sin(x.d*RAD),-x.s*Math.cos(x.d*RAD)];let a=n[0],b=n[0],t=0;
+ if(altM>=n[n.length-1].h){a=b=n[n.length-1]}else if(altM>n[0].h){for(let i=0;i<n.length-1;i++)if(altM>=n[i].h&&altM<=n[i+1].h){a=n[i];b=n[i+1];t=(altM-a.h)/((b.h-a.h)||1);break}}
+ const A=uv(a),B=uv(b),u=A[0]+(B[0]-A[0])*t,v=A[1]+(B[1]-A[1])*t,spd=Math.hypot(u,v);
+ return{spd,dir:spd<0.5?0:(Math.atan2(-u,-v)*DEG+360)%360}}
+/* >0 = viento de frente (HW), <0 = de cola (TW). */
+const compFrente=(spd,dir,curso)=>spd*Math.cos((dir-curso)*RAD);
+/* distancias (NM) donde se estima el viento: 0, cada paso y el final si queda un tramo largo. */
+function distViento(D,paso){const o=[];for(let d=0;d<=D+1e-9;d+=paso)o.push(d);if(D-o[o.length-1]>=paso/2)o.push(D);return o}
+if(typeof module!=='undefined')module.exports={distNM,bearing,midpoint,decl,calcRuta,hhmm,hdg,elevFt,tileXY,muestrear,perfilCalc,vientoInterp,compFrente,distViento,_setGrid:g=>{GRID=g}};
 if(typeof document==='undefined')return;
 
 /* ---------- interfaz ---------- */
@@ -152,7 +164,7 @@ async function dibujar(pts){
  if(layer)layer.remove();layer=L.layerGroup().addTo(map);
  const all=[];
  for(let i=0;i<pts.length-1;i++){const a=[pts[i].lat,pts[i].lon],b=[pts[i+1].lat,pts[i+1].lon],g=gcPts(a,b,Math.max(4,Math.min(80,Math.round(distNM(a,b)/10))));g.forEach(p=>all.push(p));L.polyline(g,{color:'#c2306e',weight:3,opacity:.9}).addTo(layer)}
- pts.forEach((p,i)=>{L.marker([p.lat,p.lon]).addTo(layer).bindTooltip((i+1)+'. '+p.c+(AP[p.c]?' · '+AP[p.c][2]:''),{permanent:true,direction:'top'})});
+ pts.forEach((p,i)=>{L.marker([p.lat,p.lon]).addTo(layer).bindTooltip(p.c,{permanent:true,direction:'top'})});
  setTimeout(()=>{map.invalidateSize();map.fitBounds(L.latLngBounds(all),{padding:[40,40]})},50);
 }
 function copiar(){
@@ -176,7 +188,7 @@ async function terrenoEn(pts){
  const data={};await Promise.all([...keys].map(async k=>{const[zz,x,y]=k.split('/').map(Number);data[k]=await cargarTile(zz,x,y)}));
  return pts.map(p=>{const t=tileXY(p.lat,p.lon,z),d=data[z+'/'+t.x+'/'+t.y],i=(t.py*256+t.px)*4;return elevFt(d[i],d[i+1],d[i+2])})}
 const nice=(v,n)=>{const r=v/n,m=10**Math.floor(Math.log10(r)),f=r/m;return(f<=1?1:f<=2?2:f<=5?5:10)*m};
-let profTok=0;
+let profTok=0,geom=null;
 async function perfil(pts,vav,alt,rc,rd){
  const box=$('rtProf'),tok=++profTok;box.innerHTML='<p class="hint">Cargando terreno…</p>';
  let sm,e;try{sm=muestrear(pts);e=await terrenoEn(sm.pts)}catch(err){if(tok===profTok)box.innerHTML='<div class="msg err">No pude cargar el terreno para el perfil vertical (necesita conexión a internet).</div>';return}
@@ -189,20 +201,23 @@ async function perfil(pts,vav,alt,rc,rd){
   else alerta=`<div class="msg ok">Margen mínimo sobre el terreno: ${fl(P.minM)} ft (cerca de la NM ${Math.round(P.minD)}).</div>`}
  box.innerHTML=`<h3 style="margin:8px 0">Perfil vertical</h3>
  <p>${P.llega?'':'<b>No alcanza la altitud elegida</b>: la ruta es muy corta; máxima ≈ '+fl(P.top)+' ft. '}Ascenso: <b>${P.dc.toFixed(0)} NM</b> · ${hhmm(P.tocMin)} · Crucero: <b>${Math.max(0,P.D-P.dc-P.dd).toFixed(0)} NM</b> · Descenso: <b>${P.dd.toFixed(0)} NM</b> · ${hhmm(P.todMin)} · Terreno máx.: <b>${fl(P.tMax)} ft</b></p>${alerta}
- <svg id="rtSvg" viewBox="0 0 900 320" style="width:100%;height:auto;touch-action:none;color:inherit" role="img" aria-label="Perfil vertical de la ruta"></svg>
+ <svg id="rtSvg" viewBox="0 0 900 430" style="width:100%;height:auto;touch-action:none;color:inherit" role="img" aria-label="Perfil vertical de la ruta"></svg>
  <div id="rtRead" class="hint" style="min-height:1.4em">Toca o pasa el cursor sobre el gráfico para ver el detalle.</div>
- <p class="hint">Terreno desde el modelo digital de elevación (AWS Terrain Tiles); es referencial y no incluye obstáculos. Ascenso y descenso con la VAV constante y los ritmos indicados (el tiempo de la tabla no cambia). Altitud en pies sobre el nivel del mar; salida y destino se toman a la elevación del terreno en el aeródromo.</p>`;
+ <p><button class="btn ghost small" id="rtWindBtn" type="button">Actualizar viento</button> <span id="rtWindMsg" class="hint"></span></p>
+ <p class="hint">Terreno desde el modelo digital de elevación (AWS Terrain Tiles); es referencial y no incluye obstáculos. Ascenso y descenso con la VAV constante y los ritmos indicados (el tiempo de la tabla no cambia). Viento: modelo meteorológico (Open-Meteo) a la altitud de la ruta y a la hora estimada de cada punto, según la fecha y hora de despegue del bloque Exportar. La flecha apunta hacia donde sopla; el texto es dirección de donde viene / nudos; HW = viento de frente, TW = de cola. Es referencial y no reemplaza el pronóstico oficial. Altitud en pies sobre el nivel del mar; salida y destino se toman a la elevación del terreno en el aeródromo.</p>`;
  dibujarPerfil(P,pts);
+ $('rtWindBtn').onclick=()=>actualizarViento(P,vav);
+ actualizarViento(P,vav,tok);
 }
 function dibujarPerfil(P,pts){
  const svg=$('rtSvg');if(!svg)return;
- const W=900,H=320,L=56,R=14,T=22,B=40,pw=W-L-R,ph=H-T-B,sm=P.sm,D=P.D;
+ const W=900,H=430,L=56,R=14,T=22,ph=244,pw=W-L-R,sm=P.sm,D=P.D,AX=T+ph;
  const yMaxRaw=Math.max(P.top,P.tMax)*1.12+500,ys=nice(yMaxRaw,5),yMax=Math.ceil(yMaxRaw/ys)*ys;
  const X=d=>L+d/D*pw,Y=h=>T+ph-(h/yMax)*ph,f=n=>n.toFixed(1);
  let g='';
  for(let v=0;v<=yMax;v+=ys)g+=`<line x1="${L}" x2="${W-R}" y1="${f(Y(v))}" y2="${f(Y(v))}" stroke="currentColor" opacity=".13"/><text x="${L-6}" y="${f(Y(v)+4)}" font-size="11" text-anchor="end" fill="currentColor" opacity=".7">${v.toLocaleString('es-CL')}</text>`;
- const xs=nice(D,6);for(let d=0;d<=D+0.01;d+=xs)g+=`<line x1="${f(X(d))}" x2="${f(X(d))}" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".07"/><text x="${f(X(d))}" y="${H-B+16}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">${Math.round(d)}</text>`;
- g+=`<text x="${W/2}" y="${H-6}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">Distancia (NM)</text><text x="12" y="${T+ph/2}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7" transform="rotate(-90 12 ${T+ph/2})">Altitud (ft)</text>`;
+ const xs=nice(D,6);for(let d=0;d<=D+0.01;d+=xs)g+=`<line x1="${f(X(d))}" x2="${f(X(d))}" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".07"/><text x="${f(X(d))}" y="${AX+13}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">${Math.round(d)}</text>`;
+ g+=`<text x="${W/2}" y="${AX+54}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">Distancia (NM)</text><text x="12" y="${T+ph/2}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7" transform="rotate(-90 12 ${T+ph/2})">Altitud (ft)</text>`;
  const terr=sm.pts.map((p,i)=>f(X(p.d))+','+f(Y(P.e[i]))).join(' ');
  g+=`<polygon points="${f(X(0))},${f(Y(0))} ${terr} ${f(X(D))},${f(Y(0))}" fill="#b9a98a" fill-opacity=".85" stroke="#8a7a5c" stroke-width="1"/>`;
  const key=[[0,P.path[0]],[P.dc,P.top],[D-P.dd,P.top],[D,P.path[P.path.length-1]]];
@@ -213,6 +228,8 @@ function dibujarPerfil(P,pts){
  if(P.dc>0.5&&P.dc<D)g+=lab(P.dc,'TOC '+hhmm(P.tocMin),-8);
  if(P.dd>0.5&&D-P.dd>0)g+=lab(D-P.dd,'TOD',-8);
  pts.forEach((p,i)=>{const d=sm.cum[i];g+=`<line x1="${f(X(d))}" x2="${f(X(d))}" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".35" stroke-dasharray="4 4"/><text x="${f(Math.min(W-R-14,Math.max(L+14,X(d))))}" y="${T-6}" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">${E(p.c)}</text>`});
+ {let ultX=-1e9,fila=0;pts.forEach((p,i)=>{const x=X(sm.cum[i]),cx=Math.min(W-R-16,Math.max(L+16,x));fila=(cx-ultX<38)?1-fila:0;ultX=cx;g+=`<path d="M${f(x-5)},${AX+8} L${f(x+5)},${AX+8} L${f(x)},${AX} Z" fill="#c2306e"/><text x="${f(cx)}" y="${AX+27+fila*12}" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">${E(p.c)}</text>`})}
+ g+=`<g id="rtWind"><text x="${L}" y="${AX+74}" font-size="11" fill="currentColor" opacity=".7">Viento estimado: cargando…</text></g>`;
  g+=`<line id="rtCur" x1="0" x2="0" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".6" style="display:none"/>`;
  svg.innerHTML=g;
  const rd=$('rtRead'),cur=$('rtCur');
@@ -221,6 +238,7 @@ function dibujarPerfil(P,pts){
   cur.style.display='';cur.setAttribute('x1',f(X(sm.pts[i].d)));cur.setAttribute('x2',f(X(sm.pts[i].d)));
   rd.textContent=`NM ${Math.round(sm.pts[i].d)} · Terreno ${Math.round(P.e[i]).toLocaleString('es-CL')} ft · Ruta ${Math.round(P.path[i]).toLocaleString('es-CL')} ft · Margen ${Math.round(P.marg[i]).toLocaleString('es-CL')} ft`};
  svg.onpointermove=move;svg.onpointerdown=move;
+ geom={X,L,W,R,AX,D};
 }
 
 
@@ -253,6 +271,54 @@ async function exportarPdf(){
   doc.save('NavLog-'+lastPts[0].c+'-'+dest+'-'+fecha+'.pdf');msg('PDF descargado.','ok');
  }catch(e){msg('No pude generar el PDF: '+(e&&e.message||e),'err')}
 }
+
+
+/* ---------- viento estimado (Open-Meteo, niveles de presión) ---------- */
+const NIVELES=[1000,975,950,925,900,850,800,700,600,500,400,300,250,200];
+function tzSalida(){const c=lastPts&&lastPts[0]&&lastPts[0].c;return window.NavlogPdf&&AP&&AP[c]?window.NavlogPdf.tzDe(AP[c]):null}
+function localAUtc(fecha,hora,tz){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha),h=/^(\d{2}):(\d{2})$/.exec(hora||'12:00');if(!m||!h)return null;
+ const t=Date.UTC(+m[1],+m[2]-1,+m[3],+h[1],+h[2]);if(!tz)return t;
+ const off=u=>{const p=new Intl.DateTimeFormat('en-US',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(new Date(u)).reduce((a,x)=>(a[x.type]=x.value,a),{});return Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second)-u};
+ let u=t-off(t);u=t-off(u);return u}
+function inicioUtc(){ /* instante estimado de despegue (ms UTC) */
+ const fecha=$('rtFecha')&&$('rtFecha').value,hora=$('rtHora')&&$('rtHora').value,tz=tzSalida(),n=new Date(),hoy=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+ if(!fecha||fecha===hoy&&!hora)return Date.now();
+ return localAUtc(fecha,hora||'12:00',tz)}
+async function pedirViento(coords,t0){
+ const d0=new Date(t0).toISOString().slice(0,10),d1=new Date(t0+36e5*30).toISOString().slice(0,10),vars=NIVELES.flatMap(l=>['wind_speed_'+l+'hPa','wind_direction_'+l+'hPa','geopotential_height_'+l+'hPa']);
+ const url='https://api.open-meteo.com/v1/forecast?latitude='+coords.map(c=>c[0].toFixed(3)).join(',')+'&longitude='+coords.map(c=>c[1].toFixed(3)).join(',')+'&hourly='+vars.join(',')+'&wind_speed_unit=kn&timezone=GMT&start_date='+d0+'&end_date='+d1;
+ let ult='';for(let i=0;i<3;i++){try{const c=new AbortController(),to=setTimeout(()=>c.abort(),12000),r=await fetch(url,{signal:c.signal});clearTimeout(to);
+  if(r.ok){const j=await r.json();return Array.isArray(j)?j:[j]}
+  ult='HTTP '+r.status;if(r.status<500&&r.status!==429)break}catch(e){ult=e.name==='AbortError'?'tiempo agotado':'sin conexión'}
+  await new Promise(r=>setTimeout(r,1200*(i+1)))}
+ throw new Error(ult)}
+async function cargarViento(P,vav){
+ const t0=inicioUtc(),ahora=Date.now();if(t0==null)throw new Error('Fecha u hora inválidas');
+ if(t0<ahora-36e5*24||t0>ahora+36e5*24*14)throw new Error('El pronóstico cubre desde hoy hasta 14 días adelante. Ajusta la fecha de vuelo.');
+ const sm=P.sm,D=P.D,paso=D/50>39?Math.ceil(D/39/50)*50:50,ds=distViento(D,paso),legs=lastLegs;
+ const idx=ds.map(d=>{let i=0;while(i<sm.pts.length-1&&sm.pts[i+1].d<=d)i++;return i}),
+  curso=ds.map(d=>{const l=legs.find(x=>d<=x.accD+1e-9)||legs[legs.length-1];return l.tc});
+ const coords=idx.map(i=>[sm.pts[i].lat,sm.pts[i].lon]),resp=await pedirViento(coords,t0);
+ if(resp.length<coords.length)throw new Error('Respuesta incompleta del servicio de viento');
+ const out=ds.map((d,k)=>{const t=t0+d/vav*36e5,h=new Date(Math.round(t/36e5)*36e5).toISOString().slice(0,13)+':00',o=resp[k].hourly,j=o&&o.time?o.time.indexOf(h):-1;if(j<0)return null;
+  const niv=NIVELES.map(l=>({h:o['geopotential_height_'+l+'hPa']&&o['geopotential_height_'+l+'hPa'][j],s:o['wind_speed_'+l+'hPa']&&o['wind_speed_'+l+'hPa'][j],d:o['wind_direction_'+l+'hPa']&&o['wind_direction_'+l+'hPa'][j]}));
+  const alt=P.path[idx[k]],w=vientoInterp(niv,alt*0.3048);return w&&{d,dir:w.dir,spd:w.spd,hw:compFrente(w.spd,w.dir,curso[k]),alt}});
+ return{pts:out,paso,t0}}
+function pintarViento(W){
+ const g=$('rtWind');if(!g||!geom)return;const{X,L,W:Wd,R,AX}=geom,f=n=>n.toFixed(1),y0=AX+112;
+ if(!W||!W.pts||!W.pts.some(Boolean)){g.innerHTML=`<text x="${L}" y="${AX+74}" font-size="11" fill="#b00020">Viento no disponible${W&&W.error?': '+E(W.error):''}</text>`;return}
+ let h=`<text x="${L}" y="${AX+74}" font-size="11" fill="currentColor" opacity=".7">Viento estimado cada ${W.paso} NM, a la altitud de la ruta (de donde viene / nudos)</text>`;
+ W.pts.forEach(p=>{if(!p)return;const x=Math.min(Wd-R-22,Math.max(L+22,X(p.d))),hw=p.hw,col=hw>=2?'#c0392b':hw<=-2?'#2e8b57':'currentColor',to=(p.dir+180)%360,
+  tx=p.spd<0.5?'calma':hdg(p.dir)+'°/'+Math.round(p.spd),cp=Math.abs(hw)<2?'':(hw>0?'HW ':'TW ')+Math.round(Math.abs(hw));
+  h+=(p.spd<0.5?`<circle cx="${f(x)}" cy="${y0}" r="4" fill="none" stroke="currentColor" opacity=".6"/>`:`<g transform="translate(${f(x)},${y0}) rotate(${f(to)})"><line x1="0" y1="13" x2="0" y2="-11" stroke="${col}" stroke-width="2"/><path d="M0,-15 L-5,-6 L5,-6 Z" fill="${col}"/></g>`)+
+   `<text x="${f(x)}" y="${y0+28}" font-size="10.5" text-anchor="middle" fill="currentColor">${tx}</text><text x="${f(x)}" y="${y0+40}" font-size="10.5" font-weight="700" text-anchor="middle" fill="${col}">${cp}</text>`});
+ g.innerHTML=h}
+let vTok=0;
+async function actualizarViento(P,vav,tok){
+ const my=++vTok,msgEl=$('rtWindMsg');if(msgEl)msgEl.textContent='Consultando viento…';
+ let W;try{W=await cargarViento(P,vav)}catch(e){W={error:e.message}}
+ if(my!==vTok||(tok!==undefined&&tok!==profTok)||!$('rtWind'))return;
+ pintarViento(W);if($('rtWindMsg'))$('rtWindMsg').textContent=W.error?'':'Hora base: '+new Date(W.t0).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})+' (hora de este dispositivo)'}
 
 /* ---------- guardado (Supabase, tabla rutas) ---------- */
 async function guardar(){
