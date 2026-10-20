@@ -326,7 +326,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
      </div>
      <h3 class="c12" style="margin:10px 0 0">Cursos y condición</h3>
      <div class="field c12"><label>Cursos y requisitos ya aprobados</label><p class="hint">Se marcan solos si los detecto en tus comentarios.</p>
-      <div class="filters" id="ckCur"><label class="tog"><input type="checkbox" data-c="fc">Inspección Fuera de Cancha</label><label class="tog"><input type="checkbox" data-c="cost">Chequeo pistas costeras</label><label class="tog"><input type="checkbox" data-c="am">Área Media</label><label class="tog"><input type="checkbox" data-c="rv2">Habilitado en RV-9A II</label><label class="tog"><input type="checkbox" data-c="g1000">Ramo/curso Garmin 1000</label><label class="tog"><input type="checkbox" data-c="charla">Charla paso variable e inyección</label><label class="tog"><input type="checkbox" data-c="ma">Monomotores Avanzados</label><label class="tog"><input type="checkbox" data-c="noc">VFR Nocturno</label><label class="tog"><input type="checkbox" data-c="ifr">Vuelo por Instrumentos (IFR)</label><label class="tog"><input type="checkbox" data-c="mm">Multimotores</label></div></div>
+      <div class="filters" id="ckCur"><label class="tog"><input type="checkbox" data-c="fc">Inspección Fuera de Cancha</label><label class="tog"><input type="checkbox" data-c="cost">Chequeo pistas costeras</label><label class="tog"><input type="checkbox" data-c="psc">Chequeo Pista Corta</label><label class="tog"><input type="checkbox" data-c="am">Área Media</label><label class="tog"><input type="checkbox" data-c="rv2">Habilitado en RV-9A II</label><label class="tog"><input type="checkbox" data-c="g1000">Ramo/curso Garmin 1000</label><label class="tog"><input type="checkbox" data-c="charla">Charla paso variable e inyección</label><label class="tog"><input type="checkbox" data-c="ma">Monomotores Avanzados</label><label class="tog"><input type="checkbox" data-c="noc">VFR Nocturno</label><label class="tog"><input type="checkbox" data-c="ifr">Vuelo por Instrumentos (IFR)</label><label class="tog"><input type="checkbox" data-c="mm">Multimotores</label></div></div>
      <div class="c12 filters"><label class="tog" for="ckIns"><input type="checkbox" id="ckIns">Soy instructor o instructor ayudante (360 días en todos los grupos)</label></div>
     </div>
     <button class="btn" id="ckSave">Guardar</button> <span class="hint" id="ckMsg"></span>
@@ -842,7 +842,7 @@ const ckDot=k=>`<span class="tag" style="background:${CK_COL[k]}">${k==='ok'?'Ve
 
 /* ---------- Habilitaciones disponibles (Manual 4.37 y 4.38) ---------- */
 function acKey(m){return ckCode(m)}
-const HAB_CUR=['fc','am','g1000','charla','ma','noc','ifr','mm'];
+const HAB_CUR=['fc','psc','am','g1000','charla','ma','noc','ifr','mm'];
 function detectCursos(R){
  const nrm=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
  const out={cur:{},lic:'',am:''};
@@ -851,6 +851,7 @@ function detectCursos(R){
   if(/examen.*area media/.test(c)){out.cur.am=true;if(!out.am)out.am=r.d}
   if(/fuera de cancha/.test(c))out.cur.fc=true;
   if(/pistas? costeras?/.test(c))out.cur.cost=true;
+  if(/pistas? cortas?/.test(c))out.cur.psc=true;
   if(/examen.*monomotor|monomotores avanzados.*(aprob|examen)/.test(c))out.cur.ma=true;
   if(/examen.*nocturno/.test(c))out.cur.noc=true;
   if(/examen.*(ifr|instrumentos)/.test(c))out.cur.ifr=true;
@@ -872,6 +873,7 @@ function evalHab(R,tot,C,licD,amD){
  const A=[ // [nombre, norma, realizado?, requisitos[]]
  ['Inspección de Vuelo Fuera de Cancha','4.37.3',!!C.fc,[need(lic,'Licencia de piloto')]],
  ['Inspección opcional pistas costeras','4.37.4',!!C.cost,[need(lic,'Licencia de piloto')]],
+ ['Chequeo Pista Corta','',!!C.psc,[need(lic,'Licencia de piloto')]],
  ['Instrucción en Diamond DA-20 / Tomahawk','4.37.1-2',!!(F.DA20||F.TOMA),[need(lic,'Licencia de piloto')]],
  ['Instrucción en RV-9A I','4.37.5',!!F.RV9,[need(lic,'Licencia de piloto')]],
  ['Curso de Área Media (C172N o Cherokee 180)','4.37.8',!!C.am,[need(lic,'Licencia de piloto'),need(hLic>=25,`25 h después de la licencia (llevas ${fmt(hLic)})`),need(xLic>=15,`15 h de travesía (llevas ${fmt(xLic)})`),need(bip>=2,`Estar autorizado en 2 biplazas (llevas ${bip})`),need(C.fc,'Inspección Fuera de Cancha aprobada')]],
