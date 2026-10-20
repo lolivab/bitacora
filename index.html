@@ -485,9 +485,9 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
    <div class="card c6"><h2>Vuelos por día de la semana</h2><div class="hint">Según la fecha de cada vuelo</div><div class="chart"><canvas id="mxD"></canvas></div></div>
   </div>
  </section>
- <section id="s-pasaporte" class="hidden"><div class="card" style="max-width:560px">
+ <section id="s-pasaporte" class="hidden"><div class="card" style="max-width:620px">
   <h2>Mi pasaporte de vuelo</h2><div class="hint" id="ppH">Una tarjeta con tus rutas, aeródromos y totales. Se arma con los códigos ICAO de la ruta de tus vuelos.</div>
-  <canvas id="ppCv" style="width:100%;border-radius:10px;margin:10px 0;box-shadow:0 6px 24px #0004"></canvas>
+  <canvas id="ppCv" style="width:100%;border-radius:14px;margin:10px 0"></canvas>
   <div id="ppMsg" class="hint"></div>
   <p><button class="btn" id="ppDl" type="button">Descargar imagen</button> <button class="btn ghost" id="ppSh" type="button">Compartir</button></p>
  </div></section>
@@ -1976,105 +1976,102 @@ async function renderPasaporte(){
  const home=codes.sort((a,b)=>V[b]-V[a])[0]||'',ccs=[...new Set(codes.map(c=>AP[c][4]).filter(Boolean))];
  const nm=(viewing?(viewing.name||viewing.email):(user&&((user.user_metadata&&user.user_metadata.nombre)||String(user.email||'').split('@')[0])))||'PILOTO';
 
- const W=1080,H=1600,cv=$('ppCv');cv.width=W;cv.height=H;const g=cv.getContext('2d');
- const NAVY='#14305c',NAVY2='#0c1f3f',GOLD='#b8892b',GOLDL='#e6c670',INK='#1b2433',MUT='#5b6b86',MX=40,MY=168,MWd=W-80,MHd=540;
- const sp=(t,x,y,px,wt,col,ls,al,fam)=>{g.font=wt+' '+px+'px '+(fam||'system-ui,sans-serif');g.fillStyle=col;g.textBaseline='alphabetic';const ch=[...String(t)],ws=ch.map(c=>g.measureText(c).width),tot=ws.reduce((q,w)=>q+w,0)+ls*(ch.length-1);let cx=al==='c'?x-tot/2:al==='r'?x-tot:x;g.textAlign='left';ch.forEach((c,i)=>{g.fillText(c,cx,y);cx+=ws[i]+ls});return tot};
- const SERIF='Georgia,"Times New Roman",serif';
- const wings=(cx,cy,s,col,col2)=>{[[-1],[1]].forEach(([d])=>{for(let i=0;i<6;i++){g.beginPath();g.moveTo(cx+d*10*s,cy-4*s+i*2.2*s);g.quadraticCurveTo(cx+d*(70+i*9)*s,cy-(34-i*6)*s,cx+d*(112-i*4)*s,cy-(24-i*7)*s);g.quadraticCurveTo(cx+d*(70+i*6)*s,cy+(2+i*2)*s,cx+d*10*s,cy+(5+i*2.2)*s);g.closePath();g.fillStyle=i%2?col2:col;g.fill()}});g.beginPath();g.arc(cx,cy,13*s,0,7);g.fillStyle=col;g.fill();g.beginPath();g.arc(cx,cy,7*s,0,7);g.fillStyle=col2;g.fill()};
- // ---- papel
- const pg=g.createLinearGradient(0,0,W,H);pg.addColorStop(0,'#f6f0df');pg.addColorStop(.5,'#efe7d0');pg.addColorStop(1,'#f4ecd6');g.fillStyle=pg;g.fillRect(0,0,W,H);
- g.save();for(let i=0;i<5200;i++){g.fillStyle='rgba('+(120+Math.random()*60|0)+',100,60,'+(Math.random()*.05)+')';g.fillRect(Math.random()*W,Math.random()*H,1.4,1.4)}g.restore();
- // guilloché
- g.save();g.lineWidth=1;for(let i=0;i<46;i++){g.beginPath();const y0=150+i*31,A=10+(i%7)*3,f=.011+(i%5)*.0016,ph=i*.7;for(let x=0;x<=W;x+=6){const y=y0+A*Math.sin(x*f+ph)+A*.5*Math.sin(x*f*2.3-ph);x?g.lineTo(x,y):g.moveTo(x,y)}g.strokeStyle=i%2?'rgba(20,48,92,.07)':'rgba(30,125,125,.07)';g.stroke()}
- for(let k=0;k<9;k++){g.beginPath();const R=330-k*26,n=5+(k%4)*2;for(let t=0;t<=Math.PI*2+.01;t+=.01){const r=R*(0.86+0.14*Math.cos(n*t)),x=W/2+r*Math.cos(t),y=1040+r*Math.sin(t);t?g.lineTo(x,y):g.moveTo(x,y)}g.closePath();g.strokeStyle=k%2?'rgba(20,48,92,.07)':'rgba(30,125,125,.08)';g.stroke()}
- g.restore();
- // marca de agua
- g.save();g.globalAlpha=.05;wings(W/2,1040,2.6,NAVY,'#7a8fb2');g.restore();
- // ---- borde doble + microtexto
- g.strokeStyle=NAVY;g.lineWidth=5;g.strokeRect(16,16,W-32,H-32);g.strokeStyle=GOLD;g.lineWidth=1.6;g.strokeRect(28,28,W-56,H-56);
- g.save();g.beginPath();g.rect(34,34,W-68,H-68);g.restore();
- g.fillStyle='rgba(20,48,92,.35)';g.font='700 8px system-ui,sans-serif';g.textAlign='left';const micro='PASAPORTE DE VUELO  ·  FLIGHT PASSPORT  ·  PASSEPORT DE VOL  ·  ';let mt='';while(mt.length<420)mt+=micro;g.fillText(mt.slice(0,330),44,43);g.fillText(mt.slice(0,330),44,H-36);
- // ---- encabezado
- const hg=g.createLinearGradient(0,0,W,0);hg.addColorStop(0,NAVY2);hg.addColorStop(.5,NAVY);hg.addColorStop(1,NAVY2);g.fillStyle=hg;g.fillRect(34,52,W-68,96);
- g.fillStyle=GOLD;g.fillRect(34,148,W-68,3);
- wings(104,100,.58,GOLDL,'#a77a22');
- sp('PASAPORTE DE VUELO',W/2,96,46,'700',GOLDL,6,'c',SERIF);
- sp('FLIGHT PASSPORT  ·  PASSEPORT DE VOL',W/2,128,19,'600','#c9d4ea',5,'c');
- wings(W-104,100,.58,GOLDL,'#a77a22');
 
- // ---- marco del mapa y datos
- g.save();g.translate(MX,MY);
+ const W=1200,H=1640,cv=$('ppCv');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+ const INK='#0f1b3d',MUT='#6b7794',ACC='#ff5a1f',GY=H/2;
+ const rr=(x,y,w,hh,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+hh,r);g.arcTo(x+w,y+hh,x,y+hh,r);g.arcTo(x,y+hh,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()};
+ const card=(x,y,w,hh,r,fill)=>{g.save();g.shadowColor='rgba(15,27,61,.10)';g.shadowBlur=22;g.shadowOffsetY=7;g.fillStyle=fill||'#fff';rr(x,y,w,hh,r);g.fill();g.restore()};
+ // ---- mesa y tapa
+ const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#dfe3ec');bg.addColorStop(1,'#cfd5e2');g.fillStyle=bg;g.fillRect(0,0,W,H);
+ g.save();g.shadowColor='rgba(10,20,50,.45)';g.shadowBlur=44;g.shadowOffsetY=16;const cg=g.createLinearGradient(0,0,0,H);cg.addColorStop(0,'#1b2a5e');cg.addColorStop(1,'#0e1736');g.fillStyle=cg;rr(14,14,W-28,H-36,34);g.fill();g.restore();
+ g.strokeStyle='rgba(255,255,255,.10)';g.lineWidth=2;rr(20,20,W-40,H-48,30);g.stroke();
+ // ---- hojas (arriba y abajo del pliegue horizontal)
+ const X0=50,X1=W-50,TY0=70,TY1=GY-4,BY0=GY+4,BY1=H-86;
+ for(let i=4;i>=1;i--){g.fillStyle=i%2?'#e2e6ee':'#d6dbe6';g.fillRect(X0-i*3,TY0+4,X1-X0+i*6,TY1-TY0-4);g.fillRect(X0-i*3,BY0,X1-X0+i*6,BY1-BY0-4)}
+ const paper=(y0,y1,top)=>{
+  g.save();g.beginPath();g.rect(X0,y0,X1-X0,y1-y0);g.clip();
+  const pg=g.createLinearGradient(0,y0,0,y1);const a='#f8f9fc',b='#edeff5';pg.addColorStop(top?0:1,a);pg.addColorStop(top?1:0,b);g.fillStyle=pg;g.fillRect(X0,y0,X1-X0,y1-y0);
+  for(let i=0;i<11000;i++){const x=X0+Math.random()*(X1-X0),y=y0+Math.random()*(y1-y0);g.fillStyle='rgba(70,85,120,'+(Math.random()*.05)+')';g.fillRect(x,y,1+Math.random()*1.4,1)}
+  g.lineWidth=.6;for(let i=0;i<800;i++){const x=X0+Math.random()*(X1-X0),y=y0+Math.random()*(y1-y0),a2=Math.random()*6.28,l=4+Math.random()*10;g.strokeStyle='rgba(120,135,170,'+(Math.random()*.07)+')';g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a2)*l,y+Math.sin(a2)*l);g.stroke()}
+  g.lineWidth=.7;g.strokeStyle='rgba(40,70,140,.045)';for(let k=-1000;k<1300;k+=14){g.beginPath();g.moveTo(X0+k,y0);g.lineTo(X0+k+900,y1);g.stroke();g.beginPath();g.moveTo(X0+k+900,y0);g.lineTo(X0+k,y1);g.stroke()}
+  g.strokeStyle='rgba(20,140,150,.05)';for(let i=0;i<60;i++){g.beginPath();const yy=y0+i*12.5,A=3+(i%5);for(let x=X0;x<=X1;x+=5){const y=yy+A*Math.sin(x*.035+i*.5);x===X0?g.moveTo(x,y):g.lineTo(x,y)}g.stroke()}
+  g.restore()};
+ paper(TY0,TY1,true);paper(BY0,BY1,false);
+ // ---- página superior: mapa y banderas
+ const LX=96,MY=100,MWd=W-192,MHd=470;
+ g.save();g.shadowColor='rgba(15,27,61,.25)';g.shadowBlur=22;g.shadowOffsetY=8;g.fillStyle='#dde6f3';rr(LX,MY,MWd,MHd,22);g.fill();g.restore();
+ g.save();g.beginPath();rr(LX,MY,MWd,MHd,22);g.clip();g.translate(LX,MY);
  const GC=(A,B,n)=>{const t=x=>x*Math.PI/180,d=x=>x*180/Math.PI,v=p=>[Math.cos(t(p[0]))*Math.cos(t(p[1])),Math.cos(t(p[0]))*Math.sin(t(p[1])),Math.sin(t(p[0]))],a=v(A),b=v(B),om=Math.acos(Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1]+a[2]*b[2]))),o=[];for(let i=0;i<=n;i++){const f=i/n,k1=om<1e-6?1-f:Math.sin((1-f)*om)/Math.sin(om),k2=om<1e-6?f:Math.sin(f*om)/Math.sin(om),x=k1*a[0]+k2*b[0],y=k1*a[1]+k2*b[1],z=k1*a[2]+k2*b[2];o.push([d(Math.atan2(z,Math.hypot(x,y))),d(Math.atan2(y,x))])}return o};
  const segPts={};Object.keys(segs).forEach(k=>{const[a,b]=k.split('-');segPts[k]=GC(AP[a],AP[b],64)});
  let la0=-34,la1=-33,mlo=-70,spanLo=6;
  if(codes.length){const la=codes.map(c=>AP[c][0]).concat(...Object.values(segPts).map(p=>p.map(q=>q[0]))),lo=codes.map(c=>AP[c][1]).sort((x,y)=>x-y);la0=Math.min(...la);la1=Math.max(...la);
   let gap=-1,ga=lo[0],gb=lo[0];for(let i=0;i<lo.length;i++){const a=lo[i],b=i+1<lo.length?lo[i+1]:lo[0]+360,d=b-a;if(d>gap){gap=d;ga=a;gb=b}}
   spanLo=360-gap;mlo=((gb+ga+360)/2+540)%360-180;if(lo.length===1)spanLo=6}
- let dla=Math.max(la1-la0,3.5),dlo=Math.max(spanLo,3.5),mla=(la0+la1)/2;
+ let dla=Math.max(la1-la0,6),dlo=Math.max(spanLo,6),mla=(la0+la1)/2;
  const world=spanLo>120;if(world){mlo=-118.4;dlo=360;dla=Math.max(la1-la0+20,110)}
  const cs=Math.cos(mla*Math.PI/180);
  const sc=world?Math.min(MWd/(360*cs),(MHd-40)/dla):Math.min((MWd-120)/(dlo*cs),(MHd-140)/dla)*0.92,WW=360*cs*sc;
  const wr=l=>((l-mlo+540)%360+360)%360-180;
  const P=(lat,lon)=>[MWd/2+wr(lon)*cs*sc,MHd/2+10-(lat-mla)*sc];
  g.save();g.beginPath();g.rect(0,0,MWd,MHd);g.clip();
- g.fillStyle='#d4e5e9';g.fillRect(0,0,MWd,MHd);g.strokeStyle='rgba(29,61,98,.13)';g.lineWidth=1;for(let q=0;q<=MWd;q+=60){g.beginPath();g.moveTo(q,0);g.lineTo(q,MHd);g.stroke()}for(let q=0;q<=MHd;q+=60){g.beginPath();g.moveTo(0,q);g.lineTo(MWd,q);g.stroke()}
- g.fillStyle='#f3ead3';g.strokeStyle='#b4a273';g.lineWidth=1.2;
+ g.fillStyle='#dde6f3';g.fillRect(0,0,MWd,MHd);
+ g.fillStyle='#ffffff';g.strokeStyle='#c2cee2';g.lineWidth=1;
  const PL=(lat,lon,off)=>[MWd/2+(lon-mlo+off)*cs*sc,MHd/2+10-(lat-mla)*sc];
  (WORLD||[]).forEach(f=>{const G=f.geometry;if(!G)return;const polys=G.type==='Polygon'?[G.coordinates]:G.type==='MultiPolygon'?G.coordinates:[];[-360,0,360].forEach(off=>polys.forEach(p=>{g.beginPath();p.forEach(ring=>ring.forEach((pt,i)=>{const q=PL(pt[1],pt[0],off);i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])}));g.closePath();g.fill('evenodd');g.stroke()}))});
  g.lineCap='round';
- Object.keys(segs).forEach(k=>{g.strokeStyle='rgba(196,74,18,.9)';g.lineWidth=1.6+Math.min(segs[k],8)*.5;g.beginPath();let px=null;segPts[k].forEach(q=>{const p=P(q[0],q[1]);if(px===null||Math.abs(p[0]-px)>WW/2)g.moveTo(p[0],p[1]);else g.lineTo(p[0],p[1]);px=p[0]});g.stroke()});
- codes.forEach(c=>{const p=P(AP[c][0],AP[c][1]);g.beginPath();g.arc(p[0],p[1],8,0,7);g.fillStyle='#14305c';g.fill();g.lineWidth=3;g.strokeStyle='#d9ac3f';g.stroke()});
+ Object.keys(segs).forEach(k=>{g.shadowColor='rgba(255,90,31,.55)';g.shadowBlur=14;g.strokeStyle='#ff5a1f';g.lineWidth=1.6+Math.min(segs[k],8)*.5;g.beginPath();let px=null;segPts[k].forEach(q=>{const p=P(q[0],q[1]);if(px===null||Math.abs(p[0]-px)>WW/2)g.moveTo(p[0],p[1]);else g.lineTo(p[0],p[1]);px=p[0]});g.stroke()});
+ g.shadowBlur=0;g.shadowColor='transparent';
+ codes.forEach(c=>{const p=P(AP[c][0],AP[c][1]);g.beginPath();g.arc(p[0],p[1],7,0,7);g.fillStyle='#ffffff';g.fill();g.lineWidth=4;g.strokeStyle='#ff5a1f';g.stroke()});
  g.restore();
 
  g.restore();
- g.strokeStyle=NAVY;g.lineWidth=3;g.strokeRect(MX,MY,MWd,MHd);g.strokeStyle=GOLD;g.lineWidth=1.2;g.strokeRect(MX+5,MY+5,MWd-10,MHd-10);
- // etiqueta base
- g.fillStyle='rgba(12,31,63,.92)';g.fillRect(MX+18,MY+18,250,44);g.fillStyle=GOLDL;g.fillRect(MX+18,MY+18,5,44);
- sp('BASE / HOME',MX+36,MY+34,12,'600','#9fb2d6',3,'l');sp(home||'—',MX+36,MY+56,22,'700','#ffffff',4,'l',SERIF);
- // banderas
- const FL=ccs.slice(),step=Math.min(64,FL.length>1?(W-160)/(FL.length-1):64);
+ g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=3;rr(LX,MY,MWd,MHd,22);g.stroke();
+ g.save();g.shadowColor='rgba(15,27,61,.18)';g.shadowBlur=20;g.shadowOffsetY=5;g.fillStyle='rgba(255,255,255,.94)';rr(LX+18,MY+18,330,72,36);g.fill();g.restore();
+ g.fillStyle=ACC;g.beginPath();g.arc(LX+54,MY+54,20,0,7);g.fill();g.fillStyle='#fff';g.font='700 24px system-ui,sans-serif';g.textAlign='center';g.fillText('✈',LX+54,MY+63);
+ g.textAlign='left';g.fillStyle=INK;g.font='800 24px system-ui,sans-serif';g.fillText('Pasaporte de vuelo',LX+86,MY+50);g.fillStyle=MUT;g.font='600 17px system-ui,sans-serif';g.fillText('Base '+(home||'—')+'  ·  '+ccs.length+(ccs.length===1?' país':' países'),LX+86,MY+75);
+ // banderas (igual que antes)
+ const FL=ccs.slice(),step=Math.min(62,FL.length>1?(MWd-56)/(FL.length-1):62);
  const imgs=await Promise.all(FL.map(c=>new Promise(res=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>res(im);im.onerror=()=>res(null);im.src='https://flagcdn.com/w80/'+c.toLowerCase()+'.png'})));
- sp('PAÍSES VISITADOS  /  COUNTRIES',MX,MY+MHd+34,13,'600',MUT,3,'l');
- FL.forEach((c,i)=>{const x=MX+30+i*step,y=MY+MHd+78,r=26;g.save();g.beginPath();g.arc(x,y,r,0,7);g.clip();if(imgs[i]){const im=imgs[i],hh=r*2,w=hh*im.width/im.height;g.drawImage(im,x-w/2,y-r,w,hh)}else{g.fillStyle='#d9d4c0';g.fillRect(x-r,y-r,r*2,r*2);g.fillStyle='#555';g.font='600 20px system-ui,sans-serif';g.textAlign='center';g.fillText(c,x,y+7)}g.restore();g.beginPath();g.arc(x,y,r,0,7);g.strokeStyle=GOLD;g.lineWidth=2.5;g.stroke()});
- // ---- página de datos
- const DY=MY+MHd+130;
- g.strokeStyle='rgba(20,48,92,.35)';g.lineWidth=1.2;g.setLineDash([3,5]);g.beginPath();g.moveTo(MX,DY-14);g.lineTo(W-MX,DY-14);g.stroke();g.setLineDash([]);
- // foto
- const PX=MX,PY=DY+8,PW=250,PH=316;
- const drawPhoto=async()=>{g.save();g.fillStyle='#e5ecf4';g.fillRect(PX,PY,PW,PH);
-  let im=null;if(!viewing&&avatar){im=await new Promise(res=>{const q=new Image();q.onload=()=>res(q);q.onerror=()=>res(null);q.src=avatar})}
-  if(im){{const ar=PW/PH;let sw=im.width,sh=sw/ar;if(sh>im.height){sh=im.height;sw=sh*ar}g.drawImage(im,(im.width-sw)/2,(im.height-sh)*.3,sw,sh,PX,PY,PW,PH)}}
-  else{const gg=g.createLinearGradient(PX,PY,PX+PW,PY+PH);gg.addColorStop(0,'#1d3f78');gg.addColorStop(1,NAVY2);g.fillStyle=gg;g.fillRect(PX,PY,PW,PH);wings(PX+PW/2,PY+PH*.78,.8,'rgba(230,198,112,.28)','rgba(230,198,112,.15)');const ini=nm.trim().split(/\s+/);const t=((ini[0]||'?')[0]+((ini.length>1?ini[ini.length-1][0]:'')||'')).toUpperCase();g.font='700 120px '+SERIF;g.fillStyle=GOLDL;g.textAlign='center';g.fillText(t,PX+PW/2,PY+PH*.5);g.textAlign='left'}
-  g.restore();g.strokeStyle=NAVY;g.lineWidth=3;g.strokeRect(PX,PY,PW,PH);g.strokeStyle=GOLD;g.lineWidth=1;g.strokeRect(PX+5,PY+5,PW-10,PH-10)};
- await drawPhoto();
- // campos
- const FX=PX+PW+40,FW=W-MX-FX;
- const field=(es,en,val,x,y,w,big)=>{sp(es+'  /  '+en,x,y,12,'600',MUT,2.4,'l');g.fillStyle=INK;fitTxt(g,String(val),x,y+(big?46:36),w,big?44:32,'700');g.strokeStyle='rgba(20,48,92,.18)';g.lineWidth=1;g.beginPath();g.moveTo(x,y+(big?60:48));g.lineTo(x+w,y+(big?60:48));g.stroke()};
- sp('TIPO / TYPE',FX,DY+20,12,'600',MUT,2.4,'l');sp('P',FX,DY+54,34,'700',NAVY,0,'l',SERIF);
- sp('PAÍS / CODE',FX+120,DY+20,12,'600',MUT,2.4,'l');sp(home?AP[home][4]||'—':'—',FX+120,DY+54,34,'700',NAVY,0,'l',SERIF);
- sp('N.º / No.',FX+290,DY+20,12,'600',MUT,2.4,'l');sp(String(real.length).padStart(5,'0'),FX+290,DY+54,34,'700',NAVY,2,'l','ui-monospace,Menlo,Consolas,monospace');
- field('PILOTO','PILOT',nm.toUpperCase(),FX,DY+90,FW,true);
- field('LUGAR DE EMISIÓN','PLACE OF ISSUE',home||'—',FX,DY+178,FW/2-14);
- field('FECHA DE EMISIÓN','DATE OF ISSUE',dm(todayIso()),FX+FW/2+14,DY+178,FW/2-14);
- field('PILOTO DESDE','PILOT SINCE',first?dm(first):'—',FX,DY+250,FW/2-14);
- field('AERONAVES','AIRCRAFT TYPES',String(acs),FX+FW/2+14,DY+250,FW/2-14);
- // ---- cifras
- const SY=DY+PH+60,cells=[['VUELOS','FLIGHTS',real.length.toLocaleString('es-CL')],['TIEMPO DE VUELO','FLIGHT TIME',fmt(hrs,1)+' h'],['DISTANCIA','DISTANCE',fmt(km,0)+' km'],['AERÓDROMOS','AIRFIELDS',String(codes.length)]];
- const cw=(W-2*MX)/4;
- g.fillStyle='rgba(20,48,92,.06)';g.fillRect(MX,SY,W-2*MX,150);g.strokeStyle=NAVY;g.lineWidth=2;g.strokeRect(MX,SY,W-2*MX,150);
- cells.forEach((c,i)=>{const x=MX+i*cw;if(i){g.strokeStyle='rgba(20,48,92,.3)';g.lineWidth=1;g.beginPath();g.moveTo(x,SY+16);g.lineTo(x,SY+134);g.stroke()}
-  g.fillStyle=NAVY;fitTxt(g,c[2],x+18,SY+76,cw-30,50,'700');sp(c[0],x+18,SY+108,13,'700',GOLD,2.6,'l');sp(c[1],x+18,SY+128,11,'500',MUT,2.4,'l')});
- // ---- sellos
- const top=Object.keys(V).sort((a,b)=>V[b]-V[a]).slice(0,3),stampAt=[[W-120,MY+MHd+86,-12],[W-290,MY+MHd+92,8],[W-460,MY+MHd+86,-5]];
- const cols=['#1c4f9a','#9a1f2d','#1f7a4c'];
- top.forEach((c,i)=>{const[x,y,rot]=stampAt[i];g.save();g.translate(x,y);g.rotate(rot*Math.PI/180);g.scale(.78,.78);g.globalAlpha=.8;g.strokeStyle=cols[i];g.fillStyle=cols[i];g.lineWidth=4;g.beginPath();g.arc(0,0,70,0,7);g.stroke();g.lineWidth=1.5;g.beginPath();g.arc(0,0,61,0,7);g.stroke();
-  g.textAlign='center';g.font='700 15px system-ui,sans-serif';g.fillText('MALETÍN DE VUELO',0,-38);g.font='700 34px '+SERIF;g.fillText(c,0,10);g.font='600 13px system-ui,sans-serif';g.fillText(String(AP[c][3]||'').slice(0,18).toUpperCase(),0,32);g.fillText(V[c]+(V[c]===1?' VISITA':' VISITAS'),0,50);g.restore()});
- // ---- MRZ
- const MY2=H-190;g.fillStyle='rgba(255,255,255,.55)';g.fillRect(MX,MY2,W-2*MX,120);g.strokeStyle='rgba(20,48,92,.35)';g.lineWidth=1;g.strokeRect(MX,MY2,W-2*MX,120);
- g.fillStyle='#222';g.textAlign='left';g.font='500 31px ui-monospace,Menlo,Consolas,monospace';
+ g.fillStyle=MUT;g.font='700 17px system-ui,sans-serif';g.textAlign='left';g.fillText('PAÍSES VISITADOS',LX,MY+MHd+36);
+ FL.forEach((c,i)=>{const x=LX+28+i*step,y=MY+MHd+80,r=26;g.save();g.beginPath();g.arc(x,y,r,0,7);g.clip();if(imgs[i]){const im=imgs[i],hh=r*2,w=hh*im.width/im.height;g.drawImage(im,x-w/2,y-r,w,hh)}else{g.fillStyle='#d9d8cc';g.fillRect(x-r,y-r,r*2,r*2);g.fillStyle='#555';g.font='600 20px system-ui,sans-serif';g.textAlign='center';g.fillText(c,x,y+7)}g.restore();g.beginPath();g.arc(x,y,r,0,7);g.strokeStyle='#fff';g.lineWidth=3;g.stroke()});
+ const PYY=MY+MHd+124;g.fillStyle=MUT;g.font='700 17px system-ui,sans-serif';g.textAlign='left';g.fillText('MÁS VISITADOS',LX,PYY);
+ const top=Object.keys(V).sort((a,b)=>V[b]-V[a]).slice(0,4);let tx=LX;
+ top.forEach(c=>{g.font='800 26px system-ui,sans-serif';const w1=g.measureText(c).width;g.font='600 19px system-ui,sans-serif';const t2=V[c]+(V[c]===1?' visita':' visitas'),w2=g.measureText(t2).width,pw=w1+w2+54;
+  if(tx+pw>LX+MWd)return;card(tx,PYY+12,pw,52,26);g.fillStyle=INK;g.font='800 26px system-ui,sans-serif';g.fillText(c,tx+20,PYY+48);g.fillStyle=MUT;g.font='600 19px system-ui,sans-serif';g.fillText(t2,tx+20+w1+12,PYY+47);tx+=pw+14});
+ // ---- página inferior: datos
+ const RX=LX,RW=MWd;
+ g.textAlign='left';g.fillStyle=MUT;g.font='700 17px system-ui,sans-serif';g.fillText('PILOTO',RX,BY0+46);
+ g.fillStyle=INK;fitTxt(g,nm,RX,BY0+108,RW,62,'800');
+ g.fillStyle=MUT;g.font='500 22px system-ui,sans-serif';g.fillText('Bitácora de vuelo personal',RX,BY0+142);
+ const HY=BY0+164,HHt=200;g.save();rr(RX,HY,RW,HHt,32);g.clip();
+ const hg=g.createLinearGradient(RX,HY,RX+RW,HY+HHt);hg.addColorStop(0,'#1a2a8c');hg.addColorStop(.6,'#3b3fd8');hg.addColorStop(1,'#6a4bff');g.fillStyle=hg;g.fillRect(RX,HY,RW,HHt);
+ g.strokeStyle='rgba(255,255,255,.10)';g.lineWidth=2;for(let k=0;k<8;k++){g.beginPath();g.arc(RX+RW-30,HY+HHt+40,100+k*56,Math.PI,Math.PI*1.5);g.stroke()}g.restore();
+ g.fillStyle='rgba(255,255,255,.75)';g.font='700 17px system-ui,sans-serif';g.fillText('VUELOS REGISTRADOS',RX+34,HY+44);
+ g.fillStyle='#fff';g.font='800 112px system-ui,sans-serif';g.fillText(real.length.toLocaleString('es-CL'),RX+30,HY+156);
+ g.fillStyle='rgba(255,255,255,.18)';g.fillRect(RX+RW-420,HY+36,2,HHt-72);
+ g.fillStyle='rgba(255,255,255,.75)';g.font='700 17px system-ui,sans-serif';g.fillText('TIEMPO DE VUELO',RX+RW-390,HY+60);
+ g.fillStyle='#fff';fitTxt(g,fmt(hrs,1)+' h',RX+RW-390,HY+106,350,50,'800');
+ g.fillStyle='rgba(255,255,255,.75)';g.font='700 17px system-ui,sans-serif';g.fillText('DISTANCIA',RX+RW-390,HY+140);
+ g.fillStyle='#fff';fitTxt(g,fmt(km,0)+' km',RX+RW-390,HY+180,350,38,'800');
+ const CY=HY+HHt+20,CWd=(RW-2*20)/3,CH=118;
+ [['Aeródromos',String(codes.length),'#ff5a1f','M12 2c-3.3 0-6 2.6-6 5.9 0 4.4 6 12.1 6 12.1s6-7.7 6-12.1C18 4.6 15.300 2 12 2zm0 8a2.300 2.300 0 110-4.600A2.300 2.300 0 0112 10z'],['Países',String(ccs.length),'#0ea5a4','M12 2a10 10 0 100 20 10 10 0 000-20zm0 2c1.200 1.600 2 3.700 2.200 6H9.800C10 7.700 10.800 5.600 12 4zM4.300 10H8c.1 1.300.1 2.700 0 4H4.300a8 8 0 010-4zm5.500 4c-.1-1.300-.1-2.700 0-4h4.400c.1 1.300.1 2.700 0 4H9.800zM16 10h3.700a8 8 0 010 4H16c.1-1.300.1-2.700 0-4z'],['Aeronaves',String(acs),'#7c3aed','M21 16v-2l-8-5V3.500a1.500 1.500 0 00-3 0V9l-8 5v2l8-2.500V19l-2 1.500V22l3.500-1 3.500 1v-1.500L13 19v-5.500z']].forEach((c,i)=>{
+  const x=RX+i*(CWd+20);card(x,CY,CWd,CH,26);
+  g.fillStyle=c[2];g.beginPath();g.arc(x+42,CY+38,23,0,7);g.fill();
+  g.save();g.translate(x+42-11,CY+38-11);g.scale(.92,.92);g.fillStyle='#fff';g.fill(new Path2D(c[3]));g.restore();
+  g.fillStyle=INK;g.font='800 50px system-ui,sans-serif';g.textAlign='right';g.fillText(c[1],x+CWd-22,CY+60);g.textAlign='left';
+  g.fillStyle=MUT;g.font='600 20px system-ui,sans-serif';g.fillText(c[0],x+24,CY+98)});
+ const IY=CY+CH+18,iw=(RW-20)/2;
+ [['PILOTO DESDE',first?dm(first):'—'],['FECHA DE EMISIÓN',dm(todayIso())]].forEach((c,i)=>{const x=RX+i*(iw+20);card(x,IY,iw,84,22);g.fillStyle=MUT;g.font='700 15px system-ui,sans-serif';g.fillText(c[0],x+22,IY+30);g.fillStyle=INK;g.font='800 30px system-ui,sans-serif';g.fillText(c[1],x+22,IY+66)});
+ const ZY=IY+84+18;g.fillStyle='rgba(15,27,61,.045)';rr(RX,ZY,RW,BY1-12-ZY,16);g.fill();
+ g.fillStyle='rgba(15,27,61,.62)';g.font='500 24px ui-monospace,Menlo,Consolas,monospace';
  const pad=(s,n)=>(s+'<'.repeat(n)).slice(0,n),nmP=mrz(nm).replace(/^<+|<+$/g,'');
- g.fillText(pad('P<'+String(home?AP[home][4]||'XXX':'XXX').padEnd(3,'<')+nmP+'<<PILOTO',44),MX+18,MY2+48);
- g.fillText(pad(String(real.length).padStart(5,'0')+'<'+mrz(dm(first)||'')+'<'+mrz(dm(todayIso()))+'<'+(home||'')+'<'+String(Math.round(hrs)).padStart(5,'0')+'H',44),MX+18,MY2+96);
+ g.fillText(pad('P<'+String(home?AP[home][4]||'XXX':'XXX').padEnd(3,'<')+nmP+'<<PILOTO',44),RX+18,ZY+34);
+ g.fillText(pad(String(real.length).padStart(5,'0')+'<'+mrz(dm(first)||'')+'<'+mrz(dm(todayIso()))+'<'+(home||'')+'<'+String(Math.round(hrs)).padStart(5,'0')+'H',44),RX+18,ZY+68);
+ // ---- pliegue horizontal
+ let sg=g.createLinearGradient(0,GY-110,0,GY);sg.addColorStop(0,'rgba(20,30,60,0)');sg.addColorStop(1,'rgba(20,30,60,.20)');g.fillStyle=sg;g.fillRect(X0,GY-110,X1-X0,110);
+ sg=g.createLinearGradient(0,GY,0,GY+110);sg.addColorStop(0,'rgba(20,30,60,.20)');sg.addColorStop(1,'rgba(20,30,60,0)');g.fillStyle=sg;g.fillRect(X0,GY,X1-X0,110);
+ g.fillStyle='rgba(10,20,45,.45)';g.fillRect(X0,GY-1.5,X1-X0,3);g.fillStyle='rgba(255,255,255,.55)';g.fillRect(X0,GY+1.5,X1-X0,1.5);
+ g.strokeStyle='rgba(20,30,60,.18)';g.lineWidth=1.5;g.strokeRect(X0,TY0,X1-X0,TY1-TY0);g.strokeRect(X0,BY0,X1-X0,BY1-BY0);
  $('ppH').textContent=codes.length?`${codes.length} aeródromos en ${ccs.length} ${ccs.length===1?'país':'países'}. Las horas son las totales de tu bitácora (incluyen experiencia previa y simulador); la distancia suma solo tramos con códigos ICAO en la ruta.`:'Aún no hay códigos ICAO en las rutas de tus vuelos; agrégalos (ej. SCTB SCVH) para ver el mapa.';
 }
 $('ppDl').onclick=()=>{$('ppCv').toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='pasaporte-de-vuelo.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)})};
@@ -2111,7 +2108,7 @@ function paintAcc(){const b=$('inAcc');if(!b)return;const d=accDias(),show=!view
 function openPlans(onb){const v=accVencido();$('pyT').textContent=v?'Tu acceso terminó':onb===true?'Bienvenido a Maletín de vuelo':'Elige tu acceso';$('pyS').textContent=v?'Para seguir usando la bitácora elige un plan. Tus vuelos siguen guardados.':onb===true?'Elige cómo quieres acceder. Es un pago único, sin cobros automáticos. También puedes probarlo 3 días gratis.':accTexto();$('pyBack').classList.toggle('hidden',v||onb===true);$('pyTry').classList.toggle('hidden',onb!==true);note('pyMsg','');show('vPay')}
 $('pyTry').onclick=async()=>{$('pyTry').disabled=true;try{const{error}=await sb.auth.updateUser({data:{onb_plan:true}});if(error)throw error;location.reload()}catch(e){note('pyMsg','No pude continuar: '+(e.message||e),'err');$('pyTry').disabled=false}};
 let CUP='';const PL={anual:9990,lifetime:29990},clp=n=>'$'+n.toLocaleString('es-CL');
-function pyPrecios(p){for(const k in PL){const v=p!=null?Math.min(p,PL[k]):PL[k];document.querySelectorAll('[data-pr="'+k+'"],[data-pb="'+k+'"]').forEach(e=>e.textContent=clp(v))}}
+function pyPrecios(p){for(const k in PL){const v=p!=null?Math.min(p,PGL[k]):PGL[k];document.querySelectorAll('[data-pr="'+k+'"],[data-pb="'+k+'"]').forEach(e=>e.textContent=clp(v))}}
 $('pyCupB').onclick=async()=>{const c=$('pyCup').value.trim().toUpperCase();CUP='';pyPrecios();if(!c){note('pyMsg','');return}$('pyCupB').disabled=true;try{const{data,error}=await sb.functions.invoke('crear-pago',{body:{plan:'anual',cupon:c,accion:'validar'}});let m=data&&data.error;if(error&&!m){try{m=(await error.context.json()).error}catch(_){m=error.message}}if(m)throw new Error(m);CUP=c;pyPrecios(data.precio);note('pyMsg',data.precio===0?'Cupón aplicado: acceso gratis.':'Cupón aplicado: pagas '+clp(data.precio)+'.','ok')}catch(e){note('pyMsg',e.message||String(e),'err')}$('pyCupB').disabled=false};
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-plan]');if(!b||!sb)return;b.disabled=true;note('pyMsg','Abriendo Mercado Pago…');try{const{data,error}=await sb.functions.invoke('crear-pago',{body:{plan:b.dataset.plan,cupon:CUP}});if(error)throw error;if(data&&data.gratis){location.href=location.pathname+'?pago=ok';return}if(!data||!data.init_point)throw new Error((data&&data.error)||'No se pudo crear el pago');location.href=data.init_point}catch(err){note('pyMsg','No pude iniciar el pago: '+(err.message||err),'err');b.disabled=false}});
 $('inAcc').onclick=()=>openPlans();$('pyBack').onclick=()=>show('vApp');$('pyOut').onclick=()=>sb.auth.signOut();
