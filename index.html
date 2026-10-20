@@ -686,7 +686,7 @@ function buildJeppesenPdf(jsPDF,rows,o){
   ['xc',75,35,'L'],['solo',75,35,'D'],['pic',75,35,'L'],['sic',75,35,'D'],['dual',75,35,'L'],['fi',80,35,'D'],['rem',360,0,0]];
  const wsum=a=>a.reduce((q,c)=>q+c[1]+c[2],0),MX=12,SP=10,s=(W-2*MX-SP)/(wsum(L)+wsum(R));
  const lx=MX,rx=MX+wsum(L)*s+SP,rend=rx+wsum(R)*s,lend=rx-SP;
- const TOP=24,GH=15,HH=62,RH=32,FH=21,NR=13,ytab=TOP+HH,yfoot=ytab+NR*RH,yend=yfoot+3*FH;
+ const GH=13,HH=54,RH=20,FH=17,NR=13,TOP=Math.round((H-(HH+NR*RH+3*FH))/2),ytab=TOP+HH,yfoot=ytab+NR*RH,yend=yfoot+3*FH;
  const place=(cols,x0)=>{let x=x0;return cols.map(c=>{const q={k:c[0],x,w:c[1]*s,tw:c[2]*s,b:c[3]};x+=q.w+q.tw;return q})};
  const CA=place(L,lx).concat(place(R,rx));const C=k=>CA.find(c=>c.k===k);
  const span=(a,b)=>{const A=C(a),B=C(b);return{x:A.x,w:B.x+B.w+B.tw-A.x}};
