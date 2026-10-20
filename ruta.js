@@ -284,28 +284,38 @@ function inicioUtc(){ /* instante estimado de despegue (ms UTC) */
  const fecha=$('rtFecha')&&$('rtFecha').value,hora=$('rtHora')&&$('rtHora').value,tz=tzSalida(),n=new Date(),hoy=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
  if(!fecha||fecha===hoy&&!hora)return Date.now();
  return localAUtc(fecha,hora||'12:00',tz)}
-async function pedirViento(coords,t0){
- const d0=new Date(t0).toISOString().slice(0,10),d1=new Date(t0+36e5*30).toISOString().slice(0,10),vars=NIVELES.flatMap(l=>['wind_speed_'+l+'hPa','wind_direction_'+l+'hPa','geopotential_height_'+l+'hPa']);
- const url='https://api.open-meteo.com/v1/forecast?latitude='+coords.map(c=>c[0].toFixed(3)).join(',')+'&longitude='+coords.map(c=>c[1].toFixed(3)).join(',')+'&hourly='+vars.join(',')+'&wind_speed_unit=kn&timezone=GMT&start_date='+d0+'&end_date='+d1;
- let ult='';for(let i=0;i<3;i++){try{const c=new AbortController(),to=setTimeout(()=>c.abort(),12000),r=await fetch(url,{signal:c.signal});clearTimeout(to);
-  if(r.ok){const j=await r.json();return Array.isArray(j)?j:[j]}
-  ult='HTTP '+r.status;if(r.status<500&&r.status!==429)break}catch(e){ult=e.name==='AbortError'?'tiempo agotado':'sin conexión'}
-  await new Promise(r=>setTimeout(r,1200*(i+1)))}
+const NIV_BASE=[1000,925,850,700,500];
+function nivelesPara(altMaxFt){const n=NIV_BASE.slice();if(altMaxFt>15000)n.push(400,300);if(altMaxFt>28000)n.push(250,200);return n}
+const vCache=new Map();
+/* Una consulta por punto (más liviana), solo las horas necesarias y los niveles de presión que importan. */
+async function pedirPunto(c,hIni,hFin,niv){
+ const vars=niv.flatMap(l=>['wind_speed_'+l+'hPa','wind_direction_'+l+'hPa','geopotential_height_'+l+'hPa']),
+  url='https://api.open-meteo.com/v1/forecast?latitude='+c[0].toFixed(3)+'&longitude='+c[1].toFixed(3)+'&hourly='+vars.join(',')+'&wind_speed_unit=kn&timezone=GMT&start_hour='+hIni+'&end_hour='+hFin;
+ if(vCache.has(url))return vCache.get(url);
+ let ult='';for(let i=0;i<3;i++){let to;try{const ab=new AbortController();to=setTimeout(()=>ab.abort(),40000);const r=await fetch(url,{signal:ab.signal});clearTimeout(to);
+  if(r.ok){const j=await r.json();vCache.set(url,j);return j}
+  ult='HTTP '+r.status;if(r.status<500&&r.status!==429)break}catch(e){clearTimeout(to);ult=e.name==='AbortError'?'tiempo agotado':'sin conexión'}
+  await new Promise(r=>setTimeout(r,1500*(i+1)))}
  throw new Error(ult)}
-async function cargarViento(P,vav){
+const hIso=ms=>new Date(ms).toISOString().slice(0,13)+':00';
+async function cargarViento(P,vav,progreso){
  const t0=inicioUtc(),ahora=Date.now();if(t0==null)throw new Error('Fecha u hora inválidas');
  if(t0<ahora-36e5*24||t0>ahora+36e5*24*14)throw new Error('El pronóstico cubre desde hoy hasta 14 días adelante. Ajusta la fecha de vuelo.');
  const sm=P.sm,D=P.D,paso=D/50>39?Math.ceil(D/39/50)*50:50,ds=distViento(D,paso),legs=lastLegs;
  const idx=ds.map(d=>{let i=0;while(i<sm.pts.length-1&&sm.pts[i+1].d<=d)i++;return i}),
   curso=ds.map(d=>{const l=legs.find(x=>d<=x.accD+1e-9)||legs[legs.length-1];return l.tc});
- const coords=idx.map(i=>[sm.pts[i].lat,sm.pts[i].lon]),resp=await pedirViento(coords,t0);
- if(resp.length<coords.length)throw new Error('Respuesta incompleta del servicio de viento');
- const out=ds.map((d,k)=>{const t=t0+d/vav*36e5,h=new Date(Math.round(t/36e5)*36e5).toISOString().slice(0,13)+':00',o=resp[k].hourly,j=o&&o.time?o.time.indexOf(h):-1;if(j<0)return null;
-  const niv=NIVELES.map(l=>({h:o['geopotential_height_'+l+'hPa']&&o['geopotential_height_'+l+'hPa'][j],s:o['wind_speed_'+l+'hPa']&&o['wind_speed_'+l+'hPa'][j],d:o['wind_direction_'+l+'hPa']&&o['wind_direction_'+l+'hPa'][j]}));
-  const alt=P.path[idx[k]],w=vientoInterp(niv,alt*0.3048);return w&&{d,dir:w.dir,spd:w.spd,hw:compFrente(w.spd,w.dir,curso[k]),alt}});
- return{pts:out,paso,t0}}
+ const tFin=t0+D/vav*36e5,hIni=hIso(Math.floor(t0/36e5)*36e5),hFin=hIso(Math.ceil(tFin/36e5)*36e5),niv=nivelesPara(Math.max(P.top,P.alt||0));
+ const out=new Array(ds.length).fill(null);let hechos=0,fallos=0,ult='';
+ const uno=async k=>{try{const j=await pedirPunto([sm.pts[idx[k]].lat,sm.pts[idx[k]].lon],hIni,hFin,niv),o=j.hourly,h=hIso(Math.round((t0+ds[k]/vav*36e5)/36e5)*36e5),jj=o&&o.time?o.time.indexOf(h):-1;if(jj<0)throw new Error('sin datos para esa hora');
+   const n=niv.map(l=>({h:o['geopotential_height_'+l+'hPa']&&o['geopotential_height_'+l+'hPa'][jj],s:o['wind_speed_'+l+'hPa']&&o['wind_speed_'+l+'hPa'][jj],d:o['wind_direction_'+l+'hPa']&&o['wind_direction_'+l+'hPa'][jj]})),
+   alt=P.path[idx[k]],w=vientoInterp(n,alt*0.3048);if(!w)throw new Error('sin datos');out[k]={d:ds[k],dir:w.dir,spd:w.spd,hw:compFrente(w.spd,w.dir,curso[k]),alt}}catch(e){fallos++;ult=e.message}
+  hechos++;if(progreso)progreso({pts:out.slice(),paso,t0,hechos,total:ds.length,fallos})};
+ let sig=0;await Promise.all([...Array(Math.min(3,ds.length))].map(async()=>{while(sig<ds.length){const k=sig++;await uno(k)}}));
+ if(!out.some(Boolean))throw new Error(ult||'sin datos');
+ return{pts:out,paso,t0,fallos}}
 function pintarViento(W){
  const g=$('rtWind');if(!g||!geom)return;const{X,L,W:Wd,R,AX}=geom,f=n=>n.toFixed(1),y0=AX+112;
+ if(W&&W.pts&&!W.pts.some(Boolean)&&!W.error){g.innerHTML=`<text x="${L}" y="${AX+74}" font-size="11" fill="currentColor" opacity=".7">Viento estimado: consultando (${W.hechos||0}/${W.total||''})…</text>`;return}
  if(!W||!W.pts||!W.pts.some(Boolean)){g.innerHTML=`<text x="${L}" y="${AX+74}" font-size="11" fill="#b00020">Viento no disponible${W&&W.error?': '+E(W.error):''}</text>`;return}
  let h=`<text x="${L}" y="${AX+74}" font-size="11" fill="currentColor" opacity=".7">Viento estimado cada ${W.paso} NM, a la altitud de la ruta (de donde viene / nudos)</text>`;
  W.pts.forEach(p=>{if(!p)return;const x=Math.min(Wd-R-22,Math.max(L+22,X(p.d))),hw=p.hw,col=hw>=2?'#c0392b':hw<=-2?'#2e8b57':'currentColor',to=(p.dir+180)%360,
@@ -315,10 +325,12 @@ function pintarViento(W){
  g.innerHTML=h}
 let vTok=0;
 async function actualizarViento(P,vav,tok){
- const my=++vTok,msgEl=$('rtWindMsg');if(msgEl)msgEl.textContent='Consultando viento…';
- let W;try{W=await cargarViento(P,vav)}catch(e){W={error:e.message}}
- if(my!==vTok||(tok!==undefined&&tok!==profTok)||!$('rtWind'))return;
- pintarViento(W);if($('rtWindMsg'))$('rtWindMsg').textContent=W.error?'':'Hora base: '+new Date(W.t0).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})+' (hora de este dispositivo)'}
+ const my=++vTok,msgEl=()=>$('rtWindMsg'),vivo=()=>my===vTok&&(tok===undefined||tok===profTok)&&$('rtWind');
+ if(msgEl())msgEl().textContent='Consultando viento…';
+ let W;try{W=await cargarViento(P,vav,pr=>{if(!vivo())return;pintarViento(pr);if(msgEl())msgEl().textContent='Consultando viento… '+pr.hechos+'/'+pr.total})}catch(e){W={error:e.message}}
+ if(!vivo())return;
+ pintarViento(W);
+ if(msgEl())msgEl().textContent=W.error?'':'Hora base: '+new Date(W.t0).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})+' (hora de este dispositivo)'+(W.fallos?' · '+W.fallos+' punto(s) sin datos':'')}
 
 /* ---------- guardado (Supabase, tabla rutas) ---------- */
 async function guardar(){
