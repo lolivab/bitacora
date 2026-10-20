@@ -27,3 +27,6 @@ alter table public.rutas
   add column if not exists alternativa text check (alternativa is null or char_length(alternativa) between 3 and 4),
   add column if not exists consumo numeric check (consumo is null or (consumo > 0 and consumo <= 500)),
   add column if not exists extra numeric check (extra is null or (extra > 0 and extra <= 2000));
+
+-- Cambios de altitud por punto: arreglo alineado con "puntos" (null | {modo:'ini'|'cru', alt:ft}) (ya aplicado en Supabase).
+alter table public.rutas add column if not exists cambios jsonb;
