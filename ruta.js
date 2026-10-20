@@ -14,7 +14,26 @@ const hhmm=min=>{const m=Math.round(min),h=Math.floor(m/60);return h+':'+String(
 const hdg=d=>String(Math.round(d)%360===0?360:Math.round(d)%360).padStart(3,'0');
 /* pts: [{c,lat,lon}], vav en kt. Devuelve tramos con rumbo magnético (medio del tramo), distancia y tiempos. */
 function calcRuta(pts,vav){let acc=0,accD=0;const legs=[];for(let i=0;i<pts.length-1;i++){const a=[pts[i].lat,pts[i].lon],b=[pts[i+1].lat,pts[i+1].lon],d=distNM(a,b),m=midpoint(a,b),tc=bearing(m,b),v=decl(m[0],m[1]),mh=(tc-v+720)%360,t=vav>0?d/vav*60:0;acc+=t;accD+=d;legs.push({de:pts[i].c,a:pts[i+1].c,tc,v,mh,d,t,acc,accD})}return legs}
-if(typeof module!=='undefined')module.exports={distNM,bearing,midpoint,decl,calcRuta,hhmm,hdg,_setGrid:g=>{GRID=g}};
+
+/* ---------- perfil vertical (funciones puras) ---------- */
+const M2FT=3.28084;
+const elevFt=(r,g,b)=>Math.max(0,(r*256+g+b/256-32768)*M2FT); /* Terrarium (AWS Terrain Tiles): metros -> pies, océano = 0 */
+function tileXY(lat,lon,z){const n=2**z,la=Math.max(-85.0511,Math.min(85.0511,lat))*RAD,fx=((lon+180)/360)*n,fy=(1-Math.log(Math.tan(la)+1/Math.cos(la))/Math.PI)/2*n,x=Math.min(n-1,Math.max(0,Math.floor(fx))),y=Math.min(n-1,Math.max(0,Math.floor(fy)));return{x,y,px:Math.min(255,Math.floor((fx-x)*256)),py:Math.min(255,Math.floor((fy-y)*256))}}
+/* Puntos equiespaciados a lo largo de toda la ruta (círculo máximo por tramo), con distancia acumulada en NM. */
+function muestrear(pts){const legs=[];let tot=0;for(let i=0;i<pts.length-1;i++){const d=distNM([pts[i].lat,pts[i].lon],[pts[i+1].lat,pts[i+1].lon]);legs.push(d);tot+=d}
+ const step=Math.max(0.5,tot/300),out=[];let base=0;
+ for(let i=0;i<legs.length;i++){const n=Math.max(1,Math.ceil(legs[i]/step)),g=gcPts([pts[i].lat,pts[i].lon],[pts[i+1].lat,pts[i+1].lon],n);for(let k=(i?1:0);k<=n;k++)out.push({lat:g[k][0],lon:((g[k][1]+540)%360)-180,d:base+legs[i]*k/n})}
+ return{pts:out,total:tot,cum:legs.reduce((a,d)=>(a.push((a.length?a[a.length-1]:0)+d),a),[0])}}
+/* e: terreno (ft) en cada muestra; alt: altitud de crucero (ft MSL); rc/rd: ft/min; vav: kt. */
+function perfilCalc(sm,e,vav,alt,rc,rd){
+ const D=sm.total,e0=e[0],e1=e[e.length-1],k=vav/60;
+ let top=alt,dc=alt>e0?(alt-e0)/rc*k:0,dd=alt>e1?(alt-e1)/rd*k:0,llega=true;
+ if(dc+dd>D){llega=false;top=Math.max(Math.max(e0,e1),(D/k+e0/rc+e1/rd)/(1/rc+1/rd));dc=Math.max(0,(top-e0)/rc*k);dd=Math.max(0,(top-e1)/rd*k)}
+ const at=d=>d<dc?e0+(top-e0)*(dc?d/dc:1):d>D-dd?e1+(top-e1)*(dd?(D-d)/dd:1):top;
+ const path=sm.pts.map(p=>at(p.d)),marg=path.map((h,i)=>h-e[i]);
+ let minM=Infinity,minD=0,bajo=0;sm.pts.forEach((p,i)=>{if(p.d<3||p.d>D-3)return;if(marg[i]<minM){minM=marg[i];minD=p.d}if(marg[i]<1000)bajo++});
+ return{dc,dd,top,llega,path,marg,minM:minM===Infinity?null:minM,minD,bajo,tMax:Math.max.apply(null,e),tocMin:dc/k,todMin:dd/k,D}}
+if(typeof module!=='undefined')module.exports={distNM,bearing,midpoint,decl,calcRuta,hhmm,hdg,elevFt,tileXY,muestrear,perfilCalc,_setGrid:g=>{GRID=g}};
 if(typeof document==='undefined')return;
 
 /* ---------- interfaz ---------- */
@@ -43,12 +62,15 @@ function build(){
    <div class="field"><label for="rtAv">Avión</label><select id="rtAv"></select></div>
    <div class="field"><label for="rtV">VAV (kt) — editable</label><input id="rtV" type="number" min="30" max="600" step="1" inputmode="numeric"></div>
    <div class="field"><label for="rtAlt">Altitud (ft)</label><input id="rtAlt" type="number" min="0" max="60000" step="500" value="5500" inputmode="numeric"></div>
+   <div class="field"><label for="rtRc">Ascenso (ft/min)</label><input id="rtRc" type="number" min="100" max="5000" step="50" value="700" inputmode="numeric"></div>
+   <div class="field"><label for="rtRd">Descenso (ft/min)</label><input id="rtRd" type="number" min="100" max="5000" step="50" value="500" inputmode="numeric"></div>
   </div>
   <div class="field" id="rtOtroBox" style="display:none"><label for="rtOtroN">Nombre del avión (opcional)</label><input id="rtOtroN" maxlength="20" placeholder="Ej. C-150"></div>
   <p><button class="btn" id="rtGo" type="button">Calcular ruta</button></p>
   <div id="rtMsg"></div>
   <div id="rtMap" style="display:none;height:380px;border:1px solid var(--line,#ddd);border-radius:8px;margin:10px 0"></div>
   <div id="rtOut" style="overflow-x:auto"></div>
+  <div id="rtProf" style="margin-top:12px"></div>
   <div id="rtSave" style="display:none">
    <hr style="border:0;border-top:1px solid var(--line,#ddd);margin:14px 0">
    <div class="form"><div class="field"><label for="rtNom">Nombre de la ruta</label><input id="rtNom" maxlength="80" placeholder="Ej. SCTB – SCVM ida"></div></div>
@@ -63,7 +85,7 @@ function build(){
  sel.onchange=setV;setV();
  $('rtAdd').onclick=()=>{readWps();if(wps.length>=20)return;wps.splice(wps.length-1,0,'');drawWps()};
  $('rtGo').onclick=calcular;$('rtSv').onclick=guardar;$('rtCp').onclick=copiar;
- $('rtNew').onclick=()=>{editId=null;wps=['',''];$('rtNom').value='';$('rtOut').innerHTML='';$('rtSave').style.display='none';$('rtMap').style.display='none';msg('');drawWps();drawList()};
+ $('rtNew').onclick=()=>{editId=null;wps=['',''];$('rtNom').value='';$('rtOut').innerHTML='';$('rtProf').innerHTML='';$('rtSave').style.display='none';$('rtMap').style.display='none';msg('');drawWps();drawList()};
  drawWps();
 }
 function msg(t,k){const m=$('rtMsg');if(m)m.innerHTML=t?`<div class="msg ${k||''}">${E(t)}</div>`:''}
@@ -95,6 +117,7 @@ async function calcular(){
  const falta=cods.find(c=>!/^[A-Z0-9]{3,4}$/.test(c)||!AP[c]);if(falta)return msg('No encuentro "'+falta+'" en la base de aeródromos.','err');
  const vav=Number($('rtV').value);if(!(vav>=30&&vav<=600))return msg('Escribe una VAV entre 30 y 600 kt.','err');
  const alt=Number($('rtAlt').value);if(!(alt>=0&&alt<=60000))return msg('La altitud debe estar entre 0 y 60.000 ft.','err');
+ const rc=Number($('rtRc').value),rd=Number($('rtRd').value);if(!(rc>=100&&rc<=5000)||!(rd>=100&&rd<=5000))return msg('Ascenso y descenso deben estar entre 100 y 5.000 ft/min.','err');
  const pts=cods.map(c=>({c,lat:AP[c][0],lon:AP[c][1]}));
  for(let i=0;i<pts.length-1;i++)if(pts[i].c===pts[i+1].c)return msg('Dos puntos consecutivos son iguales ('+pts[i].c+').','err');
  const legs=calcRuta(pts,vav);lastLegs=legs;lastPts=pts;
@@ -106,7 +129,7 @@ async function calcular(){
  <p class="hint">Rumbo magnético = rumbo verdadero en el punto medio de cada tramo menos la declinación (WMM2025). Tiempos sin viento ni tiempo de rodaje o circuito.</p>`;
  $('rtSave').style.display='';
  if(!$('rtNom').value)$('rtNom').value=cods[0]+' – '+cods[cods.length-1];
- dibujar(pts);
+ dibujar(pts);perfil(pts,vav,alt,rc,rd);
 }
 async function dibujar(pts){
  try{await loadLeaflet()}catch(e){return}
@@ -127,11 +150,70 @@ function copiar(){
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fail);else fail();
 }
 
+
+/* ---------- perfil vertical (terreno + ruta) ---------- */
+const tileCache=new Map();
+function cargarTile(z,x,y){const k=z+'/'+x+'/'+y;if(tileCache.has(k))return tileCache.get(k);
+ const p=new Promise((res,rej)=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{try{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0);res(g.getImageData(0,0,256,256).data)}catch(e){rej(e)}};im.onerror=()=>rej(new Error('tile '+k));im.src='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/'+k+'.png'});
+ p.catch(()=>tileCache.delete(k));tileCache.set(k,p);return p}
+async function terrenoEn(pts){
+ let z=pts.length&&pts[pts.length-1].d>600?8:pts[pts.length-1].d>200?9:10,keys;
+ for(;;){keys=new Set(pts.map(p=>{const t=tileXY(p.lat,p.lon,z);return z+'/'+t.x+'/'+t.y}));if(keys.size<=60||z<=6)break;z--}
+ const data={};await Promise.all([...keys].map(async k=>{const[zz,x,y]=k.split('/').map(Number);data[k]=await cargarTile(zz,x,y)}));
+ return pts.map(p=>{const t=tileXY(p.lat,p.lon,z),d=data[z+'/'+t.x+'/'+t.y],i=(t.py*256+t.px)*4;return elevFt(d[i],d[i+1],d[i+2])})}
+const nice=(v,n)=>{const r=v/n,m=10**Math.floor(Math.log10(r)),f=r/m;return(f<=1?1:f<=2?2:f<=5?5:10)*m};
+let profTok=0;
+async function perfil(pts,vav,alt,rc,rd){
+ const box=$('rtProf'),tok=++profTok;box.innerHTML='<p class="hint">Cargando terreno…</p>';
+ let sm,e;try{sm=muestrear(pts);e=await terrenoEn(sm.pts)}catch(err){if(tok===profTok)box.innerHTML='<div class="msg err">No pude cargar el terreno para el perfil vertical (necesita conexión a internet).</div>';return}
+ if(tok!==profTok)return;
+ const P=perfilCalc(sm,e,vav,alt,rc,rd);P.e=e;P.sm=sm;P.alt=alt;
+ const fl=n=>Math.round(n).toLocaleString('es-CL');
+ let alerta='';
+ if(P.minM!==null){if(P.minM<0)alerta=`<div class="msg err">La ruta cruza el terreno (margen ${fl(P.minM)} ft cerca de la NM ${Math.round(P.minD)}). Sube la altitud o cambia la ruta.</div>`;
+  else if(P.minM<1000)alerta=`<div class="msg err">Margen sobre el terreno menor a 1.000 ft: mínimo ${fl(P.minM)} ft cerca de la NM ${Math.round(P.minD)}.</div>`;
+  else alerta=`<div class="msg ok">Margen mínimo sobre el terreno: ${fl(P.minM)} ft (cerca de la NM ${Math.round(P.minD)}).</div>`}
+ box.innerHTML=`<h3 style="margin:8px 0">Perfil vertical</h3>
+ <p>${P.llega?'':'<b>No alcanza la altitud elegida</b>: la ruta es muy corta; máxima ≈ '+fl(P.top)+' ft. '}Ascenso: <b>${P.dc.toFixed(0)} NM</b> · ${hhmm(P.tocMin)} · Crucero: <b>${Math.max(0,P.D-P.dc-P.dd).toFixed(0)} NM</b> · Descenso: <b>${P.dd.toFixed(0)} NM</b> · ${hhmm(P.todMin)} · Terreno máx.: <b>${fl(P.tMax)} ft</b></p>${alerta}
+ <svg id="rtSvg" viewBox="0 0 900 320" style="width:100%;height:auto;touch-action:none;color:inherit" role="img" aria-label="Perfil vertical de la ruta"></svg>
+ <div id="rtRead" class="hint" style="min-height:1.4em">Toca o pasa el cursor sobre el gráfico para ver el detalle.</div>
+ <p class="hint">Terreno desde el modelo digital de elevación (AWS Terrain Tiles); es referencial y no incluye obstáculos. Ascenso y descenso con la VAV constante y los ritmos indicados (el tiempo de la tabla no cambia). Altitud en pies sobre el nivel del mar; salida y destino se toman a la elevación del terreno en el aeródromo.</p>`;
+ dibujarPerfil(P,pts);
+}
+function dibujarPerfil(P,pts){
+ const svg=$('rtSvg');if(!svg)return;
+ const W=900,H=320,L=56,R=14,T=22,B=40,pw=W-L-R,ph=H-T-B,sm=P.sm,D=P.D;
+ const yMaxRaw=Math.max(P.top,P.tMax)*1.12+500,ys=nice(yMaxRaw,5),yMax=Math.ceil(yMaxRaw/ys)*ys;
+ const X=d=>L+d/D*pw,Y=h=>T+ph-(h/yMax)*ph,f=n=>n.toFixed(1);
+ let g='';
+ for(let v=0;v<=yMax;v+=ys)g+=`<line x1="${L}" x2="${W-R}" y1="${f(Y(v))}" y2="${f(Y(v))}" stroke="currentColor" opacity=".13"/><text x="${L-6}" y="${f(Y(v)+4)}" font-size="11" text-anchor="end" fill="currentColor" opacity=".7">${v.toLocaleString('es-CL')}</text>`;
+ const xs=nice(D,6);for(let d=0;d<=D+0.01;d+=xs)g+=`<line x1="${f(X(d))}" x2="${f(X(d))}" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".07"/><text x="${f(X(d))}" y="${H-B+16}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">${Math.round(d)}</text>`;
+ g+=`<text x="${W/2}" y="${H-6}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">Distancia (NM)</text><text x="12" y="${T+ph/2}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7" transform="rotate(-90 12 ${T+ph/2})">Altitud (ft)</text>`;
+ const terr=sm.pts.map((p,i)=>f(X(p.d))+','+f(Y(P.e[i]))).join(' ');
+ g+=`<polygon points="${f(X(0))},${f(Y(0))} ${terr} ${f(X(D))},${f(Y(0))}" fill="#b9a98a" fill-opacity=".85" stroke="#8a7a5c" stroke-width="1"/>`;
+ const key=[[0,P.path[0]],[P.dc,P.top],[D-P.dd,P.top],[D,P.path[P.path.length-1]]];
+ g+=`<polyline points="${key.map(k=>f(X(k[0]))+','+f(Y(k[1]))).join(' ')}" fill="none" stroke="#c2306e" stroke-width="2.5" stroke-linejoin="round"/>`;
+ let red='';sm.pts.forEach((p,i)=>{if(i&&p.d>=3&&p.d<=D-3&&(P.marg[i]<1000||P.marg[i-1]<1000)&&sm.pts[i-1].d>=3)red+=`<line x1="${f(X(sm.pts[i-1].d))}" y1="${f(Y(P.path[i-1]))}" x2="${f(X(p.d))}" y2="${f(Y(P.path[i]))}"/>`});
+ if(red)g+=`<g stroke="#d00" stroke-width="5" stroke-linecap="round" opacity=".9">${red}</g>`;
+ const lab=(d,t,dy)=>`<circle cx="${f(X(d))}" cy="${f(Y(d===P.dc?P.top:P.top))}" r="3.5" fill="#c2306e"/><text x="${f(X(d))}" y="${f(Y(P.top)+dy)}" font-size="11" text-anchor="middle" fill="currentColor">${t}</text>`;
+ if(P.dc>0.5&&P.dc<D)g+=lab(P.dc,'TOC '+hhmm(P.tocMin),-8);
+ if(P.dd>0.5&&D-P.dd>0)g+=lab(D-P.dd,'TOD',-8);
+ pts.forEach((p,i)=>{const d=sm.cum[i];g+=`<line x1="${f(X(d))}" x2="${f(X(d))}" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".35" stroke-dasharray="4 4"/><text x="${f(Math.min(W-R-14,Math.max(L+14,X(d))))}" y="${T-6}" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">${E(p.c)}</text>`});
+ g+=`<line id="rtCur" x1="0" x2="0" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".6" style="display:none"/>`;
+ svg.innerHTML=g;
+ const rd=$('rtRead'),cur=$('rtCur');
+ const move=ev=>{const r=svg.getBoundingClientRect(),c=ev.touches?ev.touches[0]:ev,x=(c.clientX-r.left)/r.width*W,d=Math.max(0,Math.min(D,(x-L)/pw*D));
+  let i=0;while(i<sm.pts.length-1&&sm.pts[i+1].d<=d)i++;
+  cur.style.display='';cur.setAttribute('x1',f(X(sm.pts[i].d)));cur.setAttribute('x2',f(X(sm.pts[i].d)));
+  rd.textContent=`NM ${Math.round(sm.pts[i].d)} · Terreno ${Math.round(P.e[i]).toLocaleString('es-CL')} ft · Ruta ${Math.round(P.path[i]).toLocaleString('es-CL')} ft · Margen ${Math.round(P.marg[i]).toLocaleString('es-CL')} ft`};
+ svg.onpointermove=move;svg.onpointerdown=move;
+}
+
 /* ---------- guardado (Supabase, tabla rutas) ---------- */
 async function guardar(){
  if(!lastPts||!user||!sb)return;msg('');
  const nombre=$('rtNom').value.trim();if(!nombre)return msg('Ponle un nombre a la ruta.','err');
- const v=$('rtAv').value,row={nombre,puntos:lastPts.map(p=>p.c),avion:avionActual(),vav:Number($('rtV').value),altitud:Math.round(Number($('rtAlt').value)),updated_at:new Date().toISOString()};
+ const v=$('rtAv').value,row={nombre,puntos:lastPts.map(p=>p.c),avion:avionActual(),vav:Number($('rtV').value),altitud:Math.round(Number($('rtAlt').value)),ascenso:Math.round(Number($('rtRc').value))||null,descenso:Math.round(Number($('rtRd').value))||null,updated_at:new Date().toISOString()};
  let r;
  if(editId)r=await sb.from('rutas').update(row).eq('id',editId).select('id').single();
  else r=await sb.from('rutas').insert(row).select('id').single();
@@ -140,7 +222,7 @@ async function guardar(){
 }
 async function cargarLista(){
  if(!sb||!user)return;
- const r=await sb.from('rutas').select('id,nombre,puntos,avion,vav,altitud,updated_at').order('updated_at',{ascending:false}).limit(100);
+ const r=await sb.from('rutas').select('id,nombre,puntos,avion,vav,altitud,ascenso,descenso,updated_at').order('updated_at',{ascending:false}).limit(100);
  if(r.error){saved=[];$('rtList').textContent='No pude cargar tus rutas: '+r.error.message;return}
  saved=r.data||[];drawList();
 }
@@ -157,7 +239,7 @@ function abrir(id){
  editId=s.id;wps=(s.puntos||[]).slice();$('rtNom').value=s.nombre;
  const i=typeof FLOTA!=='undefined'?FLOTA.findIndex(f=>f[0]===s.avion):-1,sel=$('rtAv');
  if(i>=0)sel.value=String(i);else{sel.value=OTRO;$('rtOtroN').value=s.avion||''}
- sel.onchange();if(s.vav)$('rtV').value=s.vav;if(s.altitud!=null)$('rtAlt').value=s.altitud;
+ sel.onchange();if(s.vav)$('rtV').value=s.vav;if(s.altitud!=null)$('rtAlt').value=s.altitud;if(s.ascenso)$('rtRc').value=s.ascenso;if(s.descenso)$('rtRd').value=s.descenso;
  drawWps();calcular();window.scrollTo({top:0,behavior:'smooth'});
 }
 async function eliminar(id){
