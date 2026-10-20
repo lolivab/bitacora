@@ -13,7 +13,7 @@ function decl(lat,lon){if(!GRID)return 0;const la=Math.max(-90,Math.min(90,lat))
 const hhmm=min=>{const m=Math.round(min),h=Math.floor(m/60);return h+':'+String(m%60).padStart(2,'0')};
 const hdg=d=>String(Math.round(d)%360===0?360:Math.round(d)%360).padStart(3,'0');
 /* pts: [{c,lat,lon}], vav en kt. Devuelve tramos con rumbo magnético (medio del tramo), distancia y tiempos. */
-function calcRuta(pts,vav){let acc=0,accD=0;const legs=[];for(let i=0;i<pts.length-1;i++){const a=[pts[i].lat,pts[i].lon],b=[pts[i+1].lat,pts[i+1].lon],d=distNM(a,b),m=midpoint(a,b),tc=bearing(m,b),v=decl(m[0],m[1]),mh=(tc-v+720)%360,t=vav>0?d/vav*60:0;acc+=t;accD+=d;legs.push({de:pts[i].c,a:pts[i+1].c,tc,v,mh,d,t,acc,accD})}return legs}
+function calcRuta(pts,vav){let acc=0,accD=0,accR=0;const legs=[];for(let i=0;i<pts.length-1;i++){const a=[pts[i].lat,pts[i].lon],b=[pts[i+1].lat,pts[i+1].lon],d=distNM(a,b),m=midpoint(a,b),tc=bearing(m,b),v=decl(m[0],m[1]),mh=(tc-v+720)%360,t=vav>0?d/vav*60:0,tr=Math.round(t);acc+=t;accD+=d;accR+=tr;legs.push({de:pts[i].c,a:pts[i+1].c,tc,v,mh,d,t,tr,acc,accD,accR})}return legs}
 
 /* ---------- perfil vertical (funciones puras) ---------- */
 const M2FT=3.28084;
@@ -39,7 +39,7 @@ if(typeof document==='undefined')return;
 /* ---------- interfaz ---------- */
 const $=id=>document.getElementById(id);
 const E=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let built=false,map=null,layer=null,wps=['',''],editId=null,saved=[],lastLegs=null,lastPts=null;
+let lastIn=null,lastP=null,built=false,map=null,layer=null,wps=['',''],editId=null,saved=[],lastLegs=null,lastPts=null;
 const OTRO='__otro__';
 
 function build(){
@@ -71,6 +71,19 @@ function build(){
   <div id="rtMap" style="display:none;height:380px;border:1px solid var(--line,#ddd);border-radius:8px;margin:10px 0"></div>
   <div id="rtOut" style="overflow-x:auto"></div>
   <div id="rtProf" style="margin-top:12px"></div>
+  <div id="rtExp" class="card" style="display:none;margin:14px 0;padding:12px">
+   <h3 style="margin:0 0 6px">Exportar navegación (PDF)</h3>
+   <div class="form">
+    <div class="field"><label for="rtAlter">Alternativa (ICAO)</label><input id="rtAlter" maxlength="4" list="rtDl" placeholder="Opcional" style="text-transform:uppercase" autocomplete="off"></div>
+    <div class="field"><label for="rtFecha">Fecha del vuelo</label><input id="rtFecha" type="date"></div>
+    <div class="field"><label for="rtHora">Hora de despegue (opcional)</label><input id="rtHora" type="time"></div>
+    <div class="field"><label for="rtCons">Consumo (gal/h, opcional)</label><input id="rtCons" type="number" min="0" max="500" step="0.1" inputmode="decimal"></div>
+    <div class="field"><label for="rtExtra">Combustible extra / reserva (gal)</label><input id="rtExtra" type="number" min="0" max="2000" step="0.5" inputmode="decimal"></div>
+   </div>
+   <div class="field"><label for="rtObs">Observaciones (se imprimen en el PDF)</label><input id="rtObs" maxlength="200" placeholder="Ej. R-1: 3000-FL090 | VIÑA APP 129,30"></div>
+   <p><button class="btn" id="rtPdf" type="button">Descargar PDF</button></p>
+   <p class="hint">Hora de despegue y fecha en hora local. Sin consumo, las columnas de combustible quedan en blanco. Las frecuencias, pistas y METAR se completan a mano en el formulario.</p>
+  </div>
   <div id="rtSave" style="display:none">
    <hr style="border:0;border-top:1px solid var(--line,#ddd);margin:14px 0">
    <div class="form"><div class="field"><label for="rtNom">Nombre de la ruta</label><input id="rtNom" maxlength="80" placeholder="Ej. SCTB – SCVM ida"></div></div>
@@ -84,8 +97,9 @@ function build(){
  const setV=()=>{const v=sel.value;$('rtOtroBox').style.display=v===OTRO?'':'none';if(v!==OTRO&&typeof FLOTA!=='undefined')$('rtV').value=FLOTA[+v][2]};
  sel.onchange=setV;setV();
  $('rtAdd').onclick=()=>{readWps();if(wps.length>=20)return;wps.splice(wps.length-1,0,'');drawWps()};
- $('rtGo').onclick=calcular;$('rtSv').onclick=guardar;$('rtCp').onclick=copiar;
- $('rtNew').onclick=()=>{editId=null;wps=['',''];$('rtNom').value='';$('rtOut').innerHTML='';$('rtProf').innerHTML='';$('rtSave').style.display='none';$('rtMap').style.display='none';msg('');drawWps();drawList()};
+ $('rtGo').onclick=calcular;$('rtPdf').onclick=exportarPdf;{const t=new Date();$('rtFecha').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
+ $('rtSv').onclick=guardar;$('rtCp').onclick=copiar;
+ $('rtNew').onclick=()=>{editId=null;wps=['',''];$('rtNom').value='';$('rtOut').innerHTML='';$('rtProf').innerHTML='';$('rtSave').style.display='none';$('rtExp').style.display='none';$('rtMap').style.display='none';msg('');drawWps();drawList()};
  drawWps();
 }
 function msg(t,k){const m=$('rtMsg');if(m)m.innerHTML=t?`<div class="msg ${k||''}">${E(t)}</div>`:''}
@@ -111,7 +125,7 @@ function sugerir(q){
 }
 function avionActual(){const v=$('rtAv').value;if(v===OTRO)return $('rtOtroN').value.trim()||'Otro avión';return FLOTA[+v][0]}
 async function calcular(){
- readWps();msg('');
+ readWps();msg('');lastP=null;
  const cods=wps.filter(c=>c);if(wps.some(c=>!c)||cods.length<2)return msg('Completa salida, destino y los puntos intermedios (o quita los vacíos).','err');
  try{await cargarDatos()}catch(e){return msg('No pude cargar los datos de aeródromos o de declinación magnética.','err')}
  const falta=cods.find(c=>!/^[A-Z0-9]{3,4}$/.test(c)||!AP[c]);if(falta)return msg('No encuentro "'+falta+'" en la base de aeródromos.','err');
@@ -122,12 +136,12 @@ async function calcular(){
  for(let i=0;i<pts.length-1;i++)if(pts[i].c===pts[i+1].c)return msg('Dos puntos consecutivos son iguales ('+pts[i].c+').','err');
  const legs=calcRuta(pts,vav);lastLegs=legs;lastPts=pts;
  const tot=legs[legs.length-1];
- $('rtOut').innerHTML=`<p><b>${Math.round(tot.accD)} NM</b> · <b>${hhmm(tot.acc)}</b> de vuelo · VAV ${Math.round(vav)} kt · ${Math.round(alt).toLocaleString('es-CL')} ft · ${E(avionActual())}</p>
+ $('rtOut').innerHTML=`<p><b>${Math.round(tot.accD)} NM</b> · <b>${hhmm(tot.accR)}</b> de vuelo · VAV ${Math.round(vav)} kt · ${Math.round(alt).toLocaleString('es-CL')} ft · ${E(avionActual())}</p>
  <table class="rt"><thead><tr><th>#</th><th>Tramo</th><th style="text-align:right">Rumbo mag.</th><th style="text-align:right">Dist. (NM)</th><th style="text-align:right">Tiempo</th><th style="text-align:right">Acumulado</th></tr></thead><tbody>`+
- legs.map((l,i)=>`<tr><td>${i+1}</td><td><b>${E(l.de)}</b> → <b>${E(l.a)}</b></td><td style="text-align:right">${hdg(l.mh)}°</td><td style="text-align:right">${l.d.toFixed(1)}</td><td style="text-align:right">${hhmm(l.t)}</td><td style="text-align:right">${hhmm(l.acc)}</td></tr>`).join('')+
- `<tr><td></td><td><b>Total</b></td><td></td><td style="text-align:right"><b>${tot.accD.toFixed(1)}</b></td><td style="text-align:right"><b>${hhmm(tot.acc)}</b></td><td></td></tr></tbody></table>
- <p class="hint">Rumbo magnético = rumbo verdadero en el punto medio de cada tramo menos la declinación (WMM2025). Tiempos sin viento ni tiempo de rodaje o circuito.</p>`;
- $('rtSave').style.display='';
+ legs.map((l,i)=>`<tr><td>${i+1}</td><td><b>${E(l.de)}</b> → <b>${E(l.a)}</b></td><td style="text-align:right">${hdg(l.mh)}°</td><td style="text-align:right">${l.d.toFixed(1)}</td><td style="text-align:right">${hhmm(l.tr)}</td><td style="text-align:right">${hhmm(l.accR)}</td></tr>`).join('')+
+ `<tr><td></td><td><b>Total</b></td><td></td><td style="text-align:right"><b>${tot.accD.toFixed(1)}</b></td><td style="text-align:right"><b>${hhmm(tot.accR)}</b></td><td></td></tr></tbody></table>
+ <p class="hint">Rumbo magnético = rumbo verdadero en el punto medio de cada tramo menos la declinación (WMM2025). Tiempos por tramo redondeados al minuto, sin viento ni rodaje o circuito.</p>`;
+ $('rtSave').style.display='';$('rtExp').style.display='';lastIn={avion:avionActual(),vav,alt};
  if(!$('rtNom').value)$('rtNom').value=cods[0]+' – '+cods[cods.length-1];
  dibujar(pts);perfil(pts,vav,alt,rc,rd);
 }
@@ -144,8 +158,8 @@ async function dibujar(pts){
 function copiar(){
  if(!lastLegs)return;const t=lastLegs[lastLegs.length-1];
  const txt=['Plan de ruta · '+avionActual()+' · VAV '+$('rtV').value+' kt · '+$('rtAlt').value+' ft','']
-  .concat(lastLegs.map((l,i)=>`${i+1}. ${l.de}→${l.a}  RM ${hdg(l.mh)}°  ${l.d.toFixed(1)} NM  ${hhmm(l.t)}  (acum. ${hhmm(l.acc)})`))
-  .concat(['','Total: '+t.accD.toFixed(1)+' NM · '+hhmm(t.acc)]).join('\n');
+  .concat(lastLegs.map((l,i)=>`${i+1}. ${l.de}→${l.a}  RM ${hdg(l.mh)}°  ${l.d.toFixed(1)} NM  ${hhmm(l.tr)}  (acum. ${hhmm(l.accR)})`))
+  .concat(['','Total: '+t.accD.toFixed(1)+' NM · '+hhmm(t.accR)]).join('\n');
  const ok=()=>msg('Resumen copiado.','ok'),fail=()=>msg('No pude copiar. Selecciona la tabla y cópiala manualmente.','err');
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fail);else fail();
 }
@@ -167,7 +181,7 @@ async function perfil(pts,vav,alt,rc,rd){
  const box=$('rtProf'),tok=++profTok;box.innerHTML='<p class="hint">Cargando terreno…</p>';
  let sm,e;try{sm=muestrear(pts);e=await terrenoEn(sm.pts)}catch(err){if(tok===profTok)box.innerHTML='<div class="msg err">No pude cargar el terreno para el perfil vertical (necesita conexión a internet).</div>';return}
  if(tok!==profTok)return;
- const P=perfilCalc(sm,e,vav,alt,rc,rd);P.e=e;P.sm=sm;P.alt=alt;
+ const P=perfilCalc(sm,e,vav,alt,rc,rd);P.e=e;P.sm=sm;P.alt=alt;lastP=P;
  const fl=n=>Math.round(n).toLocaleString('es-CL');
  let alerta='';
  if(P.minM!==null){if(P.minM<0)alerta=`<div class="msg err">La ruta cruza el terreno (margen ${fl(P.minM)} ft cerca de la NM ${Math.round(P.minD)}). Sube la altitud o cambia la ruta.</div>`;
@@ -209,11 +223,42 @@ function dibujarPerfil(P,pts){
  svg.onpointermove=move;svg.onpointerdown=move;
 }
 
+
+/* ---------- exportar navegación a PDF ---------- */
+async function exportarPdf(){
+ if(!lastLegs||!lastPts||!lastIn)return msg('Primero calcula la ruta.','err');
+ if(!window.NavlogPdf)return msg('No pude cargar el generador de PDF. Recarga la página.','err');
+ const N=window.NavlogPdf,T=s=>N.pdfSafe(s);
+ const alt=$('rtAlter').value.trim().toUpperCase();if(alt&&(!/^[A-Z0-9]{3,4}$/.test(alt)||!AP[alt]))return msg('No encuentro la alternativa "'+alt+'" en la base de aeródromos.','err');
+ const fecha=$('rtFecha').value,hora=$('rtHora').value,cons=Number($('rtCons').value)||0,extra=Number($('rtExtra').value)||0;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha))return msg('Elige la fecha del vuelo.','err');
+ if(cons<0||extra<0)return msg('Consumo y combustible extra no pueden ser negativos.','err');
+ let horaMin=null;if(hora){const m=/^(\d{2}):(\d{2})$/.exec(hora);if(!m)return msg('Hora de despegue inválida.','err');horaMin=+m[1]*60+ +m[2]}
+ const notas={};
+ if(lastP&&lastP.sm){const cum=lastP.sm.cum,at=x=>{for(let i=0;i<cum.length-1;i++)if(x>=cum[i]&&x<cum[i+1]+1e-9)return i;return cum.length-2};
+  if(lastP.dc>0.5){const i=at(lastP.dc);notas[i]=(notas[i]?notas[i]+' / ':'')+'TOC'}
+  if(lastP.dd>0.5){const i=at(lastP.D-lastP.dd);notas[i]=(notas[i]?notas[i]+' / ':'')+'TOD'}}
+ const nombres=lastLegs.map(l=>{const a=AP[l.a];return (l.a+' '+String(a&&(a[3]||a[2])||'').toUpperCase()).trim()});
+ const fil=N.filas(lastLegs,{vav:lastIn.vav,altitud:Math.round(lastIn.alt),consumo:cons,horaMin,notas,nombres});
+ const totMin=lastLegs[lastLegs.length-1].accR,quema=cons>0?cons*totMin/60:0,dest=lastPts[lastPts.length-1].c;
+ const ads=[];lastPts.forEach(p=>{if(!ads.includes(p.c))ads.push(p.c)});if(alt&&!ads.includes(alt))ads.push(alt);
+ const fc=N.fccv(AP[dest],fecha),fd=fecha.split('-');
+ const D={titulo:T('NAVEGACIÓN · '+lastIn.avion+' · crucero '+Math.round(lastIn.alt).toLocaleString('es-CL')+' ft · VAV '+Math.round(lastIn.vav)+' kt'),
+  desde:lastPts[0].c,hasta:dest,alternativa:alt,comb:cons>0?N.f1(quema+extra):'',combNota:cons>0&&extra>0?'< Incluye '+String(extra).replace('.',',')+' gal extra':'',
+  vt:String(Math.round(lastIn.vav)),tTot:N.hm(totMin),hora:hora||'',fccv:fc?dest+'  '+fc:'',fecha:fd[2]+'/'+fd[1]+'/'+fd[0].slice(2),
+  filas:fil,ads,obs:$('rtObs').value};
+ try{
+  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',()=>window.jspdf&&window.jspdf.jsPDF);
+  const doc=N.build(window.jspdf.jsPDF,D);
+  doc.save('NavLog-'+lastPts[0].c+'-'+dest+'-'+fecha+'.pdf');msg('PDF descargado.','ok');
+ }catch(e){msg('No pude generar el PDF: '+(e&&e.message||e),'err')}
+}
+
 /* ---------- guardado (Supabase, tabla rutas) ---------- */
 async function guardar(){
  if(!lastPts||!user||!sb)return;msg('');
  const nombre=$('rtNom').value.trim();if(!nombre)return msg('Ponle un nombre a la ruta.','err');
- const v=$('rtAv').value,row={nombre,puntos:lastPts.map(p=>p.c),avion:avionActual(),vav:Number($('rtV').value),altitud:Math.round(Number($('rtAlt').value)),ascenso:Math.round(Number($('rtRc').value))||null,descenso:Math.round(Number($('rtRd').value))||null,updated_at:new Date().toISOString()};
+ const v=$('rtAv').value,row={nombre,puntos:lastPts.map(p=>p.c),avion:avionActual(),vav:Number($('rtV').value),altitud:Math.round(Number($('rtAlt').value)),alternativa:($('rtAlter').value.trim().toUpperCase()||null),consumo:Number($('rtCons').value)>0?Number($('rtCons').value):null,extra:Number($('rtExtra').value)>0?Number($('rtExtra').value):null,ascenso:Math.round(Number($('rtRc').value))||null,descenso:Math.round(Number($('rtRd').value))||null,updated_at:new Date().toISOString()};
  let r;
  if(editId)r=await sb.from('rutas').update(row).eq('id',editId).select('id').single();
  else r=await sb.from('rutas').insert(row).select('id').single();
@@ -222,7 +267,7 @@ async function guardar(){
 }
 async function cargarLista(){
  if(!sb||!user)return;
- const r=await sb.from('rutas').select('id,nombre,puntos,avion,vav,altitud,ascenso,descenso,updated_at').order('updated_at',{ascending:false}).limit(100);
+ const r=await sb.from('rutas').select('id,nombre,puntos,avion,vav,altitud,ascenso,descenso,alternativa,consumo,extra,updated_at').order('updated_at',{ascending:false}).limit(100);
  if(r.error){saved=[];$('rtList').textContent='No pude cargar tus rutas: '+r.error.message;return}
  saved=r.data||[];drawList();
 }
@@ -239,7 +284,7 @@ function abrir(id){
  editId=s.id;wps=(s.puntos||[]).slice();$('rtNom').value=s.nombre;
  const i=typeof FLOTA!=='undefined'?FLOTA.findIndex(f=>f[0]===s.avion):-1,sel=$('rtAv');
  if(i>=0)sel.value=String(i);else{sel.value=OTRO;$('rtOtroN').value=s.avion||''}
- sel.onchange();if(s.vav)$('rtV').value=s.vav;if(s.altitud!=null)$('rtAlt').value=s.altitud;if(s.ascenso)$('rtRc').value=s.ascenso;if(s.descenso)$('rtRd').value=s.descenso;
+ sel.onchange();if(s.vav)$('rtV').value=s.vav;if(s.altitud!=null)$('rtAlt').value=s.altitud;$('rtAlter').value=s.alternativa||'';$('rtCons').value=s.consumo||'';$('rtExtra').value=s.extra||'';if(s.ascenso)$('rtRc').value=s.ascenso;if(s.descenso)$('rtRd').value=s.descenso;
  drawWps();calcular();window.scrollTo({top:0,behavior:'smooth'});
 }
 async function eliminar(id){

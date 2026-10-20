@@ -21,3 +21,9 @@ create policy "rutas_delete_propias" on public.rutas for delete to authenticated
 alter table public.rutas
   add column if not exists ascenso integer check (ascenso is null or (ascenso >= 100 and ascenso <= 5000)),
   add column if not exists descenso integer check (descenso is null or (descenso >= 100 and descenso <= 5000));
+
+-- NavLog PDF: alternativa, consumo (gal/h) y combustible extra (gal) (ya aplicado en Supabase).
+alter table public.rutas
+  add column if not exists alternativa text check (alternativa is null or char_length(alternativa) between 3 and 4),
+  add column if not exists consumo numeric check (consumo is null or (consumo > 0 and consumo <= 500)),
+  add column if not exists extra numeric check (extra is null or (extra > 0 and extra <= 2000));
