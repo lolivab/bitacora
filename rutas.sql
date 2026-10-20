@@ -16,3 +16,8 @@ create policy "rutas_select_propias" on public.rutas for select to authenticated
 create policy "rutas_insert_propias" on public.rutas for insert to authenticated with check (user_id = (select auth.uid()));
 create policy "rutas_update_propias" on public.rutas for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy "rutas_delete_propias" on public.rutas for delete to authenticated using (user_id = (select auth.uid()));
+
+-- Perfil vertical: ritmos de ascenso y descenso (ya aplicado en Supabase).
+alter table public.rutas
+  add column if not exists ascenso integer check (ascenso is null or (ascenso >= 100 and ascenso <= 5000)),
+  add column if not exists descenso integer check (descenso is null or (descenso >= 100 and descenso <= 5000));
