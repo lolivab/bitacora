@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Descargar METAR
         run: |
-          curl -fsS -A "bitacora-vuelo/1.0" "https://aviationweather.gov/api/data/metar?ids=SCTB,SCEL,SCPD,SCSN,SCRD,SCVM&format=json&hours=24" -o m.json
+          curl -fsS -A "bitacora-vuelo/1.0" "https://aviationweather.gov/api/data/metar?ids=SCTB,SCEL,SCPD,SCSN,SCRD,SCRG,SCVM&format=json&hours=24" -o m.json
           python3 -c "import json,time;d=json.load(open('m.json'));json.dump({'t':int(time.time()),'m':d},open('metars.json','w'))"
           rm m.json
       - name: Guardar
