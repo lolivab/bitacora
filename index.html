@@ -108,6 +108,11 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #subnav
 @media(max-width:620px){.in-wx .wd5{grid-template-columns:1fr;gap:5px}.in-wx .wd5>div{flex-direction:row;align-items:center;gap:10px;padding:8px 12px;text-align:left}.in-wx .wd5 .dn{width:54px;flex:none;font-size:13px}.in-wx .wd5 .wi{font-size:24px;flex:none}.in-wx .wd5 .wt{flex:none;white-space:nowrap}.in-wx .wd5 .wm{margin-left:auto;text-align:right;font-size:12px;white-space:nowrap}}.in-wx .ic{font-size:40px;line-height:1;flex:none}.in-wx .tx{display:flex;flex-direction:column;gap:2px;min-width:0}.in-wx .tt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#f2a86b;font-weight:600}.in-wx .tm{font-size:24px;font-weight:700;font-family:'Bricolage Grotesque',sans-serif;color:#fff}.in-wx .tm small{font-size:15px;font-weight:500;color:#b9cbe3}.in-wx .ds{font-size:13px;color:#d6e2f2}
 .e6g{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end}.e6g .field{margin:0;display:flex;flex-direction:column;justify-content:flex-end}.e6g label{display:block;min-height:2.4em;line-height:1.2;margin:0 0 4px;font-size:13px}.e6g input{width:100%;box-sizing:border-box;min-height:42px}#s-e6b .cvc{display:flex;flex-direction:column}#s-e6b .cvc .hint{margin:0 0 10px}#s-e6b .cvo{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}#s-e6b .cvo>div{min-width:0}#e6S text{font:12px sans-serif;fill:var(--ink)}
 .cvc h3{margin:0 0 10px;font-family:'Bricolage Grotesque',sans-serif;font-size:20px}.cvr{display:grid;grid-template-columns:1fr 110px;gap:8px}.cvr input,.cvr select,.cvw input{width:100%;box-sizing:border-box}.cvo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.cvo>div{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px}.cvo b{display:block;font-size:18px}.cvo span{font-size:12px;color:var(--mute)}.cvw{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.cvw .field{margin:0}@media(max-width:480px){.cvw{grid-template-columns:1fr}}
+
+#s-conversor .cvh{margin:0 0 8px;font-size:15px}#s-conversor>h2{font-size:22px;margin:0 0 8px}
+#s-conversor .cvmini{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}#s-conversor .cvmini .card{padding:9px 10px;border-radius:12px}#s-conversor .cvmini .cvc h3{font-size:13px;margin:0 0 5px}#s-conversor .cvmini .cvr{grid-template-columns:minmax(0,1fr) 62px;gap:5px}#s-conversor .cvmini input,#s-conversor .cvmini select{font-size:14px;padding:4px 6px;min-height:32px;height:32px}#s-conversor .cvmini .cvo{gap:5px;margin-top:5px}#s-conversor .cvmini .cvo>div{padding:4px 7px}#s-conversor .cvmini .cvo b{font-size:13px}#s-conversor .cvmini .cvo span{font-size:10.5px}#s-conversor .cvmini .cvc:nth-child(4){grid-column:1/-1}#s-conversor .cvmini .cvw{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}#s-conversor .cvmini .cvw .field{margin:0}#s-conversor .cvmini .cvw label{font-size:11px;margin:0 0 2px}#s-conversor .cvmini .hint{font-size:11px;margin:3px 0 4px}
+@media(max-width:620px){#s-conversor .cvmini{grid-template-columns:1fr;gap:6px}#s-conversor .cvmini .cvr{grid-template-columns:minmax(0,1fr) 90px}#s-conversor .cvmini .cvc:nth-child(4){grid-column:auto}#s-conversor>.card .form{grid-template-columns:1fr 1fr;gap:8px}#s-conversor>.card .field{margin:0 0 8px}#s-conversor>.card input,#s-conversor>.card select{font-size:14px;min-height:34px;padding:5px 8px}#s-conversor>.card label{font-size:12px}#s-conversor>.card .hint{font-size:12px}}
+#s-conversor>.card{padding:14px}#s-conversor>.card h2{font-size:18px}
 .in-grid{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .in-grid .card h3{margin:0 0 2px;font-family:'Bricolage Grotesque',sans-serif;font-size:20px}.in-grid .card .hint{margin:0 0 12px}
 .in-t{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}.in-t.one{grid-template-columns:1fr}
@@ -354,7 +359,16 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
 
   <section id="s-conversor" class="hidden">
   <h2 style="margin:0 0 12px">Conversor y Cálculos</h2>
-  <div class="card" style="max-width:900px;margin-bottom:16px">
+    <h3 class="cvh">Conversión de unidades</h3>
+  <div class="in-grid cvmini">
+   <div class="card cvc"><h3>Peso</h3><div class="cvr"><input id="cv_peso" type="number" step="any" inputmode="decimal" placeholder="0"><select id="cs_peso"></select></div><div class="cvo" id="co_peso"></div></div>
+   <div class="card cvc"><h3>Distancia</h3><div class="cvr"><input id="cv_dist" type="number" step="any" inputmode="decimal" placeholder="0"><select id="cs_dist"></select></div><div class="cvo" id="co_dist"></div></div>
+   <div class="card cvc"><h3>Volumen</h3><div class="cvr"><input id="cv_vol" type="number" step="any" inputmode="decimal" placeholder="0"><select id="cs_vol"></select></div><div class="cvo" id="co_vol"></div></div>
+   <div class="card cvc"><h3>Descomposición de viento</h3>
+    <div class="cvw"><div class="field"><label for="vwH">Rumbo o pista</label><input id="vwH" type="number" step="any" inputmode="decimal" placeholder="Ej. 26 o 260"></div><div class="field"><label for="vwD">Viento desde (°)</label><input id="vwD" type="number" step="any" inputmode="decimal" placeholder="Ej. 310"></div><div class="field"><label for="vwV">Velocidad (kt)</label><input id="vwV" type="number" step="any" inputmode="decimal" placeholder="Ej. 15"></div></div>
+    <p class="hint" style="margin:4px 0 8px">Para una pista escribe su número (26) o el rumbo en grados (260).</p><div class="cvo" id="vwO"></div></div>
+  </div>
+  <div class="card" style="max-width:900px;margin-top:14px">
    <h2>Planificador de vuelo</h2>
    <p class="hint">Estimación simple: distancia en línea recta entre aeródromos, tiempo según la velocidad del avión. Puedes elegir varios aviones para compararlos. No reemplaza tu planificación ni el briefing.</p>
    <div class="form">
@@ -371,15 +385,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
    <div id="pfMsg" class="hint"></div><div id="pfOut"></div><div id="pfMap" style="display:none;height:340px;border:1px solid var(--line);border-radius:8px;margin-top:10px"></div>
    <p class="hint">Las velocidades son aproximadas de crucero típico y puedes editarlas. Distancia directa; la ruta real puede ser mayor.</p>
   </div>
-  <h3 style="margin:18px 0 10px;max-width:900px">Conversor de unidades</h3>
-  <div class="in-grid" style="max-width:900px">
-   <div class="card cvc"><h3>Peso</h3><div class="cvr"><input id="cv_peso" type="number" step="any" inputmode="decimal" placeholder="0"><select id="cs_peso"></select></div><div class="cvo" id="co_peso"></div></div>
-   <div class="card cvc"><h3>Distancia</h3><div class="cvr"><input id="cv_dist" type="number" step="any" inputmode="decimal" placeholder="0"><select id="cs_dist"></select></div><div class="cvo" id="co_dist"></div></div>
-   <div class="card cvc"><h3>Volumen</h3><div class="cvr"><input id="cv_vol" type="number" step="any" inputmode="decimal" placeholder="0"><select id="cs_vol"></select></div><div class="cvo" id="co_vol"></div></div>
-   <div class="card cvc"><h3>Descomposición de viento</h3>
-    <div class="cvw"><div class="field"><label for="vwH">Rumbo o pista</label><input id="vwH" type="number" step="any" inputmode="decimal" placeholder="Ej. 26 o 260"></div><div class="field"><label for="vwD">Viento desde (°)</label><input id="vwD" type="number" step="any" inputmode="decimal" placeholder="Ej. 310"></div><div class="field"><label for="vwV">Velocidad (kt)</label><input id="vwV" type="number" step="any" inputmode="decimal" placeholder="Ej. 15"></div></div>
-    <p class="hint" style="margin:4px 0 8px">Para una pista escribe su número (26) o el rumbo en grados (260).</p><div class="cvo" id="vwO"></div></div>
-  </div>
+
   </section>
 
   <section id="s-e6b" class="hidden">
