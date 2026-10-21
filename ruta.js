@@ -274,26 +274,37 @@ async function perfil(pts,vav,alt,rc,rd){
  $('rtWindBtn').onclick=()=>actualizarViento(P,vav);
  actualizarViento(P,vav,tok);
 }
+/* terreno estilo ForeFlight: degradé según altitud absoluta; borde amarillo (<1.000 ft bajo la ruta) y rojo (bajo la ruta) */
+const TERR_ST=[[0,'#6f9b5a'],[1500,'#a9bf74'],[3500,'#dccf8e'],[6000,'#e6c37a'],[9000,'#d9a050'],[13000,'#c47a45'],[17000,'#a8583d'],[22000,'#8d4a46'],[30000,'#efe3e3']];
+const hex2=c=>[1,3,5].map(i=>parseInt(c.substr(i,2),16)),mix=(a,b,t)=>'#'+hex2(a).map((v,i)=>Math.round(v+(hex2(b)[i]-v)*t).toString(16).padStart(2,'0')).join('');
+function terrenoSvg(id,X,Y,sm,e,P,yMax,D,sw){
+ const st=[];for(let i=0;i<TERR_ST.length;i++){const[h,c]=TERR_ST[i];if(h<=yMax)st.push([h/yMax,c]);else{const[h0,c0]=TERR_ST[i-1];st.push([1,mix(c0,c,(yMax-h0)/(h-h0))]);break}}
+ if(st[st.length-1][0]<1)st.push([1,st[st.length-1][1]]);
+ const f=n=>n.toFixed(1);let g=`<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(Y(0))}" x2="0" y2="${f(Y(yMax))}">${st.map(a=>`<stop offset="${a[0].toFixed(4)}" stop-color="${a[1]}"/>`).join('')}</linearGradient></defs>`;
+ g+=`<polygon points="${f(X(0))},${f(Y(0))} ${sm.pts.map((p,i)=>f(X(p.d))+','+f(Y(e[i]))).join(' ')} ${f(X(D))},${f(Y(0))}" fill="url(#${id})"/>`;
+ let am='',ro='';sm.pts.forEach((p,i)=>{if(!i||sm.pts[i-1].d<3||p.d>D-3)return;const m=Math.min(P.marg[i],P.marg[i-1]),l=`<line x1="${f(X(sm.pts[i-1].d))}" y1="${f(Y(e[i-1]))}" x2="${f(X(p.d))}" y2="${f(Y(e[i]))}"/>`;if(m<0)ro+=l;else if(m<1000)am+=l});
+ g+=`<polyline points="${sm.pts.map((p,i)=>f(X(p.d))+','+f(Y(e[i]))).join(' ')}" fill="none" stroke="#5b4a2e" stroke-opacity=".55" stroke-width="1"/>`;
+ if(am)g+=`<g stroke="#ffd21f" stroke-width="${sw||3}" stroke-linecap="round">${am}</g>`;if(ro)g+=`<g stroke="#ff2b2b" stroke-width="${sw||3}" stroke-linecap="round">${ro}</g>`;
+ return g}
 function dibujarPerfil(P,pts){
  const svg=$('rtSvg');if(!svg)return;
  const W=900,H=430,L=56,R=14,T=22,ph=244,pw=W-L-R,sm=P.sm,D=P.D,AX=T+ph;
  const yMaxRaw=Math.max(P.top,P.tMax)*1.12+500,ys=nice(yMaxRaw,5),yMax=Math.ceil(yMaxRaw/ys)*ys;
  const X=d=>L+d/D*pw,Y=h=>T+ph-(h/yMax)*ph,f=n=>n.toFixed(1);
- let g='';
- for(let v=0;v<=yMax;v+=ys)g+=`<line x1="${L}" x2="${W-R}" y1="${f(Y(v))}" y2="${f(Y(v))}" stroke="currentColor" opacity=".13"/><text x="${L-6}" y="${f(Y(v)+4)}" font-size="11" text-anchor="end" fill="currentColor" opacity=".7">${v.toLocaleString('es-CL')}</text>`;
- const xs=nice(D,6);for(let d=0;d<=D+0.01;d+=xs)g+=`<line x1="${f(X(d))}" x2="${f(X(d))}" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".07"/><text x="${f(X(d))}" y="${AX+13}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">${Math.round(d)}</text>`;
+ let g=`<rect x="${L}" y="${T}" width="${pw}" height="${ph}" fill="#0e2346"/>`;
+ for(let v=0;v<=yMax;v+=ys)g+=`<line x1="${L}" x2="${W-R}" y1="${f(Y(v))}" y2="${f(Y(v))}" stroke="#fff" opacity=".16"/><text x="${L-6}" y="${f(Y(v)+4)}" font-size="11" text-anchor="end" fill="currentColor" opacity=".7">${v.toLocaleString('es-CL')}</text>`;
+ const xs=nice(D,6);for(let d=0;d<=D+0.01;d+=xs)g+=`<line x1="${f(X(d))}" x2="${f(X(d))}" y1="${T}" y2="${T+ph}" stroke="#fff" opacity=".09"/><text x="${f(X(d))}" y="${AX+13}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">${Math.round(d)}</text>`;
  g+=`<text x="${W/2}" y="${AX+54}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">Distancia (NM)</text><text x="12" y="${T+ph/2}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7" transform="rotate(-90 12 ${T+ph/2})">Altitud (ft)</text>`;
- const terr=sm.pts.map((p,i)=>f(X(p.d))+','+f(Y(P.e[i]))).join(' ');
- g+=`<polygon points="${f(X(0))},${f(Y(0))} ${terr} ${f(X(D))},${f(Y(0))}" fill="#b9a98a" fill-opacity=".85" stroke="#8a7a5c" stroke-width="1"/>`;
+ g+=terrenoSvg('gTerr',X,Y,sm,P.e,P,yMax,D);
  const key=P.key;
- g+=`<polyline points="${key.map(k=>f(X(k[0]))+','+f(Y(k[1]))).join(' ')}" fill="none" stroke="#c2306e" stroke-width="2.5" stroke-linejoin="round"/>`;
+ g+=`<polyline points="${key.map(k=>f(X(k[0]))+','+f(Y(k[1]))).join(' ')}" fill="none" stroke="#ff5aa5" stroke-width="2.5" stroke-linejoin="round"/>`;
  let red='';sm.pts.forEach((p,i)=>{if(i&&p.d>=3&&p.d<=D-3&&(P.marg[i]<1000||P.marg[i-1]<1000)&&sm.pts[i-1].d>=3)red+=`<line x1="${f(X(sm.pts[i-1].d))}" y1="${f(Y(P.path[i-1]))}" x2="${f(X(p.d))}" y2="${f(Y(P.path[i]))}"/>`});
  if(red)g+=`<g stroke="#d00" stroke-width="5" stroke-linecap="round" opacity=".9">${red}</g>`;
- const lab=(d,h,t,dy)=>`<circle cx="${f(X(d))}" cy="${f(Y(h))}" r="3.5" fill="#c2306e"/><text x="${f(X(d))}" y="${f(Y(h)+dy)}" font-size="11" text-anchor="middle" fill="currentColor">${t}</text>`;
+ const lab=(d,h,t,dy)=>`<circle cx="${f(X(d))}" cy="${f(Y(h))}" r="3.5" fill="#ff5aa5"/><text x="${f(X(d))}" y="${f(Y(h)+dy)}" font-size="11" text-anchor="middle" fill="#fff" stroke="#0e2346" stroke-width="3" paint-order="stroke">${t}</text>`;
  if(P.dc>0.5&&P.dc<D)g+=lab(P.dc,key[1][1],'TOC '+hhmm(P.tocMin),-8);
  if(P.dd>0.5&&D-P.dd>0)g+=lab(D-P.dd,key[key.length-2][1],'TOD',-8);
- P.marcas.forEach(m=>{g+=lab(m.d1,m.alt,Math.round(m.alt).toLocaleString('es-CL')+' ft',-8);g+=`<text x="${f(X(m.d))}" y="${f(Y(m.alt)+(m.sube?16:-20))}" font-size="10" text-anchor="middle" fill="currentColor" opacity=".75">${m.modo==='cru'?'cruzar':'iniciar'}</text>`});
- pts.forEach((p,i)=>{const d=sm.cum[i];g+=`<line x1="${f(X(d))}" x2="${f(X(d))}" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".35" stroke-dasharray="4 4"/><text x="${f(Math.min(W-R-14,Math.max(L+14,X(d))))}" y="${T-6}" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">${E(p.c)}</text>`});
+ P.marcas.forEach(m=>{g+=lab(m.d1,m.alt,Math.round(m.alt).toLocaleString('es-CL')+' ft',-8);g+=`<text x="${f(X(m.d))}" y="${f(Y(m.alt)+(m.sube?16:-20))}" font-size="10" text-anchor="middle" fill="#fff" opacity=".85">${m.modo==='cru'?'cruzar':'iniciar'}</text>`});
+ pts.forEach((p,i)=>{const d=sm.cum[i];g+=`<line x1="${f(X(d))}" x2="${f(X(d))}" y1="${T}" y2="${T+ph}" stroke="#fff" opacity=".4" stroke-dasharray="4 4"/><text x="${f(Math.min(W-R-14,Math.max(L+14,X(d))))}" y="${T-6}" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">${E(p.c)}</text>`});
  {let ultX=-1e9,fila=0;pts.forEach((p,i)=>{const x=X(sm.cum[i]),cx=Math.min(W-R-16,Math.max(L+16,x));fila=(cx-ultX<38)?1-fila:0;ultX=cx;g+=`<path d="M${f(x-5)},${AX+8} L${f(x+5)},${AX+8} L${f(x)},${AX} Z" fill="#c2306e"/><text x="${f(cx)}" y="${AX+27+fila*12}" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">${E(p.c)}</text>`})}
  g+=`<g id="rtWind"><text x="${L}" y="${AX+74}" font-size="11" fill="currentColor" opacity=".7">Viento estimado: cargando…</text></g>`;
  g+=`<line id="rtCur" x1="0" x2="0" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".6" style="display:none"/>`;
@@ -466,10 +477,10 @@ function gpsMini(){
  const dentro=bd<=15,alt=g.alt!=null?g.alt:P.path[k],yMaxRaw=Math.max(P.top,P.tMax,dentro?alt:0)*1.1+400;
  const X=d=>L+d/D*pw,Y=h=>T+ph-Math.max(0,Math.min(yMaxRaw,h))/yMaxRaw*ph;
  let h=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;color:inherit;border:1px solid var(--line,#ccc);border-radius:8px" role="img" aria-label="Perfil vertical con tu posición">`;
- h+=`<polygon points="${f(X(0))},${f(Y(0))} ${sm.pts.map((q,i)=>f(X(q.d))+','+f(Y(P.e[i]))).join(' ')} ${f(X(D))},${f(Y(0))}" fill="#b9a98a" fill-opacity=".85" stroke="#8a7a5c" stroke-width="1"/>`;
- h+=`<polyline points="${P.key.map(q=>f(X(q[0]))+','+f(Y(q[1]))).join(' ')}" fill="none" stroke="#c2306e" stroke-width="2" stroke-linejoin="round"/>`;
+ h+=`<rect x="${L}" y="${T}" width="${pw}" height="${ph}" fill="#0e2346"/>`+terrenoSvg('gTerrM',X,Y,sm,P.e,P,yMaxRaw,D,2);
+ h+=`<polyline points="${P.key.map(q=>f(X(q[0]))+','+f(Y(q[1]))).join(' ')}" fill="none" stroke="#ff5aa5" stroke-width="2" stroke-linejoin="round"/>`;
  lastPts.forEach((q,i)=>{const x=X(sm.cum[i]);h+=`<line x1="${f(x)}" x2="${f(x)}" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".3" stroke-dasharray="3 3"/><text x="${f(Math.min(W-R-14,Math.max(L+14,x)))}" y="${T-4}" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">${E(q.c)}</text>`});
- if(dentro){const x=X(sm.pts[k].d);h+=`<line x1="${f(x)}" x2="${f(x)}" y1="${T}" y2="${T+ph}" stroke="#1565c0" stroke-width="1" opacity=".6"/>`+avionG(x,Math.max(T+8,Math.min(T+ph-8,Y(alt))),26,90)+`<text x="${f(x>W-110?x-16:x+16)}" y="${f(Math.max(T+10,Math.min(T+ph-2,Y(alt)-12)))}" font-size="11" font-weight="700" text-anchor="${x>W-110?'end':'start'}" fill="#1565c0">${Math.round(alt).toLocaleString('es-CL')} ft</text>`}
+ if(dentro){const x=X(sm.pts[k].d);h+=`<line x1="${f(x)}" x2="${f(x)}" y1="${T}" y2="${T+ph}" stroke="#4fc3f7" stroke-width="1" opacity=".8"/>`+avionG(x,Math.max(T+8,Math.min(T+ph-8,Y(alt))),26,90)+`<text x="${f(x>W-110?x-16:x+16)}" y="${f(Math.max(T+10,Math.min(T+ph-2,Y(alt)-12)))}" font-size="11" font-weight="700" text-anchor="${x>W-110?'end':'start'}" fill="#fff" stroke="#0e2346" stroke-width="3" paint-order="stroke">${Math.round(alt).toLocaleString('es-CL')} ft</text>`}
  else h+=`<text x="${W/2}" y="${H/2}" font-size="12" text-anchor="middle" fill="currentColor" opacity=".7">Fuera de la ruta (más de 15 NM)</text>`;
  box.innerHTML=h+'</svg>';box.style.display=''}
 function gpsPerfil(){
@@ -480,10 +491,10 @@ function gpsPerfil(){
  let k=0,bd=Infinity;sm.pts.forEach((q,i)=>{const d=distNM([g.lat,g.lon],[q.lat,q.lon]);if(d<bd){bd=d;k=i}});
  if(bd>15)return; /* demasiado lejos de la ruta */
  const x=X(sm.pts[k].d),plan=lastP.path[k];
- let h=`<g id="rtGpsMk"><line x1="${f(x)}" x2="${f(x)}" y1="${T}" y2="${T+ph}" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="3 3"/>`;
- h+=`<circle cx="${f(x)}" cy="${f(Y(plan))}" r="3" fill="none" stroke="#1565c0"/>`;
+ let h=`<g id="rtGpsMk"><line x1="${f(x)}" x2="${f(x)}" y1="${T}" y2="${T+ph}" stroke="#4fc3f7" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+ h+=`<circle cx="${f(x)}" cy="${f(Y(plan))}" r="3" fill="none" stroke="#4fc3f7"/>`;
  if(g.alt!=null){const y=Math.max(T+4,Math.min(T+ph-4,Y(g.alt)));h+=`<g transform="translate(${f(x)},${f(y)}) rotate(90)">${avionSvg(0).replace(/<div[^>]*>/,'').replace('</div>','').replace('width="36" height="36"','width="22" height="22" x="-11" y="-11"')}</g>`}
- else h+=`<text x="${f(x)}" y="${T+12}" font-size="10" text-anchor="middle" fill="#1565c0">tú</text>`;
+ else h+=`<text x="${f(x)}" y="${T+12}" font-size="10" text-anchor="middle" fill="#fff">tú</text>`;
  svg.insertAdjacentHTML('beforeend',h+'</g>')}
 
 /* ---------- guardado (Supabase, tabla rutas) ---------- */
