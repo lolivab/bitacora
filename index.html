@@ -421,6 +421,20 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   </div>
   </section>
   <section id="s-briefing" class="hidden">
+  <details id="minVfr" class="card" style="max-width:760px;margin-bottom:12px;padding:0"><summary style="cursor:pointer;padding:10px 14px;font-weight:600;font-size:14px;list-style:none">Ver mínimos VFR <span style="float:right;color:var(--mute)">▾</span></summary>
+  <div style="padding:0 14px 12px;font-size:13px;line-height:1.5">
+   <p style="margin:0 0 4px"><b>VFR (C, D, E y G, bajo FL100)</b></p>
+   <ul style="margin:0 0 8px;padding-left:18px"><li>Visibilidad 5 km <span class="muted">(≈ 2,7 NM)</span></li><li>Nubes: 1.500 m horiz. <span class="muted">(≈ 4.900 ft)</span> · 300 m vert. <span class="muted">(≈ 1.000 ft)</span></li></ul>
+   <p style="margin:0 0 4px"><b>Clase G a o bajo 600 m (2.000 ft) AGL</b></p>
+   <ul style="margin:0 0 8px;padding-left:18px"><li>2.000 m <span class="muted">(≈ 6.500 ft)</span>; heli 500 m <span class="muted">(≈ 1.600 ft)</span>. Libre de nubes y a la vista de tierra o agua</li></ul>
+   <p style="margin:0 0 4px"><b>VFR Especial</b> <span class="muted">(solo entrar/salir de CTR, de día)</span></p>
+   <ul style="margin:0 0 8px;padding-left:18px"><li>Visibilidad 2.000 m <span class="muted">(≈ 6.500 ft)</span> · techo ≥ 350 m <span class="muted">(1.150 ft)</span></li><li>Libre de nubes, con contacto ATS · solo cat. A o B</li></ul>
+   <p style="margin:0 0 4px"><b>El METAR debe decir al menos</b></p>
+   <table style="min-width:0;width:100%;margin:0 0 6px"><thead><tr><th></th><th>Visib. (m)</th><th>Techo (BKN/OVC)</th></tr></thead><tbody>
+   <tr><td><b>Entrar a CTR / circuito</b><br><span class="muted">≥ 5 km · ≥ 450 m (1.500 ft)</span></td><td><b>5000</b></td><td><b>BKN015</b> o más alto</td></tr>
+   <tr><td><b>VFR Especial</b><br><span class="muted">≥ 2.000 m · ≥ 350 m (1.150 ft)</span></td><td><b>2000</b></td><td><b>BKN012</b> o más alto</td></tr></tbody></table>
+   <p class="hint" style="margin:0">En el METAR el techo va en pies (centenas): 015 = 1.500 ft. Techo = capa BKN u OVC más baja; FEW/SCT no cuentan. Ref.: AIP Chile ENR 1.2 / DAN 91; confirma con la DGAC.</p>
+  </div></details>
   <div class="card" style="max-width:760px">
    <h2>Briefing meteorológico</h2>
    <p class="hint">Indica tu vuelo y te doy una apreciación del tiempo en la salida, la ruta y la llegada, comparada con tus mínimos personales. Es orientativo (pronóstico de modelo): confirma siempre con las fuentes oficiales.</p>
