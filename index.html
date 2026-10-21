@@ -509,11 +509,14 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <h2>Mi cuenta</h2><div class="hint" id="cuMail"></div><div class="hint" id="cuPlan"></div>
   <div class="avrow"><span id="cuAv" class="av big"></span><div><div class="avbtns"><label class="btn ghost small" for="cuFile" style="margin:0;cursor:pointer">Subir foto</label><button class="btn ghost small" id="cuDel" type="button">Quitar foto</button></div><input id="cuFile" type="file" accept="image/*" class="hidden"><div class="hint" style="margin:8px 0 0">Se recorta en cuadrado y se guarda en tu cuenta.</div></div></div>
   <div id="avMsg"></div>
+  <h3 style="margin:18px 0 4px">Datos de perfil</h3>
   <div class="field"><label for="cuClub">Club</label><select id="cuClub"><option value="">No soy socio de un club</option><option value="CAS">Club Aéreo de Santiago</option></select><p class="hint">Si tu club está en la lista, se activan las habilitaciones y alertas según su manual.</p></div>
-  <div class="field"><label for="cuHome">Base de operación (ICAO)</label><input id="cuHome" maxlength="4" style="text-transform:uppercase" autocomplete="off"><p class="hint">Se usa para el pronóstico de Inicio.</p><button class="btn ghost small" id="cuHomeSave" type="button">Guardar base y club</button> <span id="cuHomeMsg"></span></div>
+  <div class="field"><label for="cuHome">Base de operación (ICAO)</label><input id="cuHome" maxlength="4" style="text-transform:uppercase" autocomplete="off"><p class="hint">Se usa para el pronóstico de Inicio.</p></div>
+  <button class="btn" id="cuHomeSave" type="button" style="width:100%">Guardar cambios de perfil</button><div id="cuHomeMsg" style="margin-top:6px"></div>
+  <hr style="border:0;border-top:1px solid var(--line);margin:26px 0 16px"><h3 style="margin:0 0 4px">Seguridad</h3><p class="hint" style="margin:0 0 10px">Solo para cambiar tu contraseña. No guarda los datos de perfil de arriba.</p>
   <div class="field"><label for="cuP1">Nueva contraseña (mínimo 8 caracteres)</label><input id="cuP1" type="password" autocomplete="new-password"></div>
   <div class="field"><label for="cuP2">Repite la nueva contraseña</label><input id="cuP2" type="password" autocomplete="new-password"></div>
-  <button class="btn" id="cuSave" type="button">Cambiar contraseña</button>
+  <button class="btn ghost" id="cuSave" type="button">Cambiar contraseña</button>
   <div id="cuMsg"></div>
  </div></section>
  <section id="s-admin" class="hidden"><div style="max-width:960px">
