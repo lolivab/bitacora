@@ -92,6 +92,11 @@ function build(){
  #s-ruta .rt-chip.ok{border-color:#2e8b57;color:#2e8b57}
  #s-ruta .rt-chip.bad{border-color:#c0392b;background:#c0392b;color:#fff}
  #s-ruta .rt-bad{border-color:#c0392b!important;outline:1px solid #c0392b}
+ #s-ruta .rt-gchips{display:flex;flex-wrap:wrap;gap:8px}
+ #s-ruta .rt-gchip{display:inline-flex;flex-direction:column;min-width:92px;padding:6px 10px;border:1px solid var(--line,#ccc);border-radius:10px;line-height:1.25}
+ #s-ruta .rt-gchip b{font-size:1.15em;color:var(--ink,inherit)}
+ #s-ruta .rt-gl{font-size:.72em;text-transform:uppercase;letter-spacing:.03em;opacity:.7}
+ #s-ruta .rt-gs{font-size:.78em;opacity:.75}
  #s-ruta .rt-mini{padding:4px 8px;min-width:32px}
  #s-ruta table.rt td,#s-ruta table.rt th{white-space:nowrap}
  #s-ruta .rt-saved{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line,#ddd)}
@@ -443,17 +448,20 @@ function gpsFix(p){
  gpsInfo();gpsPerfil()}
 function gpsInfo(){
  const g=gps.pos,el=$('rtGpsInfo');if(!g||!el)return;
- const f=n=>Math.round(n).toLocaleString('es-CL'),partes=[];
- partes.push('<b>GS</b> '+(g.gs!=null?f(g.gs)+' kt':'—'));
- if(gps.hdg!=null){const dm=decl(g.lat,g.lon);partes.push('<b>Ruta GPS</b> '+hdg(gps.hdg)+'° V · '+hdg(gps.hdg-dm)+'° M')}
- if(g.alt!=null)partes.push('<b>Alt. GPS</b> '+f(g.alt)+' ft');
- partes.push('precisión ±'+f(g.acc*M2FT)+' ft');
- const t=tramoCercano([g.lat,g.lon]);let l2='';
- if(t&&lastLegs){const nx=lastPts[t.i+1],d=distNM([g.lat,g.lon],[nx.lat,nx.lon]);
-  l2=`<br>Siguiente punto: <b>${E(nx.c)}</b> a <b>${d.toFixed(1)} NM</b>`;
-  if(g.gs!=null&&g.gs>=30){const mn=d/g.gs*60,eta=new Date(Date.now()+mn*60000);l2+=` · <b>${hhmm(mn)}</b> (llegada ${eta.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})})`}
-  l2+=` · desvío del tramo ${E(lastPts[t.i].c)}–${E(nx.c)}: ${t.d.toFixed(1)} NM`}
- el.innerHTML=partes.join(' · ')+l2+'<br><span style="opacity:.75">Referencial: no reemplaza los instrumentos de la aeronave.</span>'}
+ const f=n=>Math.round(n).toLocaleString('es-CL'),hh=ms=>new Date(ms).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),
+  chip=(t,v,sub)=>`<span class="rt-gchip"><span class="rt-gl">${t}</span><b>${v}</b>${sub?`<span class="rt-gs">${sub}</span>`:''}</span>`;
+ const t=tramoCercano([g.lat,g.lon]),ok=g.gs!=null&&g.gs>=30;let nx=null,dN=null,dD=null;
+ if(t&&lastLegs){nx=lastPts[t.i+1];dN=distNM([g.lat,g.lon],[nx.lat,nx.lon]);dD=dN;for(let j=t.i+1;j<lastLegs.length;j++)dD+=lastLegs[j].d}
+ const eta=d=>ok&&d!=null?hh(Date.now()+d/g.gs*3600000):'—',rest=d=>ok&&d!=null?hhmm(d/g.gs*60):'';
+ let h='<div class="rt-gchips">'+chip('Ground Speed',g.gs!=null?f(g.gs)+' kt':'—')+
+  chip('Rumbo',gps.hdg!=null?hdg(gps.hdg)+'°':'—',gps.hdg!=null?hdg(gps.hdg-decl(g.lat,g.lon))+'° mag.':'')+
+  chip('Dist. a '+(nx?E(nx.c):'siguiente'),dN!=null?dN.toFixed(1)+' NM':'—')+
+  chip('ETA '+(nx?E(nx.c):'siguiente'),eta(dN),rest(dN))+
+  chip('ETA '+(lastPts?E(lastPts[lastPts.length-1].c):'destino'),eta(dD),dD!=null?(ok?rest(dD)+' · ':'')+dD.toFixed(0)+' NM':'')+'</div>';
+ const x=[];if(g.alt!=null)x.push('Alt. GPS '+f(g.alt)+' ft');x.push('precisión ±'+f(g.acc*M2FT)+' ft');
+ if(t&&nx)x.push('desvío del tramo '+E(lastPts[t.i].c)+'–'+E(nx.c)+': '+t.d.toFixed(1)+' NM');
+ if(!ok)x.push('ETA disponible al superar 30 kt de velocidad');
+ el.innerHTML=h+'<div style="margin-top:4px">'+x.join(' · ')+' · Referencial: no reemplaza los instrumentos.</div>'}
 /* marca de posición en el perfil vertical */
 function gpsPerfil(){
  const old=document.getElementById('rtGpsMk');if(old)old.remove();
