@@ -107,7 +107,6 @@ function build(){
  <div class="field"><label for="rtTxt">Ruta: escribe los códigos separados por espacio</label><textarea id="rtTxt" rows="2" placeholder="Ej. SCTB SCSF SCSE" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase;width:100%;box-sizing:border-box"></textarea><div id="rtChips" class="rt-chips" aria-live="polite"></div></div>
   <p class="hint" style="margin-top:0">Primero la salida, al final el destino. Abajo puedes ajustar cada punto y agregar cambios de altitud.</p>
   <div id="rtWps"></div>
-  <p><button class="btn ghost small" id="rtAdd" type="button">+ Punto intermedio</button></p>
   <datalist id="rtDl"></datalist>
   <div class="form">
    <div class="field"><label for="rtAv">Avión</label><select id="rtAv"></select></div>
@@ -148,7 +147,6 @@ function build(){
  sel.innerHTML=(typeof FLOTA!=='undefined'?FLOTA:[]).map((f,i)=>`<option value="${i}">${E(f[0])}</option>`).join('')+`<option value="${OTRO}">Otro avión…</option>`;
  const setV=()=>{const v=sel.value;$('rtOtroBox').style.display=v===OTRO?'':'none';if(v!==OTRO&&typeof FLOTA!=='undefined')$('rtV').value=FLOTA[+v][2]};
  sel.onchange=setV;setV();
- $('rtAdd').onclick=()=>{readWps();if(wps.length>=20)return;wps.splice(wps.length-1,0,'');cams.splice(wps.length-2,0,null);drawWps()};
  $('rtGpsBtn').onclick=gpsToggle;$('rtGo').onclick=calcular;$('rtPdf').onclick=exportarPdf;{const t=new Date();$('rtFecha').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
  $('rtSv').onclick=guardar;$('rtCp').onclick=copiar;
  $('rtNew').onclick=()=>{editId=null;wps=['',''];cams=[null,null];$('rtNom').value='';$('rtOut').innerHTML='';$('rtProf').innerHTML='';$('rtSave').style.display='none';$('rtExp').style.display='none';$('rtMap').style.display='none';msg('');drawWps();drawList()};
@@ -271,8 +269,7 @@ async function perfil(pts,vav,alt,rc,rd){
  <p>${P.llega?'':'<b>No alcanza la altitud elegida</b>: la ruta es muy corta; máxima ≈ '+fl(P.top)+' ft. '}Ascenso: <b>${P.dc.toFixed(0)} NM</b> · ${hhmm(P.tocMin)} · Crucero: <b>${Math.max(0,P.D-P.dc-P.dd).toFixed(0)} NM</b>${P.marcas.length?' (con '+P.marcas.length+' cambio(s) de altitud)':''} · Descenso: <b>${P.dd.toFixed(0)} NM</b> · ${hhmm(P.todMin)} · Terreno máx.: <b>${fl(P.tMax)} ft</b></p>${alerta}
  <svg id="rtSvg" viewBox="0 0 900 430" style="width:100%;height:auto;touch-action:none;color:inherit" role="img" aria-label="Perfil vertical de la ruta"></svg>
  <div id="rtRead" class="hint" style="min-height:1.4em">Toca o pasa el cursor sobre el gráfico para ver el detalle.</div>
- <p><button class="btn ghost small" id="rtWindBtn" type="button">Actualizar viento</button> <span id="rtWindMsg" class="hint"></span></p>
- <p class="hint">Terreno desde el modelo digital de elevación (AWS Terrain Tiles); es referencial y no incluye obstáculos. Ascenso y descenso con la VAV constante y los ritmos indicados (el tiempo de la tabla no cambia). Viento: modelo meteorológico (Open-Meteo) a la altitud de la ruta y a la hora estimada de cada punto, según la fecha y hora de despegue del bloque Exportar. Las flechas muestran hacia dónde sopla el viento relativo al rumbo del tramo al que corresponde cada punto: hacia la derecha es viento de cola, hacia la izquierda de frente, hacia abajo empuja hacia la derecha del avión. El texto es dirección de donde viene / nudos; HW = viento de frente, TW = de cola. Es referencial y no reemplaza el pronóstico oficial. Altitud en pies sobre el nivel del mar; salida y destino se toman a la elevación del terreno en el aeródromo.</p>`;
+ <p><button class="btn ghost small" id="rtWindBtn" type="button">Actualizar viento</button> <span id="rtWindMsg" class="hint"></span></p>`;
  dibujarPerfil(P,pts);
  $('rtWindBtn').onclick=()=>actualizarViento(P,vav);
  actualizarViento(P,vav,tok);
