@@ -28,8 +28,8 @@ Deno.serve(async(req)=>{
     let esperado=PRECIOS[plan]
     let cup:any=null
     if(code){
-      const{data:c}=await sb.from('cupones').select('precio,usos').eq('codigo',code).maybeSingle()
-      if(c){cup=c;esperado=Math.min(c.precio,esperado)}
+      const{data:c}=await sb.from('cupones').select('precio,usos,plan').eq('codigo',code).maybeSingle()
+      if(c&&(!c.plan||c.plan===plan)){cup=c;esperado=Math.min(c.precio,esperado)}
     }
     if(!uid||!PRECIOS[plan]||Number(pay.transaction_amount)!==esperado||pay.currency_id!=='CLP')return new Response('datos no coinciden',{status:200})
     const ins=await sb.from('pagos').insert({mp_payment_id:dataId,user_id:uid,plan,monto:pay.transaction_amount})

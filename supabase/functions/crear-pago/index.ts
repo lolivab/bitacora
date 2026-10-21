@@ -18,12 +18,12 @@ Deno.serve(async(req)=>{
     let precio=p?.precio
     if(code){
       const adm=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-      const{data:c}=await adm.from('cupones').select('precio,usos,usos_max,activo').eq('codigo',code).maybeSingle()
+      const{data:c}=await adm.from('cupones').select('precio,usos,usos_max,activo,plan').eq('codigo',code).maybeSingle()
       if(!c||!c.activo||(c.usos_max!=null&&c.usos>=c.usos_max))return new Response(JSON.stringify({error:'Cupón no válido o agotado'}),{status:400,headers:cors})
-      precio=Math.min(c.precio,p?.precio??c.precio)
-      if(accion==='validar')return new Response(JSON.stringify({precio:c.precio}),{headers:{...cors,'Content-Type':'application/json'}})
+      if(accion==='validar')return new Response(JSON.stringify({precio:c.precio,plan:c.plan??null}),{headers:{...cors,'Content-Type':'application/json'}})
     }
     if(!p)return new Response(JSON.stringify({error:'Plan inválido'}),{status:400,headers:cors})
+    if(code){const adm2=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);const{data:c2}=await adm2.from('cupones').select('precio,plan').eq('codigo',code).maybeSingle();if(c2?.plan&&c2.plan!==plan)return new Response(JSON.stringify({error:'Este código solo aplica al plan '+(c2.plan==='lifetime'?'Lifetime (acceso de por vida)':c2.plan)}),{status:400,headers:cors});precio=Math.min(c2!.precio,p.precio)}
     if(code&&precio===0){
       // Cupón 100%: no pasa por Mercado Pago. Se canjea y se activa el acceso aquí mismo.
       const adm=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
