@@ -83,9 +83,10 @@ function build(){
  #s-ruta .rt-wp input{flex:1;text-transform:uppercase;min-width:0}
  #s-ruta .rt-wp .rt-n{width:22px;text-align:center;font-weight:600;color:var(--muted,#667)}
  #s-ruta .rt-wp{flex-wrap:wrap}
- #s-ruta .rt-cm{display:flex;gap:6px;flex:1 0 100%;margin:0 0 4px 28px}
+ #s-ruta .rt-cm{display:flex;gap:8px;flex:0 0 calc(100% - 28px);box-sizing:border-box;max-width:calc(100% - 28px);margin:0 0 6px 28px}
  #s-ruta .rt-cm select{flex:1;min-width:0}
- #s-ruta .rt-cm input{flex:0 0 120px;text-transform:none}
+ #s-ruta .rt-cm input{flex:0 0 96px;min-width:0;text-transform:none}
+ @media(max-width:520px){#s-ruta .rt-wp{margin-bottom:10px;gap:8px}#s-ruta .rt-cm{margin-top:-2px}#s-ruta .rt-wp .rt-mini{min-width:38px;padding:8px}}
  #s-ruta .rt-mini{padding:4px 8px;min-width:32px}
  #s-ruta table.rt td,#s-ruta table.rt th{white-space:nowrap}
  #s-ruta .rt-saved{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line,#ddd)}
