@@ -115,6 +115,7 @@ function build(){
   <p><button class="btn" id="rtGo" type="button">Calcular ruta</button></p>
   <div id="rtMsg"></div>
   <div id="rtMap" style="display:none;height:380px;border:1px solid var(--line,#ddd);border-radius:8px;margin:10px 0"></div>
+  <div id="rtGps" style="display:none;margin:-4px 0 10px"><p style="margin:4px 0"><button class="btn ghost small" id="rtGpsBtn" type="button">📍 Mi posición</button> <label class="hint" style="white-space:nowrap"><input type="checkbox" id="rtGpsSig" checked> Seguir en el mapa</label></p><div id="rtGpsInfo" class="hint">Activa tu ubicación para ver el avión sobre el mapa. Necesita permiso de ubicación y la pantalla encendida.</div></div>
   <div id="rtOut" style="overflow-x:auto"></div>
   <div id="rtProf" style="margin-top:12px"></div>
   <div id="rtExp" class="card" style="display:none;margin:14px 0;padding:12px">
@@ -143,7 +144,7 @@ function build(){
  const setV=()=>{const v=sel.value;$('rtOtroBox').style.display=v===OTRO?'':'none';if(v!==OTRO&&typeof FLOTA!=='undefined')$('rtV').value=FLOTA[+v][2]};
  sel.onchange=setV;setV();
  $('rtAdd').onclick=()=>{readWps();if(wps.length>=20)return;wps.splice(wps.length-1,0,'');cams.splice(wps.length-2,0,null);drawWps()};
- $('rtGo').onclick=calcular;$('rtPdf').onclick=exportarPdf;{const t=new Date();$('rtFecha').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
+ $('rtGpsBtn').onclick=gpsToggle;$('rtGo').onclick=calcular;$('rtPdf').onclick=exportarPdf;{const t=new Date();$('rtFecha').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
  $('rtSv').onclick=guardar;$('rtCp').onclick=copiar;
  $('rtNew').onclick=()=>{editId=null;wps=['',''];cams=[null,null];$('rtNom').value='';$('rtOut').innerHTML='';$('rtProf').innerHTML='';$('rtSave').style.display='none';$('rtExp').style.display='none';$('rtMap').style.display='none';msg('');drawWps();drawList()};
  $('rtTxt').oninput=desdeTexto;$('rtTxt').onfocus=()=>{txtFoco=true;pintarChips()};$('rtTxt').onblur=()=>{txtFoco=false;pintarChips()};
@@ -225,6 +226,7 @@ async function dibujar(pts){
  const all=[];
  for(let i=0;i<pts.length-1;i++){const a=[pts[i].lat,pts[i].lon],b=[pts[i+1].lat,pts[i+1].lon],g=gcPts(a,b,Math.max(4,Math.min(80,Math.round(distNM(a,b)/10))));g.forEach(p=>all.push(p));L.polyline(g,{color:'#c2306e',weight:3,opacity:.9}).addTo(layer)}
  pts.forEach((p,i)=>{L.marker([p.lat,p.lon]).addTo(layer).bindTooltip(p.c,{permanent:true,direction:'top'})});
+ $('rtGps').style.display='';
  setTimeout(()=>{map.invalidateSize();map.fitBounds(L.latLngBounds(all),{padding:[40,40]})},50);
 }
 function copiar(){
@@ -300,7 +302,7 @@ function dibujarPerfil(P,pts){
   cur.style.display='';cur.setAttribute('x1',f(X(sm.pts[i].d)));cur.setAttribute('x2',f(X(sm.pts[i].d)));
   rd.textContent=`NM ${Math.round(sm.pts[i].d)} · Terreno ${Math.round(P.e[i]).toLocaleString('es-CL')} ft · Ruta ${Math.round(P.path[i]).toLocaleString('es-CL')} ft · Margen ${Math.round(P.marg[i]).toLocaleString('es-CL')} ft`};
  svg.onpointermove=move;svg.onpointerdown=move;
- geom={X,L,W,R,AX,D};
+ geom={X,L,W,R,AX,D,Y,T,ph};gpsPerfil();
 }
 
 
@@ -394,6 +396,77 @@ async function actualizarViento(P,vav,tok){
  if(!vivo())return;
  pintarViento(W);
  if(msgEl())msgEl().textContent=W.error?'':'Hora base: '+new Date(W.t0).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})+' (hora de este dispositivo)'+(W.fallos?' · '+W.fallos+' punto(s) sin datos':'')}
+
+
+/* ---------- posición GPS del dispositivo ---------- */
+const gps={w:null,pos:null,hdg:null,prev:null,mk:null,ci:null,lock:null};
+const avionSvg=h=>`<div style="width:36px;height:36px;transform:rotate(${Math.round(h||0)}deg);transition:transform .4s"><svg viewBox="0 0 32 32" width="36" height="36" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))"><path d="M16 2 L19 12 L30 19 L30 22 L19 18.5 L18.5 26 L22 28.5 L22 30 L16 28.5 L10 30 L10 28.5 L13.5 26 L13 18.5 L2 22 L2 19 L13 12 Z" fill="#1565c0" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>`;
+const iconoAvion=h=>L.divIcon({className:'',iconSize:[36,36],iconAnchor:[18,18],html:avionSvg(h)});
+async function gpsToggle(){
+ if(gps.w!=null)return gpsStop();
+ if(!navigator.geolocation)return msg('Este navegador o dispositivo no ofrece GPS.','err');
+ if(!map||typeof L==='undefined')return msg('Primero calcula la ruta para ver el mapa.','err');
+ msg('');gps.prev=null;gps.hdg=null;
+ $('rtGpsInfo').textContent='Buscando señal GPS…';$('rtGpsBtn').textContent='⏹ Detener GPS';
+ gps.w=navigator.geolocation.watchPosition(gpsFix,gpsErr,{enableHighAccuracy:true,maximumAge:1000,timeout:30000});
+ try{if(navigator.wakeLock)gps.lock=await navigator.wakeLock.request('screen')}catch(e){gps.lock=null}
+}
+function gpsStop(){
+ if(gps.w!=null)navigator.geolocation.clearWatch(gps.w);gps.w=null;gps.pos=null;
+ try{if(gps.lock)gps.lock.release()}catch(e){}gps.lock=null;
+ if(gps.mk){gps.mk.remove();gps.mk=null}if(gps.ci){gps.ci.remove();gps.ci=null}
+ const b=$('rtGpsBtn');if(b)b.textContent='📍 Mi posición';const i=$('rtGpsInfo');if(i)i.textContent='GPS detenido.';
+ const m=document.getElementById('rtGpsMk');if(m)m.remove();
+}
+function gpsErr(e){
+ const t=e&&e.code===1?'Permiso de ubicación denegado. Habilítalo en el navegador para este sitio.':e&&e.code===3?'Sin señal GPS por ahora; sigo intentando.':'No pude obtener la posición.';
+ if(e&&e.code===1){gpsStop()}
+ const i=$('rtGpsInfo');if(i)i.textContent=t}
+/* distancia mínima (NM) del punto al tramo i de la ruta y el tramo más cercano */
+function tramoCercano(pos){
+ if(!lastPts)return null;let best=null;
+ for(let i=0;i<lastPts.length-1;i++){const a=[lastPts[i].lat,lastPts[i].lon],b=[lastPts[i+1].lat,lastPts[i+1].lon],g=gcPts(a,b,Math.max(4,Math.min(60,Math.round(distNM(a,b)/5))));
+  for(const q of g){const d=distNM(pos,q);if(!best||d<best.d)best={d,i}}}
+ return best}
+function gpsFix(p){
+ const c=p.coords,pos=[c.latitude,c.longitude],acc=c.accuracy||0;
+ const v=c.speed!=null&&isFinite(c.speed)?c.speed*1.94384:null;
+ if(c.heading!=null&&isFinite(c.heading)&&(c.speed||0)>1)gps.hdg=c.heading;
+ else if(gps.prev&&distNM(gps.prev,pos)>0.015){gps.hdg=bearing(gps.prev,pos)}
+ if(!gps.prev||distNM(gps.prev,pos)>0.015)gps.prev=pos;
+ gps.pos={lat:pos[0],lon:pos[1],acc,gs:v,alt:c.altitude!=null&&isFinite(c.altitude)?c.altitude*M2FT:null,t:p.timestamp};
+ const ll=L.latLng(pos[0],pos[1]);
+ if(!gps.mk){gps.mk=L.marker(ll,{icon:iconoAvion(gps.hdg),interactive:false,keyboard:false,zIndexOffset:1000}).addTo(map);gps.ci=L.circle(ll,{radius:acc,color:'#1565c0',weight:1,fillOpacity:.1}).addTo(map);
+  map.on('dragstart',()=>{const s=$('rtGpsSig');if(s)s.checked=false});
+  if($('rtGpsSig').checked)map.setView(ll,Math.max(map.getZoom(),10))}
+ else{gps.mk.setLatLng(ll);gps.mk.setIcon(iconoAvion(gps.hdg));gps.ci.setLatLng(ll);gps.ci.setRadius(acc);if($('rtGpsSig').checked)map.panTo(ll)}
+ gpsInfo();gpsPerfil()}
+function gpsInfo(){
+ const g=gps.pos,el=$('rtGpsInfo');if(!g||!el)return;
+ const f=n=>Math.round(n).toLocaleString('es-CL'),partes=[];
+ partes.push('<b>GS</b> '+(g.gs!=null?f(g.gs)+' kt':'—'));
+ if(gps.hdg!=null){const dm=decl(g.lat,g.lon);partes.push('<b>Ruta GPS</b> '+hdg(gps.hdg)+'° V · '+hdg(gps.hdg-dm)+'° M')}
+ if(g.alt!=null)partes.push('<b>Alt. GPS</b> '+f(g.alt)+' ft');
+ partes.push('precisión ±'+f(g.acc*M2FT)+' ft');
+ const t=tramoCercano([g.lat,g.lon]);let l2='';
+ if(t&&lastLegs){const nx=lastPts[t.i+1],d=distNM([g.lat,g.lon],[nx.lat,nx.lon]);
+  l2=`<br>Siguiente punto: <b>${E(nx.c)}</b> a <b>${d.toFixed(1)} NM</b>`;
+  if(g.gs!=null&&g.gs>=30){const mn=d/g.gs*60,eta=new Date(Date.now()+mn*60000);l2+=` · <b>${hhmm(mn)}</b> (llegada ${eta.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})})`}
+  l2+=` · desvío del tramo ${E(lastPts[t.i].c)}–${E(nx.c)}: ${t.d.toFixed(1)} NM`}
+ el.innerHTML=partes.join(' · ')+l2+'<br><span style="opacity:.75">Referencial: no reemplaza los instrumentos de la aeronave.</span>'}
+/* marca de posición en el perfil vertical */
+function gpsPerfil(){
+ const old=document.getElementById('rtGpsMk');if(old)old.remove();
+ const svg=$('rtSvg');if(!svg||!geom||!geom.Y||!gps.pos||!lastP||!lastP.sm)return;
+ const g=gps.pos,sm=lastP.sm,{X,Y,T,ph}=geom,f=n=>n.toFixed(1);
+ let k=0,bd=Infinity;sm.pts.forEach((q,i)=>{const d=distNM([g.lat,g.lon],[q.lat,q.lon]);if(d<bd){bd=d;k=i}});
+ if(bd>15)return; /* demasiado lejos de la ruta */
+ const x=X(sm.pts[k].d),plan=lastP.path[k];
+ let h=`<g id="rtGpsMk"><line x1="${f(x)}" x2="${f(x)}" y1="${T}" y2="${T+ph}" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+ h+=`<circle cx="${f(x)}" cy="${f(Y(plan))}" r="3" fill="none" stroke="#1565c0"/>`;
+ if(g.alt!=null){const y=Math.max(T+4,Math.min(T+ph-4,Y(g.alt)));h+=`<g transform="translate(${f(x)},${f(y)}) rotate(90)">${avionSvg(0).replace(/<div[^>]*>/,'').replace('</div>','').replace('width="36" height="36"','width="22" height="22" x="-11" y="-11"')}</g>`}
+ else h+=`<text x="${f(x)}" y="${T+12}" font-size="10" text-anchor="middle" fill="#1565c0">tú</text>`;
+ svg.insertAdjacentHTML('beforeend',h+'</g>')}
 
 /* ---------- guardado (Supabase, tabla rutas) ---------- */
 async function guardar(){
