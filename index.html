@@ -1929,7 +1929,7 @@ function gcPts(A,B,n){const t=x=>x*Math.PI/180,d=x=>x*180/Math.PI,v=p=>[Math.cos
 async function pfDraw(o,d,rt){try{await loadLeaflet()}catch(e){return}const el=$('pfMap');el.style.display='block';if(!pfLeaf){pfLeaf=L.map('pfMap',{scrollWheelZoom:false});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(pfLeaf)}if(pfLayer)pfLayer.remove();pfLayer=L.layerGroup().addTo(pfLeaf);
  const A=[AP[o][0],AP[o][1]],B=[AP[d][0],AP[d][1]],pts=gcPts(A,B,Math.max(8,Math.min(120,Math.round(hav(A,B)/20))));
  L.polyline(pts,{color:'#c2306e',weight:3,opacity:.9,dashArray:rt?'8 6':null}).addTo(pfLayer);
- [[o,pts[0]],[d,pts[pts.length-1]]].forEach(([c,p])=>L.marker(p).addTo(pfLayer).bindTooltip(c+' · '+AP[c][2],{permanent:true,direction:'top'}));
+ [[o,pts[0]],[d,pts[pts.length-1]]].forEach(([c,p])=>L.marker(p).addTo(pfLayer).bindTooltip(c,{permanent:true,direction:'top'}));
  setTimeout(()=>{pfLeaf.invalidateSize();pfLeaf.fitBounds(L.latLngBounds(pts),{padding:[40,40]})},50)}
 (function(){$('pfA').innerHTML=FLOTA.map((f,i)=>`<label class="tog"><input type="checkbox" value="${i}"${i===0?' checked':''}>${esc(f[0])}</label>`).join('');
 const cbs=()=>[...document.querySelectorAll('#pfA input')];$('pfAll').onclick=e=>{e.preventDefault();cbs().forEach(c=>c.checked=true)};$('pfNone').onclick=e=>{e.preventDefault();cbs().forEach(c=>c.checked=false)};
