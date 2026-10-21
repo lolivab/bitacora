@@ -120,7 +120,7 @@ function build(){
   <p><button class="btn" id="rtGo" type="button">Calcular ruta</button></p>
   <div id="rtMsg"></div>
   <div id="rtMap" style="display:none;height:380px;border:1px solid var(--line,#ddd);border-radius:8px;margin:10px 0"></div>
-  <div id="rtGps" style="display:none;margin:-4px 0 10px"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:4px 0 8px"><button class="btn ghost small" id="rtGpsBtn" type="button" style="width:auto;flex:none">📍 Mi posición</button><label class="hint" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;margin:0;width:auto"><input type="checkbox" id="rtGpsSig" checked style="width:auto;min-width:0;flex:none;margin:0"> Seguir en el mapa</label></div><div id="rtGpsInfo" class="hint">Activa tu ubicación para ver el avión sobre el mapa. Necesita permiso de ubicación y la pantalla encendida.</div></div>
+  <div id="rtGps" style="display:none;margin:-4px 0 10px"><div id="rtGpsMini" style="display:none;margin:4px 0 6px"></div><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:4px 0 8px"><button class="btn ghost small" id="rtGpsBtn" type="button" style="width:auto;flex:none">📍 Mi posición</button><label class="hint" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;margin:0;width:auto"><input type="checkbox" id="rtGpsSig" checked style="width:auto;min-width:0;flex:none;margin:0"> Seguir en el mapa</label></div><div id="rtGpsInfo" class="hint">Activa tu ubicación para ver el avión sobre el mapa. Necesita permiso de ubicación y la pantalla encendida.</div></div>
   <div id="rtOut" style="overflow-x:auto"></div>
   <div id="rtProf" style="margin-top:12px"></div>
   <div id="rtExp" class="card" style="display:none;margin:14px 0;padding:12px">
@@ -421,7 +421,7 @@ function gpsStop(){
  try{if(gps.lock)gps.lock.release()}catch(e){}gps.lock=null;
  if(gps.mk){gps.mk.remove();gps.mk=null}if(gps.ci){gps.ci.remove();gps.ci=null}
  const b=$('rtGpsBtn');if(b)b.textContent='📍 Mi posición';const i=$('rtGpsInfo');if(i)i.textContent='GPS detenido.';
- const m=document.getElementById('rtGpsMk');if(m)m.remove();
+ const m=document.getElementById('rtGpsMk');if(m)m.remove();gpsMini();
 }
 function gpsErr(e){
  const t=e&&e.code===1?'Permiso de ubicación denegado. Habilítalo en el navegador para este sitio.':e&&e.code===3?'Sin señal GPS por ahora; sigo intentando.':'No pude obtener la posición.';
@@ -460,7 +460,23 @@ function gpsInfo(){
   chip('ETA '+(lastPts?E(lastPts[lastPts.length-1].c):'destino'),eta(dD),dD!=null?(ok?rest(dD)+' · ':'')+dD.toFixed(0)+' NM':'')+'</div>';
  el.innerHTML=h}
 /* marca de posición en el perfil vertical */
+const avionG=(x,y,sz,rot)=>`<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${rot})">${avionSvg(0).replace(/<div[^>]*>/,'').replace('</div>','').replace('width="36" height="36"','width="'+sz+'" height="'+sz+'" x="'+(-sz/2)+'" y="'+(-sz/2)+'"')}</g>`;
+function gpsMini(){
+ const box=$('rtGpsMini');if(!box)return;
+ if(gps.w==null||!gps.pos||!lastP||!lastP.sm||!lastPts){box.style.display='none';box.innerHTML='';return}
+ const P=lastP,sm=P.sm,D=P.D,g=gps.pos,W=900,H=150,L=8,R=8,T=16,B=14,ph=H-T-B,pw=W-L-R,f=n=>n.toFixed(1);
+ let k=0,bd=Infinity;sm.pts.forEach((q,i)=>{const d=distNM([g.lat,g.lon],[q.lat,q.lon]);if(d<bd){bd=d;k=i}});
+ const dentro=bd<=15,alt=g.alt!=null?g.alt:P.path[k],yMaxRaw=Math.max(P.top,P.tMax,dentro?alt:0)*1.1+400;
+ const X=d=>L+d/D*pw,Y=h=>T+ph-Math.max(0,Math.min(yMaxRaw,h))/yMaxRaw*ph;
+ let h=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;color:inherit;border:1px solid var(--line,#ccc);border-radius:8px" role="img" aria-label="Perfil vertical con tu posición">`;
+ h+=`<polygon points="${f(X(0))},${f(Y(0))} ${sm.pts.map((q,i)=>f(X(q.d))+','+f(Y(P.e[i]))).join(' ')} ${f(X(D))},${f(Y(0))}" fill="#b9a98a" fill-opacity=".85" stroke="#8a7a5c" stroke-width="1"/>`;
+ h+=`<polyline points="${P.key.map(q=>f(X(q[0]))+','+f(Y(q[1]))).join(' ')}" fill="none" stroke="#c2306e" stroke-width="2" stroke-linejoin="round"/>`;
+ lastPts.forEach((q,i)=>{const x=X(sm.cum[i]);h+=`<line x1="${f(x)}" x2="${f(x)}" y1="${T}" y2="${T+ph}" stroke="currentColor" opacity=".3" stroke-dasharray="3 3"/><text x="${f(Math.min(W-R-14,Math.max(L+14,x)))}" y="${T-4}" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">${E(q.c)}</text>`});
+ if(dentro){const x=X(sm.pts[k].d);h+=`<line x1="${f(x)}" x2="${f(x)}" y1="${T}" y2="${T+ph}" stroke="#1565c0" stroke-width="1" opacity=".6"/>`+avionG(x,Math.max(T+8,Math.min(T+ph-8,Y(alt))),26,90)+`<text x="${f(x>W-110?x-16:x+16)}" y="${f(Math.max(T+10,Math.min(T+ph-2,Y(alt)-12)))}" font-size="11" font-weight="700" text-anchor="${x>W-110?'end':'start'}" fill="#1565c0">${Math.round(alt).toLocaleString('es-CL')} ft</text>`}
+ else h+=`<text x="${W/2}" y="${H/2}" font-size="12" text-anchor="middle" fill="currentColor" opacity=".7">Fuera de la ruta (más de 15 NM)</text>`;
+ box.innerHTML=h+'</svg>';box.style.display=''}
 function gpsPerfil(){
+ gpsMini();
  const old=document.getElementById('rtGpsMk');if(old)old.remove();
  const svg=$('rtSvg');if(!svg||!geom||!geom.Y||!gps.pos||!lastP||!lastP.sm)return;
  const g=gps.pos,sm=lastP.sm,{X,Y,T,ph}=geom,f=n=>n.toFixed(1);
