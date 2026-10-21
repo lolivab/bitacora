@@ -120,7 +120,7 @@ function build(){
   <p><button class="btn" id="rtGo" type="button">Calcular ruta</button></p>
   <div id="rtMsg"></div>
   <div id="rtMap" style="display:none;height:380px;border:1px solid var(--line,#ddd);border-radius:8px;margin:10px 0"></div>
-  <div id="rtGps" style="display:none;margin:-4px 0 10px"><p style="margin:4px 0"><button class="btn ghost small" id="rtGpsBtn" type="button">📍 Mi posición</button> <label class="hint" style="white-space:nowrap"><input type="checkbox" id="rtGpsSig" checked> Seguir en el mapa</label></p><div id="rtGpsInfo" class="hint">Activa tu ubicación para ver el avión sobre el mapa. Necesita permiso de ubicación y la pantalla encendida.</div></div>
+  <div id="rtGps" style="display:none;margin:-4px 0 10px"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:4px 0 8px"><button class="btn ghost small" id="rtGpsBtn" type="button" style="width:auto;flex:none">📍 Mi posición</button><label class="hint" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;margin:0;width:auto"><input type="checkbox" id="rtGpsSig" checked style="width:auto;min-width:0;flex:none;margin:0"> Seguir en el mapa</label></div><div id="rtGpsInfo" class="hint">Activa tu ubicación para ver el avión sobre el mapa. Necesita permiso de ubicación y la pantalla encendida.</div></div>
   <div id="rtOut" style="overflow-x:auto"></div>
   <div id="rtProf" style="margin-top:12px"></div>
   <div id="rtExp" class="card" style="display:none;margin:14px 0;padding:12px">
@@ -405,7 +405,7 @@ async function actualizarViento(P,vav,tok){
 
 /* ---------- posición GPS del dispositivo ---------- */
 const gps={w:null,pos:null,hdg:null,prev:null,mk:null,ci:null,lock:null};
-const avionSvg=h=>`<div style="width:36px;height:36px;transform:rotate(${Math.round(h||0)}deg);transition:transform .4s"><svg viewBox="0 0 32 32" width="36" height="36" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))"><path d="M16 2 L19 12 L30 19 L30 22 L19 18.5 L18.5 26 L22 28.5 L22 30 L16 28.5 L10 30 L10 28.5 L13.5 26 L13 18.5 L2 22 L2 19 L13 12 Z" fill="#1565c0" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>`;
+const avionSvg=h=>`<div style="width:36px;height:36px;transform:rotate(${Math.round(h||0)}deg);transition:transform .4s"><svg viewBox="0 0 32 32" width="36" height="36" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))"><path d="M16 2.5 C18.2 2.5 19 5.5 19 9 L19 13 L28.5 18.6 Q30 19.5 30 21 L30 21.6 L19 19.4 L19 25 L21.8 26.8 Q22.5 27.3 22.5 28.3 L16.8 27.4 L16 27.5 L15.2 27.4 L9.5 28.3 Q9.5 27.3 10.2 26.8 L13 25 L13 19.4 L2 21.6 L2 21 Q2 19.5 3.5 18.6 L13 13 L13 9 C13 5.5 13.8 2.5 16 2.5 Z" fill="#1565c0" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>`;
 const iconoAvion=h=>L.divIcon({className:'',iconSize:[36,36],iconAnchor:[18,18],html:avionSvg(h)});
 async function gpsToggle(){
  if(gps.w!=null)return gpsStop();
@@ -458,10 +458,7 @@ function gpsInfo(){
   chip('Dist. a '+(nx?E(nx.c):'siguiente'),dN!=null?dN.toFixed(1)+' NM':'—')+
   chip('ETA '+(nx?E(nx.c):'siguiente'),eta(dN),rest(dN))+
   chip('ETA '+(lastPts?E(lastPts[lastPts.length-1].c):'destino'),eta(dD),dD!=null?(ok?rest(dD)+' · ':'')+dD.toFixed(0)+' NM':'')+'</div>';
- const x=[];if(g.alt!=null)x.push('Alt. GPS '+f(g.alt)+' ft');x.push('precisión ±'+f(g.acc*M2FT)+' ft');
- if(t&&nx)x.push('desvío del tramo '+E(lastPts[t.i].c)+'–'+E(nx.c)+': '+t.d.toFixed(1)+' NM');
- if(!ok)x.push('ETA disponible al superar 30 kt de velocidad');
- el.innerHTML=h+'<div style="margin-top:4px">'+x.join(' · ')+' · Referencial: no reemplaza los instrumentos.</div>'}
+ el.innerHTML=h}
 /* marca de posición en el perfil vertical */
 function gpsPerfil(){
  const old=document.getElementById('rtGpsMk');if(old)old.remove();
