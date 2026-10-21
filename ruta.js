@@ -86,6 +86,11 @@ function build(){
  #s-ruta .rt-cm{display:flex;gap:6px;flex:1 0 100%;margin:0 0 4px 28px}
  #s-ruta .rt-cm select{flex:1;min-width:0}
  #s-ruta .rt-cm input{flex:0 0 120px;text-transform:none}
+ #s-ruta .rt-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+ #s-ruta .rt-chip{padding:2px 8px;border-radius:12px;border:1px solid var(--line,#ccc);font-size:.85em;font-weight:600}
+ #s-ruta .rt-chip.ok{border-color:#2e8b57;color:#2e8b57}
+ #s-ruta .rt-chip.bad{border-color:#c0392b;background:#c0392b;color:#fff}
+ #s-ruta .rt-bad{border-color:#c0392b!important;outline:1px solid #c0392b}
  #s-ruta .rt-mini{padding:4px 8px;min-width:32px}
  #s-ruta table.rt td,#s-ruta table.rt th{white-space:nowrap}
  #s-ruta .rt-saved{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line,#ddd)}
@@ -93,6 +98,8 @@ function build(){
  <div class="card" style="max-width:900px">
   <h2>Plan de ruta <span class="hint" style="font-weight:400">· NavLog (en pruebas, solo administrador)</span></h2>
   <p class="hint">Ingresa salida, destino y puntos intermedios (por ahora, aeródromos con código ICAO). Rumbos magnéticos con modelo WMM2025. Es una ayuda de planificación: no reemplaza el briefing ni la información oficial vigente (AIP, NOTAM).</p>
+ <div class="field"><label for="rtTxt">Ruta: escribe los códigos separados por espacio</label><textarea id="rtTxt" rows="2" placeholder="Ej. SCTB SCSF SCSE" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase;width:100%;box-sizing:border-box"></textarea><div id="rtChips" class="rt-chips" aria-live="polite"></div></div>
+  <p class="hint" style="margin-top:0">Primero la salida, al final el destino. Abajo puedes ajustar cada punto y agregar cambios de altitud.</p>
   <div id="rtWps"></div>
   <p><button class="btn ghost small" id="rtAdd" type="button">+ Punto intermedio</button></p>
   <datalist id="rtDl"></datalist>
@@ -138,17 +145,38 @@ function build(){
  $('rtGo').onclick=calcular;$('rtPdf').onclick=exportarPdf;{const t=new Date();$('rtFecha').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
  $('rtSv').onclick=guardar;$('rtCp').onclick=copiar;
  $('rtNew').onclick=()=>{editId=null;wps=['',''];cams=[null,null];$('rtNom').value='';$('rtOut').innerHTML='';$('rtProf').innerHTML='';$('rtSave').style.display='none';$('rtExp').style.display='none';$('rtMap').style.display='none';msg('');drawWps();drawList()};
+ $('rtTxt').oninput=desdeTexto;$('rtTxt').onfocus=()=>{txtFoco=true;pintarChips()};$('rtTxt').onblur=()=>{txtFoco=false;pintarChips()};
+ cargarDatos().then(pintarChips,()=>{});
  drawWps();
 }
 function msg(t,k){const m=$('rtMsg');if(m)m.innerHTML=t?`<div class="msg ${k||''}">${E(t)}</div>`:''}
-function readWps(){const r=[...document.querySelectorAll('#rtWps input[data-i]')].map(i=>i.value.trim().toUpperCase());
- if(r.length){wps=r;cams=r.map((_,i)=>{const q=document.querySelector('#rtWps [data-cm="'+i+'"]'),a=document.querySelector('#rtWps [data-ca="'+i+'"]');return q&&q.value?{modo:q.value,alt:a&&a.value!==''?Number(a.value):NaN}:null})}}
-function drawWps(){
+function readCams(n){return Array.from({length:n},(_,i)=>{const q=document.querySelector('#rtWps [data-cm="'+i+'"]'),a=document.querySelector('#rtWps [data-ca="'+i+'"]');return q&&q.value?{modo:q.value,alt:a&&a.value!==''?Number(a.value):NaN}:null})}
+function readWps(){const r=[...document.querySelectorAll('#rtWps input[data-i]')].map(i=>i.value.trim().toUpperCase());if(r.length){wps=r;cams=readCams(r.length)}}
+/* ---- texto libre: mayúsculas, validación al cerrar cada código con espacio ---- */
+let txtFoco=false;
+const parseTxt=v=>String(v||'').toUpperCase().split(/[\s,;]+/).filter(Boolean).slice(0,20);
+function valido(c){return typeof AP!=='undefined'&&AP?!!AP[c]:null}
+function pintarChips(){
+ const ta=$('rtTxt'),box=$('rtChips');if(!ta||!box)return;
+ const toks=parseTxt(ta.value),cierre=/[\s,;]$/.test(ta.value)||!txtFoco;
+ box.innerHTML=toks.map((c,i)=>{const hecho=i<toks.length-1||cierre,v=hecho?valido(c):null;
+  return`<span class="rt-chip ${v===true?'ok':v===false?'bad':''}" title="${v===true?E(AP[c][2]):v===false?'Aeródromo no encontrado':''}">${E(c)}${v===false?' ✕':''}</span>`}).join('');
+ document.querySelectorAll('#rtWps input[data-i]').forEach(inp=>{const c=inp.value.trim().toUpperCase(),hecho=document.activeElement!==inp;inp.classList.toggle('rt-bad',!!c&&hecho&&valido(c)===false)})}
+function desdeTexto(){
+ const ta=$('rtTxt'),up=ta.value.toUpperCase();
+ if(up!==ta.value){const p=ta.selectionStart;ta.value=up;try{ta.setSelectionRange(p,p)}catch(e){}}
+ const old=readCams(wps.length),t=parseTxt(up);
+ wps=t.length>=2?t:t.concat(Array(2-t.length).fill(''));
+ cams=wps.map((_,i)=>old[i]||null);
+ drawWps(true);pintarChips();
+ if(typeof AP!=='undefined'&&!AP)cargarDatos().then(pintarChips,()=>{})}
+function drawWps(desdeTxt){
  const last=wps.length-1;cams.length=wps.length;for(let i=0;i<cams.length;i++)if(cams[i]===undefined)cams[i]=null;
  $('rtWps').innerHTML=wps.map((c,i)=>{const lab=i===0?'Salida':i===last?'Destino':'Punto '+i,cm=cams[i],mid=i>0&&i<last;return`<div class="rt-wp"><span class="rt-n">${i+1}</span><input list="rtDl" maxlength="4" placeholder="${lab} (ICAO)" value="${E(c)}" aria-label="${lab}" data-i="${i}" autocomplete="off">`+
  (mid?`<button class="btn ghost small rt-mini" type="button" data-up="${i}" title="Subir">↑</button><button class="btn ghost small rt-mini" type="button" data-dn="${i}" title="Bajar">↓</button><button class="btn ghost small rt-mini" type="button" data-rm="${i}" title="Quitar">✕</button>`:'')+
  (mid?`<div class="rt-cm"><select data-cm="${i}" aria-label="Cambio de altitud en ${E(c||lab)}"><option value="">Sin cambio de altitud</option><option value="ini"${cm&&cm.modo==='ini'?' selected':''}>Iniciar cambio de altitud a…</option><option value="cru"${cm&&cm.modo==='cru'?' selected':''}>Cruzar a…</option></select><input type="number" min="0" max="60000" step="500" inputmode="numeric" placeholder="ft" data-ca="${i}" value="${cm&&isFinite(cm.alt)?cm.alt:''}" aria-label="Altitud del cambio (ft)"${cm?'':' style="display:none"'}></div>`:'')+`</div>`}).join('');
- document.querySelectorAll('#rtWps input[data-i]').forEach(inp=>inp.oninput=()=>sugerir(inp.value));
+ {const ta=$('rtTxt');if(ta&&!desdeTxt)ta.value=wps.filter(Boolean).join(' ');pintarChips()}
+ document.querySelectorAll('#rtWps input[data-i]').forEach(inp=>{inp.oninput=()=>{sugerir(inp.value);const ta=$('rtTxt');if(ta){ta.value=[...document.querySelectorAll('#rtWps input[data-i]')].map(x=>x.value.trim().toUpperCase()).filter(Boolean).join(' ');pintarChips()}};inp.onblur=pintarChips});
  document.querySelectorAll('#rtWps [data-cm]').forEach(q=>q.onchange=()=>{const a=document.querySelector('#rtWps [data-ca="'+q.dataset.cm+'"]');a.style.display=q.value?'':'none';if(q.value)a.focus()});
  document.querySelectorAll('#rtWps [data-up]').forEach(b=>b.onclick=()=>{readWps();const i=+b.dataset.up;if(i>1){[wps[i-1],wps[i]]=[wps[i],wps[i-1]];[cams[i-1],cams[i]]=[cams[i],cams[i-1]];drawWps()}});
  document.querySelectorAll('#rtWps [data-dn]').forEach(b=>b.onclick=()=>{readWps();const i=+b.dataset.dn;if(i<wps.length-2){[wps[i+1],wps[i]]=[wps[i],wps[i+1]];[cams[i+1],cams[i]]=[cams[i],cams[i+1]];drawWps()}});
