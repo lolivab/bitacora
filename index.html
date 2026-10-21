@@ -355,7 +355,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <section id="s-planificador" class="hidden">
   <div class="card" style="max-width:760px">
    <h2>Planificador de vuelo</h2>
-   <p class="hint">Estimación simple: distancia en línea recta entre aeródromos, tiempo según la velocidad del avión y, para socios del Club Aéreo de Santiago, costo según las tarifas del Club. Puedes elegir varios aviones para compararlos. No reemplaza tu planificación ni el briefing.</p>
+   <p class="hint">Estimación simple: distancia en línea recta entre aeródromos, tiempo según la velocidad del avión. Puedes elegir varios aviones para compararlos. No reemplaza tu planificación ni el briefing.</p>
    <div class="form">
     <div class="field"><label for="pfO">Origen (ICAO)</label><input id="pfO" maxlength="4" placeholder="SCTB" style="text-transform:uppercase"></div>
     <div class="field"><label for="pfD">Destino (ICAO)</label><input id="pfD" maxlength="4" placeholder="SCVM" style="text-transform:uppercase"></div>
@@ -368,7 +368,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
    <label class="tog" for="pfR"><input id="pfR" type="checkbox">Ida y vuelta</label>
    <p><button class="btn" id="pfGo" type="button">Calcular</button></p>
    <div id="pfMsg" class="hint"></div><div id="pfOut"></div><div id="pfMap" style="display:none;height:340px;border:1px solid var(--line);border-radius:8px;margin-top:10px"></div>
-   <p class="hint">Las tarifas son las del Club Aéreo de Santiago y solo se muestran a sus socios. Las velocidades son aproximadas de crucero típico y puedes editarlas. Distancia directa; la ruta real puede ser mayor.</p>
+   <p class="hint">Las velocidades son aproximadas de crucero típico y puedes editarlas. Distancia directa; la ruta real puede ser mayor.</p>
   </div>
   </section>
 
