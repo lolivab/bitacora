@@ -2,8 +2,8 @@
 // Secrets: MP_ACCESS_TOKEN, APP_URL (ej. https://lolivab.github.io/bitacora/)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0'
 const PLANES: Record<string,{precio:number,titulo:string}> = {
-  lifetime:{precio:29990,titulo:'Maletín de vuelo · Acceso de por vida'},
   anual:{precio:9990,titulo:'Maletín de vuelo · Acceso por 12 meses'},
+  cinco:{precio:29990,titulo:'Maletín de vuelo · Acceso por 5 años'},
 }
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'}
 Deno.serve(async(req)=>{
@@ -20,10 +20,11 @@ Deno.serve(async(req)=>{
       const adm=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
       const{data:c}=await adm.from('cupones').select('precio,usos,usos_max,activo,plan').eq('codigo',code).maybeSingle()
       if(!c||!c.activo||(c.usos_max!=null&&c.usos>=c.usos_max))return new Response(JSON.stringify({error:'Cupón no válido o agotado'}),{status:400,headers:cors})
+      if(c.plan==='lifetime')return new Response(JSON.stringify({error:'Este código ya no está disponible'}),{status:400,headers:cors})
       if(accion==='validar')return new Response(JSON.stringify({precio:c.precio,plan:c.plan??null}),{headers:{...cors,'Content-Type':'application/json'}})
     }
     if(!p)return new Response(JSON.stringify({error:'Plan inválido'}),{status:400,headers:cors})
-    if(code){const adm2=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);const{data:c2}=await adm2.from('cupones').select('precio,plan').eq('codigo',code).maybeSingle();if(c2?.plan&&c2.plan!==plan)return new Response(JSON.stringify({error:'Este código solo aplica al plan '+(c2.plan==='lifetime'?'Lifetime (acceso de por vida)':c2.plan)}),{status:400,headers:cors});precio=Math.min(c2!.precio,p.precio)}
+    if(code){const adm2=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);const{data:c2}=await adm2.from('cupones').select('precio,plan').eq('codigo',code).maybeSingle();if(c2?.plan&&c2.plan!==plan)return new Response(JSON.stringify({error:c2.plan==='lifetime'?'Este código ya no está disponible':'Este código solo aplica al plan '+(c2.plan==='cinco'?'de 5 años':c2.plan)}),{status:400,headers:cors});precio=Math.min(c2!.precio,p.precio)}
     if(code&&precio===0){
       // Cupón 100%: no pasa por Mercado Pago. Se canjea y se activa el acceso aquí mismo.
       const adm=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -32,8 +33,7 @@ Deno.serve(async(req)=>{
       if(u.error||!u.data?.length)return new Response(JSON.stringify({error:'Cupón no válido o agotado'}),{status:400,headers:cors})
       await adm.from('pagos').insert({mp_payment_id:`cupon-${code}-${user.id}`,user_id:user.id,plan,monto:0})
       const{data:a}=await adm.from('accesos').select('plan,hasta').eq('user_id',user.id).maybeSingle()
-      if(plan==='lifetime')await adm.from('accesos').upsert({user_id:user.id,plan:'lifetime',hasta:null})
-      else if(!(a&&!a.hasta)){const b=a?.hasta&&new Date(a.hasta)>new Date()?new Date(a.hasta):new Date();b.setDate(b.getDate()+365);await adm.from('accesos').upsert({user_id:user.id,plan:'anual',hasta:b.toISOString()})}
+      if(!(a&&!a.hasta)){const b=a?.hasta&&new Date(a.hasta)>new Date()?new Date(a.hasta):new Date();b.setDate(b.getDate()+(plan==='cinco'?1825:365));await adm.from('accesos').upsert({user_id:user.id,plan:plan==='cinco'?'cinco':(a?.plan==='cinco'?'cinco':'anual'),hasta:b.toISOString()})}
       return new Response(JSON.stringify({gratis:true}),{headers:{...cors,'Content-Type':'application/json'}})
     }
     const app=(Deno.env.get('APP_URL')??'').replace(/\/?$/,'/')

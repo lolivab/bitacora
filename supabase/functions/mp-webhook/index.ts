@@ -1,7 +1,7 @@
 // Recibe avisos de Mercado Pago, valida la firma, confirma el pago y activa el acceso.
 // Desplegar con --no-verify-jwt. Secrets: MP_ACCESS_TOKEN, MP_WEBHOOK_SECRET
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0'
-const PRECIOS: Record<string,number> = {lifetime:29990,anual:9990}
+const PRECIOS: Record<string,number> = {lifetime:29990,anual:9990,cinco:29990}
 const hex=(b:ArrayBuffer)=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')
 async function firmaOk(req:Request,dataId:string){
   const sig=req.headers.get('x-signature')??'',rid=req.headers.get('x-request-id')??''
@@ -42,8 +42,8 @@ Deno.serve(async(req)=>{
       // ya tiene acceso sin vencimiento: no se baja de plan
     }else{
       const base=a?.hasta&&new Date(a.hasta)>new Date()?new Date(a.hasta):new Date()
-      base.setDate(base.getDate()+365)
-      await sb.from('accesos').upsert({user_id:uid,plan:'anual',hasta:base.toISOString()})
+      base.setDate(base.getDate()+(plan==='cinco'?1825:365))
+      await sb.from('accesos').upsert({user_id:uid,plan:plan==='cinco'?'cinco':(a?.plan==='cinco'?'cinco':'anual'),hasta:base.toISOString()})
     }
     return new Response('ok',{status:200})
   }catch(e){return new Response(String(e),{status:500})}
