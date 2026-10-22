@@ -258,8 +258,11 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     <a href="#" data-go="metricas"><b>Métricas</b><span>Pasajeros, rutas, promedios</span></a>
     <a href="#" data-go="mapa"><b>Mapa</b><span>Aeródromos visitados</span></a>
     <a href="#" data-go="pasaporte"><b>Pasaporte de vuelo</b><span>Tarjeta para compartir</span></a></div></div>
-   <div class="card noclubonly"><h3>Habilitaciones y vínculos</h3><p class="hint">Tus documentos, tu condición como piloto y tus instructores o alumnos</p><div class="in-t one"><a href="#" data-go="chequeo"><b>Mis habilitaciones</b><span>Médico, licencia e instructor de vuelo</span></a></div></div>
-   <div class="card in-hab"><h3>Habilitaciones</h3><p class="hint">Según el Manual de Normas y Procedimientos del Club Aéreo de Santiago, para socios pilotos del Club</p><div class="in-t one">
+   <div class="card"><h3>Habilitaciones y vínculos</h3><p class="hint">Tus documentos, tu condición como piloto y tus instructores o alumnos</p><div class="in-t">
+    <a href="#" data-go="chequeo" class="noclubonly"><b>Mis habilitaciones</b><span>Médico, licencia e instructor de vuelo</span></a>
+    <a href="#" data-go="vinculos"><b>Enlazar instructor <span class="in-badge hidden" id="inVn"></span></b><span>Vincula a tu instructor de vuelo</span></a>
+    <a href="#" data-go="vinculos" id="inAlu" class="hidden"><b>Enlazar alumno</b><span>Vincula a tus alumnos</span></a></div></div>
+   <div class="card in-hab"><h3>Habilitaciones del Club</h3><p class="hint">Según el Manual de Normas y Procedimientos del Club Aéreo de Santiago, para socios pilotos del Club</p><div class="in-t one">
     <a href="#" data-go="chequeo"><b>Chequeo de habilitaciones <span class="in-badge hidden" id="inChk"></span></b><span>Semáforo por grupo, documentos y cursos a los que puedes acceder</span></a></div></div>
    <div class="card"><h3>Herramientas</h3><p class="hint">Para antes de volar</p><div class="in-t">
     <a href="#" data-go="briefing"><b>Briefing meteorológico</b><span>Pronóstico, mapa y cámaras</span></a>
@@ -366,7 +369,19 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   </div>
   </section>
 
-  <section id="s-exportar" class="hidden"><div class="card" style="max-width:520px">
+  <section id="s-vinculos" class="hidden"><div class="card" style="max-width:640px">
+  <h2>Vínculos</h2>
+  <p class="hint">Enlaza a tu instructor o a tus alumnos. El vínculo queda pendiente hasta que la otra persona lo acepte, y cualquiera de los dos puede quitarlo cuando quiera.</p>
+  <div id="vnPend"></div>
+  <h3 style="margin:14px 0 4px">Mis instructores</h3><div id="vnInst"></div>
+  <div class="tools"><input id="vnEmI" type="email" placeholder="Correo de tu instructor" autocomplete="off"><button class="btn" id="vnAddI" type="button">Enlazar instructor</button></div>
+  <div id="vnAlW"><h3 style="margin:18px 0 4px">Mis alumnos</h3><div id="vnAl"></div>
+  <div class="tools"><input id="vnEmA" type="email" placeholder="Correo de tu alumno" autocomplete="off"><button class="btn" id="vnAddA" type="button">Enlazar alumno</button></div></div>
+  <p class="hint hidden" id="vnNoInst" style="margin-top:14px">Si eres instructor de vuelo, decláralo en Bitácora › Mis habilitaciones para enlazar alumnos.</p>
+  <span class="hint" id="vnMsg"></span>
+ </div></section>
+
+ <section id="s-exportar" class="hidden"><div class="card" style="max-width:520px">
    <h2>Exportar bitácora a PDF</h2>
    <p class="hint">Genera un documento con el resumen de tus horas y el listado completo de vuelos.</p>
    <div class="field"><label for="pdfFmt">Formato</label><select id="pdfFmt"><option value="res">Bitácora resumen (con estadísticas)</option><option value="jepp">Jeppesen Logbook (hoja de 13 líneas)</option></select></div>
@@ -1255,7 +1270,7 @@ $('brAsave').onclick=()=>{
 /* ---------- Navegación ---------- */
 function go(v){
  if(v==='ruta'&&!(!!user&&String(user.email||'').toLowerCase()===ADMIN_EMAIL&&!viewing))v='inicio';
- ['inicio','resumen','vuelos','metricas','chequeo','exportar','briefing','liveatc','mapa','pasaporte','nuevo','importar','cuenta','admin','ruta','conversor','e6b'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
+ ['inicio','resumen','vuelos','metricas','chequeo','exportar','briefing','liveatc','mapa','pasaporte','nuevo','importar','cuenta','admin','ruta','conversor','e6b','vinculos'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
  {const G=['vuelos','nuevo','chequeo','mapa','pasaporte','exportar','importar'].includes(v),Hh=v==='briefing'||v==='liveatc'||v==='ruta';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g==='1'?G:b.dataset.g==='h'?Hh:b.dataset.v===v));document.querySelectorAll('#subnav button,#subnav2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G);$('subnav2').classList.toggle('hidden',!Hh)}
  {const nb=document.querySelector('#nav button.on');if(nb)$('burgerT').textContent=nb.textContent;$('nav').classList.remove('open')}
  $('backBar').classList.toggle('hidden',v==='inicio');
@@ -1268,6 +1283,7 @@ function go(v){
  if(v==='mapa')renderMap();if(v==='pasaporte')renderPasaporte();
  if(v==='metricas')renderMetrics();
  if(v==='chequeo')renderChequeo();
+ if(v==='vinculos')renderVinculos();
  if(v==='exportar')prepPdf();
  if(v==='briefing')brFill();
  if(v==='cuenta'){note('avMsg','');paintAvatar();$('cuMail').textContent=user.email||'';$('cuHome').value=homeOf();$('cuClub').value=clubOf();note('cuHomeMsg','');$('cuP1').value=$('cuP2').value='';note('cuMsg','')}
@@ -2211,6 +2227,37 @@ function paintInicioAlert(){
  a.classList.remove('hidden','bad');if(w==='bad')a.classList.add('bad');
  $('inAT').textContent=S.issues.length>1?`${S.issues[0]} (+${S.issues.length-1} más)`:(S.issues[0]||'Revisa tu chequeo.');
 }
+/* ---------- Vínculos instructor/alumno ---------- */
+let VN=[];
+async function vnLoad(){const{data,error}=await sb.rpc('mis_vinculos');if(error){VN=null;return error}VN=data||[];return null}
+function vnRow(v){const nm=v.otro_nombre?`<b>${esc(v.otro_nombre)}</b> <span class="muted">${esc(v.otro_email)}</span>`:`<b>${esc(v.otro_email)}</b>`;
+ const act=v.recibida?`<button class="btn small" data-vr="${v.id}" data-ok="1" type="button">Aceptar</button> <button class="btn ghost small" data-vr="${v.id}" type="button">Rechazar</button>`
+  :`<button class="btn ghost small danger" data-vq="${v.id}" type="button">${v.estado==='pendiente'?'Cancelar':'Quitar'}</button>`;
+ return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--line)"><div>${nm}${v.estado==='pendiente'&&!v.recibida?' <span class="tag" style="background:var(--gry)">Pendiente</span>':''}</div><div style="white-space:nowrap">${act}</div></div>`}
+async function renderVinculos(){
+ loadChk();
+ const err=await vnLoad();
+ if(err){$('vnPend').innerHTML='';$('vnInst').innerHTML='';$('vnAl').innerHTML='';note('vnMsg','Esta función aún no está activa (falta ejecutar vinculos.sql en Supabase).','err');return}
+ note('vnMsg','');
+ const pend=VN.filter(v=>v.recibida);
+ $('vnPend').innerHTML=pend.length?`<div class="card" style="margin:10px 0;background:var(--bg)"><h3 style="margin:0 0 4px">Invitaciones recibidas</h3>${pend.map(v=>vnRow(v).replace('<b>','<b>'+(v.mi_rol==='alumno'?'Instructor: ':'Alumno: ')+'</b><b>')).join('')}</div>`:'';
+ const mine=VN.filter(v=>!v.recibida);
+ const inst=mine.filter(v=>v.mi_rol==='alumno'),alu=mine.filter(v=>v.mi_rol==='instructor');
+ $('vnInst').innerHTML=inst.map(vnRow).join('')||'<div class="hint">Aún no tienes instructores enlazados.</div>';
+ $('vnAl').innerHTML=alu.map(vnRow).join('')||'<div class="hint">Aún no tienes alumnos enlazados.</div>';
+ const isI=!!CK.instv||alu.length>0;$('vnAlW').classList.toggle('hidden',!isI);$('vnNoInst').classList.toggle('hidden',isI);
+}
+async function vnAdd(rol,inp){const em=$(inp).value.trim();if(!em)return note('vnMsg','Escribe un correo.','err');
+ const{error}=await sb.rpc('crear_vinculo',{p_rol:rol,p_email:em});
+ if(error)return note('vnMsg',error.message,'err');$(inp).value='';await renderVinculos();note('vnMsg','Invitación creada. Queda pendiente hasta que la otra persona la acepte.','ok')}
+$('vnAddI').onclick=()=>vnAdd('instructor','vnEmI');$('vnAddA').onclick=()=>vnAdd('alumno','vnEmA');
+$('s-vinculos').addEventListener('click',async e=>{
+ const r=e.target.closest('[data-vr]'),q=e.target.closest('[data-vq]');
+ if(r){const{error}=await sb.rpc('responder_vinculo',{p_id:r.dataset.vr,p_aceptar:!!r.dataset.ok});if(error)return note('vnMsg',error.message,'err');await renderVinculos();note('vnMsg',r.dataset.ok?'Vínculo aceptado.':'Invitación rechazada.','ok')}
+ if(q){if(!confirm('¿Quitar este vínculo?'))return;const{error}=await sb.rpc('quitar_vinculo',{p_id:q.dataset.vq});if(error)return note('vnMsg',error.message,'err');await renderVinculos();note('vnMsg','Vínculo quitado.','ok')}
+});
+async function paintVn(){if(viewing||!user)return;$('inAlu').classList.toggle('hidden',!CK.instv);
+ const e=await vnLoad();const n=e?0:(VN||[]).filter(v=>v.recibida).length;const b=$('inVn');b.textContent=n?n+' pendiente'+(n>1?'s':''):'';b.classList.toggle('hidden',!n)}
 function renderInicio(){
  paintWx();paintSun();
  const h=new Date().getHours(),sal=h<12?'Buenos días':h<20?'Buenas tardes':'Buenas noches';
@@ -2219,7 +2266,7 @@ function renderInicio(){
  $('inQ').textContent=viewing?'Estás viendo esta bitácora en modo lectura':'¿Qué quieres hacer hoy?';
  const T=todayS(),lim=addDays(T,-90),real=ALL.filter(r=>!r.pv&&r.k!=='Simulador'&&r.d<=T);
  $('inH1').textContent=fmt(sum(ALL,'tot'))+' h';$('inH2').textContent=fmt(sum(real.filter(r=>r.d>=lim),'tot'))+' h';
- loadChk();paintChk();paintInicioAlert();paintAcc();
+ loadChk();paintChk();paintInicioAlert();paintAcc();paintVn();
  loadChkDb().then(ok=>{if(ok!==false){paintChk();paintInicioAlert()}});
 }
 $('inOut').onclick=e=>{e.preventDefault();sb.auth.signOut()};
