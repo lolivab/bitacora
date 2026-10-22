@@ -237,7 +237,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  </div>
  <div id="backBar" class="hidden"><button class="btn ghost small" data-go="inicio" type="button">← Inicio</button></div>
  <div id="subnav2" class="hidden"><button data-v="briefing">Briefing meteorológico</button><button data-v="liveatc">LiveATC</button></div>
- <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Chequeo de habilitaciones</button><button data-v="mapa">Mapa</button><button data-v="pasaporte">Pasaporte</button><button data-v="importar">Importar</button><button data-v="exportar">Exportar</button></div>
+ <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Mis habilitaciones</button><button data-v="mapa">Mapa</button><button data-v="pasaporte">Pasaporte</button><button data-v="importar">Importar</button><button data-v="exportar">Exportar</button></div>
 
  <section id="s-inicio">
   <div class="in-hero">
@@ -258,7 +258,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     <a href="#" data-go="metricas"><b>Métricas</b><span>Pasajeros, rutas, promedios</span></a>
     <a href="#" data-go="mapa"><b>Mapa</b><span>Aeródromos visitados</span></a>
     <a href="#" data-go="pasaporte"><b>Pasaporte de vuelo</b><span>Tarjeta para compartir</span></a></div></div>
-   <div class="card noclubonly"><h3>Documentos</h3><p class="hint">Vencimiento de tu certificado médico y licencia</p><div class="in-t one"><a href="#" data-go="chequeo"><b>Mis vencimientos</b><span>Médico y licencia</span></a></div></div>
+   <div class="card noclubonly"><h3>Habilitaciones</h3><p class="hint">Tus documentos y tu condición como piloto</p><div class="in-t one"><a href="#" data-go="chequeo"><b>Mis habilitaciones</b><span>Médico, licencia e instructor de vuelo</span></a></div></div>
    <div class="card in-hab"><h3>Habilitaciones</h3><p class="hint">Según el Manual de Normas y Procedimientos del Club Aéreo de Santiago, para socios pilotos del Club</p><div class="in-t one">
     <a href="#" data-go="chequeo"><b>Chequeo de habilitaciones <span class="in-badge hidden" id="inChk"></span></b><span>Semáforo por grupo, documentos y cursos a los que puedes acceder</span></a></div></div>
    <div class="card"><h3>Herramientas</h3><p class="hint">Para antes de volar</p><div class="in-t">
@@ -333,7 +333,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  </div></section>
 
   <section id="s-chequeo" class="hidden">
-  <p class="hint noclubonly" style="margin:0 0 10px"><b>Vencimientos de tus documentos.</b> Registra la fecha de vencimiento de tu certificado médico y de tu licencia.</p>
+  <p class="hint noclubonly" style="margin:0 0 10px"><b>Mis habilitaciones.</b> Registra los vencimientos de tu certificado médico y de tu licencia, y declara si eres instructor de vuelo.</p>
   <p class="hint clubonly" style="margin:0 0 10px"><b>Habilitaciones y actividad según el Manual de Normas y Procedimientos del Club Aéreo de Santiago (nov. 2025), para socios pilotos del Club.</b> Si no vuelas en el Club, esta sección no te aplica.</p>
   <div id="ckBanner" class="card clubonly" style="margin-bottom:14px"></div>
   <div class="grid">
@@ -347,6 +347,9 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
       <div class="ckgh">Vencimientos</div>
       <div class="ckr"><label for="ckMed">Certificado médico</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckMed"><div class="ckn"><span class="hint">Vencimiento</span></div></div>
       <div class="ckr"><label for="ckLic">Licencia</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckLic"><div class="ckn"><span class="hint">Vencimiento</span></div></div>
+      <div class="ckgh">Condición</div>
+      <div class="ckr"><label for="ckInstV">Instructor de vuelo</label><div class="filters" style="margin:0"><label class="tog" for="ckInstV"><input type="checkbox" id="ckInstV">Soy instructor de vuelo</label></div><div class="ckn"><span class="hint">Podrás autorizar a tus alumnos y se mostrará en tu perfil</span></div></div>
+      <div class="ckr hidden" id="ckInstVR"><label for="ckInstVD">Habilitación de instructor</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckInstVD"><div class="ckn"><span class="hint">Vencimiento (opcional)</span></div></div>
       <div class="ckgh clubonly">Fechas de hitos</div>
       <div class="ckr clubonly"><label for="ckLicF">Obtención de la licencia</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckLicF"><div class="ckn"><span class="hint">Fecha de obtención</span><span class="hint" id="ckLicFA"></span></div></div>
       <div class="ckr clubonly"><label for="ckAmF">Curso de Área Media</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckAmF"><div class="ckn"><span class="hint">Fecha de aprobación</span></div></div>
@@ -973,8 +976,8 @@ function renderChequeo(){
 function paintChk(){
  const T=todayS(),R=ALL.filter(r=>!r.pv&&r.k!=='Simulador'&&r.d<=T);
  const tot=sum(ALL.filter(r=>r.k!=='Simulador'),'tot');
- ['ckMed','ckLic','ckBie','ckIns','ckSave','ckLicF','ckAmF'].forEach(i=>$(i).disabled=!!viewing);$('ckSave').style.display=viewing?'none':'';
- DS('ckMed',CK.med);$('ckMsg').textContent=viewing?(CK.med||CK.lic||CK.bie||CK.ins?'Fechas cargadas por '+(viewing.name||viewing.email)+' (solo lectura).':(viewing.name||viewing.email)+' aún no ha cargado fechas.'):'';DS('ckLic',CK.lic);DS('ckBie',CK.bie);$('ckIns').checked=!!CK.ins;
+ ['ckMed','ckLic','ckBie','ckIns','ckInstV','ckInstVD','ckSave','ckLicF','ckAmF'].forEach(i=>$(i).disabled=!!viewing);$('ckSave').style.display=viewing?'none':'';
+ DS('ckMed',CK.med);$('ckMsg').textContent=viewing?(CK.med||CK.lic||CK.bie||CK.ins?'Fechas cargadas por '+(viewing.name||viewing.email)+' (solo lectura).':(viewing.name||viewing.email)+' aún no ha cargado fechas.'):'';DS('ckLic',CK.lic);DS('ckBie',CK.bie);$('ckIns').checked=!!CK.ins;$('ckInstV').checked=!!CK.instv;DS('ckInstVD',CK.instvD||'');$('ckInstVR').classList.toggle('hidden',!CK.instv);
  const last={},lastF={},lastT={},cnt={},h12={};
  R.forEach(r=>{const a=acType(r.m);if(!a)return;
   if(!last[a.g]||r.d>last[a.g])last[a.g]=r.d;
@@ -1035,9 +1038,10 @@ function paintChk(){
   +(bad(issues)?'<p class="hint">Si estás fuera de actividad puedes pedir una inspección al Instructor de Turno (mín. 30 min/1 aterrizaje; 45 min/2 aterrizajes; 1 h/3 aterrizajes según la inactividad, 4.41.10).</p>':'');
 }
 function bad(i){return i.length>0}
+$('ckInstV').onchange=()=>$('ckInstVR').classList.toggle('hidden',!$('ckInstV').checked);
 $('ckSave').onclick=async()=>{
  if(viewing)return;
- CK={med:DG('ckMed'),lic:DG('ckLic'),bie:DG('ckBie'),ins:$('ckIns').checked,licF:DG('ckLicF'),amF:DG('ckAmF'),cur:{}};document.querySelectorAll('#ckCur input').forEach(i=>{if(i.checked)CK.cur[i.dataset.c]=true});
+ CK={med:DG('ckMed'),lic:DG('ckLic'),bie:DG('ckBie'),ins:$('ckIns').checked,instv:$('ckInstV').checked,instvD:$('ckInstV').checked?DG('ckInstVD'):'',licF:DG('ckLicF'),amF:DG('ckAmF'),cur:{}};document.querySelectorAll('#ckCur input').forEach(i=>{if(i.checked)CK.cur[i.dataset.c]=true});
  try{localStorage.setItem('chk_'+user.id,JSON.stringify(CK))}catch(e){}
  paintChk();
  const{error}=await sb.from('perfiles').upsert({user_id:user.id,chequeo:CK,updated_at:new Date().toISOString()});
@@ -2161,7 +2165,7 @@ $('ppSh').onclick=()=>{$('ppCv').toBlob(async b=>{const f=new File([b],'pasaport
 
 /* ---------- Base de operación y pronóstico ---------- */
 const clubOf=()=>{const c=user&&user.user_metadata&&user.user_metadata.club;return c===undefined?'CAS':c};
-const applyClub=()=>{document.body.classList.toggle('noclub',!clubOf());const b=document.querySelector('#subnav [data-v="chequeo"]');if(b)b.textContent=clubOf()?'Chequeo de habilitaciones':'Vencimientos'};
+const applyClub=()=>{document.body.classList.toggle('noclub',!clubOf());const b=document.querySelector('#subnav [data-v="chequeo"]');if(b)b.textContent='Mis habilitaciones'};
 const homeOf=()=>{const h=String((user&&user.user_metadata&&user.user_metadata.home)||'SCTB').toUpperCase();return /^[A-Z]{4}$/.test(h)?h:'SCTB'};
 async function homeLL(c){if(c==='SCTB')return[-33.4564,-70.5469];try{const k=JSON.parse(localStorage.getItem('homeLL')||'{}');if(k[c])return k[c]}catch(e){}
  if(!AP){const r=await fetch('airports.json');if(!r.ok)throw 0;AP=await r.json()}if(!AP[c])return null;const v=[AP[c][0],AP[c][1]];try{const k=JSON.parse(localStorage.getItem('homeLL')||'{}');k[c]=v;localStorage.setItem('homeLL',JSON.stringify(k))}catch(e){}return v}
