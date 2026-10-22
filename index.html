@@ -385,28 +385,22 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
 
  <section id="s-autorizaciones" class="hidden"><div class="card" style="max-width:680px">
   <h2>Autorizaciones</h2>
-  <p class="hint">Tu instructor puede dejarte una autorización lista, o tú puedes pedirle una. Cada autorización queda registrada con quién la dio, cuándo y desde qué cuenta. Necesitas tener enlazado al instructor en <a href="#" data-go="vinculos">Vínculos</a>.</p>
+  <p class="hint">Tu instructor puede dejarte autorizado un vuelo solo con un máximo de horas, o tú puedes pedírselo. Cada autorización queda registrada con quién la dio, cuándo y desde qué cuenta. Necesitas tener enlazado al instructor en <a href="#" data-go="vinculos">Vínculos</a>.</p>
   <div id="auInstBox" class="hidden">
    <h3 style="margin:14px 0 4px">Solicitudes de mis alumnos</h3><div id="auSol"></div>
-   <h3 style="margin:14px 0 4px">Dejar una autorización</h3>
+   <h3 style="margin:14px 0 4px">Autorizar vuelo solo</h3>
    <div class="form" id="auFormI">
     <div><label for="auIA">Alumno</label><select id="auIA"></select></div>
-    <div><label for="auIC">Acción</label><select id="auIC"></select></div>
-    <div><label for="auID">Detalle (opcional)</label><input id="auID" placeholder="Ej. zona local, viento máx. 10 kt"></div>
-    <div><label for="auIM">Máx. horas (opcional)</label><input id="auIM" inputmode="decimal" placeholder="2"></div>
-    <div><label for="auIV">Vence (opcional)</label><input id="auIV" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti"></div>
+    <div><label for="auIM">Máximo de horas de vuelo solo *</label><input id="auIM" inputmode="decimal" placeholder="2"></div>
    </div>
    <button class="btn" id="auIGo" type="button" style="margin-top:8px">Autorizar</button>
    <h3 style="margin:18px 0 4px">Autorizaciones que he dado</h3><div id="auEmi"></div>
   </div>
   <div id="auAluBox">
-   <h3 style="margin:18px 0 4px">Pedir una autorización</h3>
+   <h3 style="margin:18px 0 4px">Pedir autorización de vuelo solo</h3>
    <div class="form" id="auFormA">
     <div><label for="auAI">Instructor</label><select id="auAI"></select></div>
-    <div><label for="auAC">Acción</label><select id="auAC"></select></div>
-    <div><label for="auAD">Detalle (opcional)</label><input id="auAD" placeholder="Ej. práctica de aterrizajes en SCTB"></div>
-    <div><label for="auAM">Máx. horas (opcional)</label><input id="auAM" inputmode="decimal" placeholder="2"></div>
-    <div><label for="auAV">Vence (opcional)</label><input id="auAV" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti"></div>
+    <div><label for="auAM">Horas de vuelo solo que solicitas (opcional)</label><input id="auAM" inputmode="decimal" placeholder="2"></div>
    </div>
    <button class="btn" id="auAGo" type="button" style="margin-top:8px">Enviar solicitud</button>
    <h3 style="margin:18px 0 4px">Mis autorizaciones</h3><div id="auMis"></div>
@@ -1595,7 +1589,7 @@ $('fSave').onclick=async()=>{
  let names=[],npax=null;
  if(!editKeep&&chk('pax')){npax=Math.min(9,Math.max(1,parseInt($('fNPax').value)||1));names=paxVals().map(s=>s.trim()).filter(Boolean)}
  const tipo=editKeep||tipoFromChecks();
- const row=Object.assign({fecha,modelo,matricula:getTail()||null,tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:[$('fCom').value.trim(),aut?'Autorizado por '+(aut.resp_nombre||aut.resp_email)+' ('+auFecha(aut.respondida_en)+')':''].filter(Boolean).join(' · ')||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:{num_pax:npax},editKeep?{}:derived(tipo,total),editKeep?{}:condRow(total,Math.max(0,parseInt($('fAterr').value)||0)));
+ const row=Object.assign({fecha,modelo,matricula:getTail()||null,tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:[$('fCom').value.trim(),aut?'Vuelo solo autorizado por '+auIni(aut.resp_nombre||aut.resp_email)+' ('+auFecha(aut.respondida_en)+')':''].filter(Boolean).join(' · ')||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:{num_pax:npax},editKeep?{}:derived(tipo,total),editKeep?{}:condRow(total,Math.max(0,parseInt($('fAterr').value)||0)));
  $('fSave').disabled=true;
  try{
   const run=r=>editId?sb.from('vuelos').update(r).eq('id',editId):sb.from('vuelos').insert(Object.assign({},r,{user_id:user.id}));
@@ -2266,24 +2260,25 @@ function paintInicioAlert(){
 }
 /* ---------- Vínculos instructor/alumno ---------- */
 let VN=[],AU=[];
-const AU_ACC=['Vuelo solo','Vuelo solo de travesía','Vuelo a otro aeródromo','Uso de aeronave específica','Otra'];
+const AU_ACC='Vuelo solo';
+const auIni=n=>{const w=String(n||'').trim().split(/\s+/).filter(Boolean);if(!w.length)return '';if(w[0].includes('@'))return w[0];if(w.length===1)return w[0];const ap=w.length>=3?w[w.length-2]:w[w.length-1];return w[0].charAt(0).toUpperCase()+'. '+ap};
 const auFecha=s=>{if(!s)return'';const d=new Date(s),z=n=>String(n).padStart(2,'0');return z(d.getDate())+'/'+z(d.getMonth()+1)+'/'+d.getFullYear()+' '+z(d.getHours())+':'+z(d.getMinutes())};
 const auVigente=a=>a.estado==='autorizada'&&(!a.vence||a.vence>=todayIso());
-function auLim(a){return [a.max_horas?'máx. '+String(a.max_horas).replace('.',',')+' h':'',a.vence?'vence '+dm(a.vence):''].filter(Boolean).join(' · ')}
+function auLim(a){return a.max_horas?'máx. '+String(a.max_horas).replace('.',',')+' h':''}
 function auEstado(a){
  const vig=auVigente(a),venc=a.estado==='autorizada'&&!vig;
  const m={solicitada:['Pendiente','var(--gry)'],autorizada:venc?['Vencida','var(--gry)']:['Autorizada','#2e8b57'],rechazada:['Rechazada','#c0392b'],usada:['Usada','#3b6fb6'],revocada:['Revocada','#c0392b']}[a.estado]||[a.estado,'var(--gry)'];
  return `<span class="tag" style="background:${m[1]};color:#fff">${m[0]}</span>`}
 function auCard(a,rol){
- const quien=rol==='alumno'?(a.instructor_nombre||a.instructor_email):(a.alumno_nombre||a.alumno_email);
+ const quien=rol==='alumno'?auIni(a.instructor_nombre||a.instructor_email):(a.alumno_nombre||a.alumno_email);
  let firma='';
- if(a.respondida_en&&a.estado!=='rechazada')firma=`<div class="hint" style="margin-top:4px">✔ Autorizado por <b>${esc(a.resp_nombre||a.resp_email)}</b> el <b>${esc(auFecha(a.respondida_en))}</b> desde ${a.verificada?'<b>cuenta verificada</b>':'cuenta sin verificar'} (${esc(a.resp_email||'')})</div>`;
- else if(a.estado==='rechazada')firma=`<div class="hint" style="margin-top:4px">Rechazada por ${esc(a.resp_nombre||a.resp_email)} el ${esc(auFecha(a.respondida_en))}</div>`;
+ if(a.respondida_en&&a.estado!=='rechazada')firma=`<div class="hint" style="margin-top:4px">✔ Autorizado por <b>${esc(auIni(a.resp_nombre||a.resp_email))}</b> el <b>${esc(auFecha(a.respondida_en))}</b> desde ${a.verificada?'<b>cuenta verificada</b>':'cuenta sin verificar'} (${esc(a.resp_email||'')})</div>`;
+ else if(a.estado==='rechazada')firma=`<div class="hint" style="margin-top:4px">Rechazada por ${esc(auIni(a.resp_nombre||a.resp_email))} el ${esc(auFecha(a.respondida_en))}</div>`;
  const act=[];
  if(rol==='instructor'&&a.estado==='solicitada')act.push(`<button class="btn small" data-au="ok" data-i="${a.id}" type="button">Autorizar</button><button class="btn ghost small" data-au="no" data-i="${a.id}" type="button">Rechazar</button>`);
  if(rol==='instructor'&&a.estado==='autorizada')act.push(`<button class="btn ghost small danger" data-au="rev" data-i="${a.id}" type="button">Revocar</button>`);
  return `<div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><div><b>${esc(a.accion)}</b> ${auEstado(a)}</div><div style="white-space:nowrap">${act.join(' ')}</div></div>
- <div class="muted" style="font-size:13px">${rol==='alumno'?'Instructor':'Alumno'}: ${esc(quien)}${auLim(a)?' · '+esc(auLim(a)):''}</div>${a.detalle?`<div style="font-size:13px">${esc(a.detalle)}</div>`:''}${a.comentario_resp?`<div class="muted" style="font-size:13px">Comentario: ${esc(a.comentario_resp)}</div>`:''}${a.usada_en?`<div class="muted" style="font-size:12px">Usada el ${esc(auFecha(a.usada_en))}</div>`:''}${firma}
+ <div class="muted" style="font-size:13px">${rol==='alumno'?'Instructor':'Alumno'}: ${esc(quien)}${auLim(a)?' · '+esc(auLim(a)):''}</div>${a.comentario_resp?`<div class="muted" style="font-size:13px">Comentario: ${esc(a.comentario_resp)}</div>`:''}${a.usada_en?`<div class="muted" style="font-size:12px">Usada el ${esc(auFecha(a.usada_en))}</div>`:''}${firma}
  <div class="muted" style="font-size:12px">${a.iniciada_por==='alumno'?'Solicitada':'Pre-autorizada'} el ${esc(auFecha(a.creada))}</div></div>`}
 async function renderAut(){
  loadChk();
@@ -2293,7 +2288,6 @@ async function renderAut(){
  const insts=VN.filter(v=>v.estado==='activo'&&v.mi_rol==='alumno'),alus=VN.filter(v=>v.estado==='activo'&&v.mi_rol==='instructor');
  const opt=l=>l.map(v=>`<option value="${v.otro_id}">${esc(v.otro_nombre||v.otro_email)}</option>`).join('')||'<option value="">— Sin enlazar —</option>';
  $('auAI').innerHTML=opt(insts);$('auIA').innerHTML=opt(alus);
- $('auAC').innerHTML=$('auIC').innerHTML=AU_ACC.map(x=>`<option>${x}</option>`).join('');
  const isI=!!CK.instv||alus.length>0||AU.some(a=>a.mi_rol==='instructor');
  $('auInstBox').classList.toggle('hidden',!isI);
  $('auSol').innerHTML=AU.filter(a=>a.mi_rol==='instructor'&&a.estado==='solicitada').map(a=>auCard(a,'instructor')).join('')||'<div class="hint">No tienes solicitudes pendientes.</div>';
@@ -2306,22 +2300,24 @@ async function auPickLoad(){
  try{const{data,error}=await sb.rpc('mis_autorizaciones');if(error||!data)return;
   AUP=data.filter(a=>a.mi_rol==='alumno'&&auVigente(a))}catch(e){return}
  if(!AUP.length)return;
- $('fAut').innerHTML='<option value="">— Ninguna —</option>'+AUP.map(a=>`<option value="${a.id}">${esc(a.accion)}${auLim(a)?' ('+esc(auLim(a))+')':''} · ${esc(a.resp_nombre||a.instructor_nombre||'')}</option>`).join('');
+ $('fAut').innerHTML='<option value="">— Ninguna —</option>'+AUP.map(a=>`<option value="${a.id}">${esc(a.accion)}${auLim(a)?' ('+esc(auLim(a))+')':''} · ${esc(auIni(a.resp_nombre||a.instructor_nombre||''))}</option>`).join('');
  $('fAutI').textContent='';$('auPick').classList.remove('hidden')}
 function auSel(){return AUP.find(a=>a.id===$('fAut').value)||null}
 $('fAut').onchange=()=>{const a=auSel();
  if(!a){$('fAutI').textContent='';return}
- if(/solo/i.test(a.accion)){$('oSolo').checked=true;if(/travesía|aeródromo/i.test(a.accion))$('oXc').checked=true;applyRules()}
- $('fAutI').innerHTML=`Autorizado por <b>${esc(a.resp_nombre||a.resp_email)}</b> el ${esc(auFecha(a.respondida_en))} desde ${a.verificada?'cuenta verificada':'cuenta sin verificar'}.${a.detalle?' '+esc(a.detalle):''}`};
+ $('oSolo').checked=true;applyRules();
+ $('fAutI').innerHTML=`Autorizado por <b>${esc(auIni(a.resp_nombre||a.resp_email))}</b> el ${esc(auFecha(a.respondida_en))} desde ${a.verificada?'cuenta verificada':'cuenta sin verificar'}.${a.detalle?' '+esc(a.detalle):''}`};
 const auNum=s=>{const n=parseFloat(String(s||'').replace(',','.'));return isNaN(n)||n<=0?null:n};
 async function auCrear(fn,args){const{error}=await sb.rpc(fn,args);if(error)return note('auMsg',error.message,'err');await renderAut();note('auMsg','Listo.','ok')}
-$('auAGo').onclick=()=>{const i=$('auAI').value;if(!i)return note('auMsg','Primero enlaza a tu instructor en Vínculos.','err');auCrear('solicitar_autorizacion',{p_instructor:i,p_accion:$('auAC').value,p_detalle:$('auAD').value,p_max:auNum($('auAM').value),p_vence:DG('auAV')||null}).then(()=>{$('auAD').value='';$('auAM').value=''})};
-$('auIGo').onclick=()=>{const i=$('auIA').value;if(!i)return note('auMsg','Aún no tienes alumnos enlazados.','err');auCrear('preautorizar',{p_alumno:i,p_accion:$('auIC').value,p_detalle:$('auID').value,p_max:auNum($('auIM').value),p_vence:DG('auIV')||null}).then(()=>{$('auID').value='';$('auIM').value=''})};
+$('auAGo').onclick=()=>{const i=$('auAI').value;if(!i)return note('auMsg','Primero enlaza a tu instructor en Vínculos.','err');auCrear('solicitar_autorizacion',{p_instructor:i,p_accion:AU_ACC,p_detalle:null,p_max:auNum($('auAM').value),p_vence:null}).then(()=>{$('auAM').value=''})};
+$('auIGo').onclick=()=>{const i=$('auIA').value;if(!i)return note('auMsg','Aún no tienes alumnos enlazados.','err');if(!auNum($('auIM').value))return note('auMsg','Indica el máximo de horas autorizadas.','err');auCrear('preautorizar',{p_alumno:i,p_accion:AU_ACC,p_detalle:null,p_max:auNum($('auIM').value),p_vence:null}).then(()=>{$('auIM').value=''})};
 $('s-autorizaciones').addEventListener('click',async e=>{
  const b=e.target.closest('[data-au]');if(!b)return;
  if(b.dataset.au==='rev'){if(!confirm('¿Revocar esta autorización?'))return;return auCrear('revocar_autorizacion',{p_id:b.dataset.i})}
- const ok=b.dataset.au==='ok',c=prompt(ok?'Comentario para el alumno (opcional):':'Motivo del rechazo (opcional):','');if(c===null)return;
- auCrear('responder_autorizacion',{p_id:b.dataset.i,p_aceptar:ok,p_comentario:c,p_max:null,p_vence:null})});
+ const ok=b.dataset.au==='ok',a0=AU.find(x=>x.id===b.dataset.i);let mx=null;
+ if(ok){const t=prompt('Máximo de horas de vuelo solo que autorizas:',a0&&a0.max_horas?String(a0.max_horas).replace('.',','):'');if(t===null)return;mx=auNum(t);if(!mx)return note('auMsg','Indica un máximo de horas válido.','err')}
+ const c=prompt(ok?'Comentario para el alumno (opcional):':'Motivo del rechazo (opcional):','');if(c===null)return;
+ auCrear('responder_autorizacion',{p_id:b.dataset.i,p_aceptar:ok,p_comentario:c,p_max:mx,p_vence:null})});
 
 async function vnLoad(){const{data,error}=await sb.rpc('mis_vinculos');if(error){VN=null;return error}VN=data||[];return null}
 function vnRow(v){const nm=v.otro_nombre?`<b>${esc(v.otro_nombre)}</b> <span class="muted">${esc(v.otro_email)}</span>`:`<b>${esc(v.otro_email)}</b>`;
