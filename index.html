@@ -313,6 +313,14 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     </div>
     <div class="cap">Si no marcas nada, se registra como vuelo al mando.</div>
    </div>
+   <div class="full" id="condWrap"><label>Condiciones del vuelo</label>
+    <div class="opts">
+     <label class="opt" id="lSim"><input type="checkbox" id="oSim"><span>Simulador</span></label>
+     <label class="opt" id="lIfr"><input type="checkbox" id="oIfr"><span>IFR</span></label>
+     <label class="opt" id="lNoc"><input type="checkbox" id="oNoc"><span>Nocturno</span></label>
+    </div>
+    <div class="cap">Si no marcas nada, se registra como VFR y diurno.</div>
+   </div>
    <div class="full subbox hidden" id="paxBox"><label for="fNPax">¿Cuántos pasajeros? <span class="hint">(los nombres son opcionales)</span></label>
     <div class="stepper"><button type="button" id="paxMinus" aria-label="Menos pasajeros">−</button><input id="fNPax" type="number" min="1" max="9" value="1"><button type="button" id="paxPlus" aria-label="Más pasajeros">+</button></div>
     <div class="paxn" id="paxNames"></div></div>
@@ -1470,9 +1478,9 @@ $('fModelo').onchange=()=>onModel();$('fMat').onchange=onTail;
 function getModel(){return($('fModelo').value==='__new'?$('fModeloNew').value:$('fModelo').value).trim()}
 function getTail(){const useNew=$('fMat').classList.contains('hidden')||$('fMat').value==='__new';return(useNew?$('fMatNew').value:$('fMat').value).trim().toUpperCase()}
 /* casillas de tipo de vuelo */
-const OPTS={xc:'oXc',solo:'oSolo',pax:'oPax',dual:'oDual',dada:'oDada',sic:'oSic'};
-const LBL={xc:'lXc',solo:'lSolo',pax:'lPax',dual:'lDual',dada:'lDada',sic:'lSic'};
-const CONFLICT={solo:['pax','dual','dada','sic'],dual:['solo','dada','sic'],dada:['solo','dual','sic'],sic:['solo','dual','dada'],pax:['solo'],xc:[]};
+const OPTS={xc:'oXc',solo:'oSolo',pax:'oPax',dual:'oDual',dada:'oDada',sic:'oSic',sim:'oSim',ifr:'oIfr',noc:'oNoc'};
+const LBL={xc:'lXc',solo:'lSolo',pax:'lPax',dual:'lDual',dada:'lDada',sic:'lSic',sim:'lSim',ifr:'lIfr',noc:'lNoc'};
+const CONFLICT={solo:['pax','dual','dada','sic','sim'],dual:['solo','dada','sic','sim'],dada:['solo','dual','sic','sim'],sic:['solo','dual','dada','sim'],pax:['solo','sim'],xc:['sim'],sim:['solo','pax','dual','dada','sic','xc'],ifr:[],noc:[]};
 const chk=k=>$(OPTS[k]).checked;
 function applyRules(){
  const dis=new Set();
@@ -1497,28 +1505,30 @@ function renderPax(names){
 $('paxMinus').onclick=()=>{$('fNPax').value=Math.max(1,(parseInt($('fNPax').value)||1)-1);renderPax()};
 $('paxPlus').onclick=()=>{$('fNPax').value=Math.min(9,(parseInt($('fNPax').value)||1)+1);renderPax()};
 $('fNPax').onchange=()=>renderPax();
-function tipoFromChecks(){return chk('solo')?'Solo':chk('dual')?'Instrucción recibida':chk('dada')?'Como instructor':chk('sic')?'Copiloto':'Al mando'}
+function tipoFromChecks(){return chk('sim')?'Simulador':chk('solo')?'Solo':chk('dual')?'Instrucción recibida':chk('dada')?'Como instructor':chk('sic')?'Copiloto':'Al mando'}
 function derived(tipo,total){return{pic:['Solo','Al mando','Como instructor'].includes(tipo)?total:0,sic:tipo==='Copiloto'?total:0,dual:tipo==='Instrucción recibida'?total:0,solo:tipo==='Solo'?total:0,inst_h:tipo==='Como instructor'?total:0}}
+let editIfr=0,editNoc=0;
+function condRow(total,at){const ifr=chk('ifr')?(editIfr>0&&editIfr<=total?editIfr:total):0,noc=chk('noc')?(editNoc>0&&editNoc<=total?editNoc:total):0;return{ifr,nocturno:noc,aterrizajes:noc>0?0:at,aterr_noche:noc>0?at:0}}
 function resetForm(){
- editId=null;editKeep=null;
+ editId=null;editKeep=null;editIfr=0;editNoc=0;
  ['fTotal','fModeloNew','fMatNew','fInst','fRuta','fCom'].forEach(i=>$(i).value='');
  DS('fFecha',todayIso());$('fAterr').value=1;$('fNPax').value=1;$('paxNames').innerHTML='';
  Object.values(OPTS).forEach(id=>$(id).checked=false);
- $('optsWrap').classList.remove('hidden');
+ $('optsWrap').classList.remove('hidden');$('condWrap').classList.remove('hidden');
  const l=ALL.find(r=>!r.pv);
  fillModels(l&&l.modelo);if(l)onModel(l.matricula);
  $('fTitle').textContent='Nuevo vuelo';$('fCancel').classList.add('hidden');note('fMsg','');applyRules();prev();
 }
 function loadForm(r){
- editId=r.id;editKeep=['Simulador','Previo'].includes(r.k)?r.k:null;
- DS('fFecha',r.fecha);$('fTotal').value=hm(r.tot);$('fAterr').value=r.aterrizajes;$('fRuta').value=r.ruta||'';$('fCom').value=r.comentarios||'';
+ editId=r.id;editKeep=r.k==='Previo'?r.k:null;editIfr=+r.ifr||0;editNoc=+r.ni||0;
+ DS('fFecha',r.fecha);$('fTotal').value=hm(r.tot);$('fAterr').value=(+r.aterrizajes||0)+(+r.aterr_noche||0);$('fRuta').value=r.ruta||'';$('fCom').value=r.comentarios||'';
  $('fModeloNew').value='';$('fMatNew').value='';
  fillModels(r.modelo);onModel(r.matricula);
  if(r.matricula&&$('fMat').value!==r.matricula){$('fMat').value='__new';$('fMatNew').value=r.matricula;$('fMatNew').classList.remove('hidden')}
  const names=(r.pasajeros||'').split(',').map(s=>s.trim()).filter(Boolean);
- $('oXc').checked=r.xc>0;$('oSolo').checked=r.k==='Solo';$('oDual').checked=r.k==='Instrucción recibida';$('oDada').checked=r.k==='Como instructor';$('oSic').checked=r.k==='Copiloto';
+ $('oXc').checked=r.xc>0;$('oSolo').checked=r.k==='Solo';$('oDual').checked=r.k==='Instrucción recibida';$('oDada').checked=r.k==='Como instructor';$('oSic').checked=r.k==='Copiloto';$('oSim').checked=r.k==='Simulador';$('oIfr').checked=editIfr>0;$('oNoc').checked=editNoc>0;
  const np0=Math.max(names.length,+r.num_pax||0);$('oPax').checked=np0>0;$('fNPax').value=Math.min(9,Math.max(1,np0));$('fInst').value=r.instructor||'';
- $('optsWrap').classList.toggle('hidden',!!editKeep);
+ $('optsWrap').classList.toggle('hidden',!!editKeep);$('condWrap').classList.toggle('hidden',!!editKeep);
  applyRules();if(np0)renderPax(names);
  $('fTitle').textContent='Editar vuelo';$('fCancel').classList.remove('hidden');prev();
 }
@@ -1529,7 +1539,7 @@ $('fSave').onclick=async()=>{
  let names=[],npax=null;
  if(!editKeep&&chk('pax')){npax=Math.min(9,Math.max(1,parseInt($('fNPax').value)||1));names=paxVals().map(s=>s.trim()).filter(Boolean)}
  const tipo=editKeep||tipoFromChecks();
- const row=Object.assign({fecha,modelo,matricula:getTail()||null,tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:$('fCom').value.trim()||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:{num_pax:npax},editKeep?{}:derived(tipo,total));
+ const row=Object.assign({fecha,modelo,matricula:getTail()||null,tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:$('fCom').value.trim()||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:{num_pax:npax},editKeep?{}:derived(tipo,total),editKeep?{}:condRow(total,Math.max(0,parseInt($('fAterr').value)||0)));
  $('fSave').disabled=true;
  try{
   const run=r=>editId?sb.from('vuelos').update(r).eq('id',editId):sb.from('vuelos').insert(Object.assign({},r,{user_id:user.id}));
