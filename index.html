@@ -78,6 +78,14 @@ label{display:block;font-size:13px;color:var(--mute);margin:0 0 4px}
 .tl b{display:block;font-size:14px}.tl span{font-size:12.5px;color:var(--mute)}
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.tools input{flex:1;min-width:180px}.tools select{width:auto}
 .tw{overflow-x:auto}
+@media(max-width:700px){
+#s-vuelos .tw{overflow:visible}#s-vuelos table{min-width:0;display:block}#s-vuelos thead{display:none}#s-vuelos tbody{display:block}
+#s-vuelos tbody tr{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"f l k" "a a t" "r r r" "x x x";column-gap:10px;row-gap:3px;padding:10px 2px;border-bottom:1px solid var(--line);align-items:center}
+#s-vuelos tbody td{display:block;padding:0;border:0}
+#s-vuelos td:nth-child(1){grid-area:f;font-weight:600}#s-vuelos td:nth-child(4){grid-area:l;font-size:12px;color:var(--mute)}#s-vuelos td:nth-child(4):not(:empty)::before{content:"· "}#s-vuelos td:nth-child(4):not(:empty)::after{content:" aterr."}
+#s-vuelos td:nth-child(5){grid-area:k;justify-self:end}#s-vuelos td:nth-child(2){grid-area:a}#s-vuelos td:nth-child(3){grid-area:t;justify-self:end;font-weight:600}
+#s-vuelos td:nth-child(6){grid-area:r}#s-vuelos td:nth-child(7){grid-area:x;padding-top:4px}
+#s-vuelos td[colspan]{grid-column:1/-1}}
 table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:700px}
 th{text-align:left;color:var(--mute);font-weight:500;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
 td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
