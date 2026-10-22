@@ -2347,6 +2347,7 @@ $('s-vinculos').addEventListener('click',async e=>{
  if(q){if(!confirm('¿Quitar este vínculo?'))return;const{error}=await sb.rpc('quitar_vinculo',{p_id:q.dataset.vq});if(error)return note('vnMsg',error.message,'err');await renderVinculos();note('vnMsg','Vínculo quitado.','ok')}
 });
 async function paintVn(){if(viewing||!user)return;$('inAlu').classList.toggle('hidden',!CK.instv);
+ try{const r=await sb.rpc('mis_autorizaciones');const m=r.error?0:(r.data||[]).filter(x=>x.mi_rol==='instructor'&&x.estado==='solicitada').length,bb=$('inAut');bb.textContent=m?m+' solicitud'+(m>1?'es':''):'';bb.classList.toggle('hidden',!m)}catch(e){}
  const e=await vnLoad();const n=e?0:(VN||[]).filter(v=>v.recibida).length;const b=$('inVn');b.textContent=n?n+' pendiente'+(n>1?'s':''):'';b.classList.toggle('hidden',!n)}
 function renderInicio(){
  paintWx();paintSun();
