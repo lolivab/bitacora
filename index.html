@@ -304,7 +304,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <div class="form">
    <div><label for="fFecha">Fecha *</label><input id="fFecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti"></div>
    <div><label for="fTotal">Tiempo total *</label><input id="fTotal" placeholder="1:30"><span class="lblhint">1:30 = horas y minutos · 1,5 = decimal</span><div class="hint" id="fPrev" style="margin:4px 0 0"></div></div>
-   <div><label for="fModelo">Aeronave (modelo) *</label><select id="fModelo"></select><div id="fModeloBox" class="hidden" style="position:relative;margin-top:8px"><input id="fModeloNew" placeholder="Escribe o busca: C172, Cessna 172, PA28…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="acList"><div id="acList" class="aclist hidden" role="listbox"></div><div class="hint" style="margin-top:4px">Lista OACI (Doc 8643). También puedes escribir un tipo propio.</div></div></div>
+   <div><label for="fModelo">Aeronave (modelo) <span id="fModStar">*</span></label><select id="fModelo"></select><div id="fModeloBox" class="hidden" style="position:relative;margin-top:8px"><input id="fModeloNew" placeholder="Escribe o busca: C172, Cessna 172, PA28…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="acList"><div id="acList" class="aclist hidden" role="listbox"></div><div class="hint" style="margin-top:4px">Lista OACI (Doc 8643). También puedes escribir un tipo propio.</div></div></div>
    <div><label for="fMat">Matrícula</label><select id="fMat"></select><input id="fMatNew" class="hidden" placeholder="Escribe la matrícula, ej. CC-KSZ" style="margin-top:8px"></div>
    <div class="full hidden" id="auPick"><label for="fAut">Usar una autorización</label><select id="fAut"></select><div class="hint" id="fAutI" style="margin:4px 0 0"></div></div>
    <div class="full" id="optsWrap"><label>Tipo de vuelo (marca todo lo que corresponda)</label>
@@ -1540,10 +1540,15 @@ function applyRules(){
   $(LBL[k]).classList.toggle('on',chk(k));
  });
  $('paxBox').classList.toggle('hidden',!chk('pax'));
+ $('fModStar').textContent=chk('sim')?'(opcional en simulador)':'*';
+ {const sel=$('fModelo');let o=sel.querySelector('option[value=""]');
+  if(chk('sim')){if(!o){o=new Option('— Sin aeronave (simulador) —','');sel.insertBefore(o,sel.firstChild)}}
+  else if(o){const was=sel.value==='';o.remove();if(was&&sel.options.length)sel.selectedIndex=0}}
  $('fInstWrap').classList.toggle('hidden',!chk('dual'));
  if(chk('pax'))renderPax();
 }
 Object.values(OPTS).forEach(id=>$(id).onchange=applyRules);
+$('oSim').addEventListener('change',()=>{if(chk('sim')){$('fModelo').value='';$('fModelo').dispatchEvent(new Event('change'))}});
 function paxVals(){return[...$('paxNames').querySelectorAll('input')].map(i=>i.value)}
 function renderPax(names){
  const n=Math.min(9,Math.max(1,parseInt($('fNPax').value)||1));$('fNPax').value=n;
@@ -1582,14 +1587,14 @@ function loadForm(r){
 }
 $('fCancel').onclick=()=>{resetForm();go('vuelos')};
 $('fSave').onclick=async()=>{
- const total=parseT($('fTotal').value),modelo=getModel(),fecha=DG('fFecha');
+ const total=parseT($('fTotal').value),modelo=getModel()||(chk('sim')?'Simulador':''),fecha=DG('fFecha');
  if(!fecha||!modelo||isNaN(total)||total<=0)return note('fMsg','Completa fecha, aeronave y un tiempo total válido.','err');
  const aut=editId?null:auSel();
  if(aut&&aut.max_horas&&total>+aut.max_horas&&!confirm('Este vuelo ('+hm(total)+') supera el máximo autorizado ('+aut.max_horas+' h). ¿Guardar de todos modos?'))return;
  let names=[],npax=null;
  if(!editKeep&&chk('pax')){npax=Math.min(9,Math.max(1,parseInt($('fNPax').value)||1));names=paxVals().map(s=>s.trim()).filter(Boolean)}
  const tipo=editKeep||tipoFromChecks();
- const row=Object.assign({fecha,modelo,matricula:getTail()||null,tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:[$('fCom').value.trim(),aut?'Vuelo solo autorizado por '+auIni(aut.resp_nombre||aut.resp_email)+' ('+auFecha(aut.respondida_en)+')':''].filter(Boolean).join(' · ')||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:{num_pax:npax},editKeep?{}:derived(tipo,total),editKeep?{}:condRow(total,Math.max(0,parseInt($('fAterr').value)||0)));
+ const row=Object.assign({fecha,modelo,matricula:(chk('sim')&&!getModel())?null:(getTail()||null),tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:[$('fCom').value.trim(),aut?'Vuelo solo autorizado por '+auIni(aut.resp_nombre||aut.resp_email)+' ('+auFecha(aut.respondida_en)+')':''].filter(Boolean).join(' · ')||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:{num_pax:npax},editKeep?{}:derived(tipo,total),editKeep?{}:condRow(total,Math.max(0,parseInt($('fAterr').value)||0)));
  $('fSave').disabled=true;
  try{
   const run=r=>editId?sb.from('vuelos').update(r).eq('id',editId):sb.from('vuelos').insert(Object.assign({},r,{user_id:user.id}));
