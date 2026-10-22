@@ -237,7 +237,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
  </div>
  <div id="backBar" class="hidden"><button class="btn ghost small" data-go="inicio" type="button">← Inicio</button></div>
  <div id="subnav2" class="hidden"><button data-v="briefing">Briefing meteorológico</button><button data-v="liveatc">LiveATC</button></div>
- <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Mis habilitaciones</button><button data-v="mapa">Mapa</button><button data-v="pasaporte">Pasaporte</button><button data-v="importar">Importar</button><button data-v="exportar">Exportar</button></div>
+ <div id="subnav" class="hidden"><button data-v="vuelos">Mis vuelos</button><button data-v="nuevo">Nuevo vuelo</button><button data-v="chequeo">Mis habilitaciones</button><button data-v="autorizaciones">Autorizaciones</button><button data-v="mapa">Mapa</button><button data-v="pasaporte">Pasaporte</button><button data-v="importar">Importar</button><button data-v="exportar">Exportar</button></div>
 
  <section id="s-inicio">
   <div class="in-hero">
@@ -260,6 +260,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     <a href="#" data-go="pasaporte"><b>Pasaporte de vuelo</b><span>Tarjeta para compartir</span></a></div></div>
    <div class="card"><h3>Habilitaciones y vínculos</h3><p class="hint">Tus documentos, tu condición como piloto y tus instructores o alumnos</p><div class="in-t">
     <a href="#" data-go="chequeo" class="noclubonly"><b>Mis habilitaciones</b><span>Médico, licencia e instructor de vuelo</span></a>
+    <a href="#" data-go="autorizaciones"><b>Autorizaciones <span class="in-badge hidden" id="inAut"></span></b><span>Pide o concede autorizaciones de vuelo</span></a>
     <a href="#" data-go="vinculos"><b>Enlazar instructor <span class="in-badge hidden" id="inVn"></span></b><span>Vincula a tu instructor de vuelo</span></a>
     <a href="#" data-go="vinculos" id="inAlu" class="hidden"><b>Enlazar alumno</b><span>Vincula a tus alumnos</span></a></div></div>
    <div class="card in-hab"><h3>Habilitaciones del Club</h3><p class="hint">Según el Manual de Normas y Procedimientos del Club Aéreo de Santiago, para socios pilotos del Club</p><div class="in-t one">
@@ -305,6 +306,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
    <div><label for="fTotal">Tiempo total *</label><input id="fTotal" placeholder="1:30"><span class="lblhint">1:30 = horas y minutos · 1,5 = decimal</span><div class="hint" id="fPrev" style="margin:4px 0 0"></div></div>
    <div><label for="fModelo">Aeronave (modelo) *</label><select id="fModelo"></select><div id="fModeloBox" class="hidden" style="position:relative;margin-top:8px"><input id="fModeloNew" placeholder="Escribe o busca: C172, Cessna 172, PA28…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="acList"><div id="acList" class="aclist hidden" role="listbox"></div><div class="hint" style="margin-top:4px">Lista OACI (Doc 8643). También puedes escribir un tipo propio.</div></div></div>
    <div><label for="fMat">Matrícula</label><select id="fMat"></select><input id="fMatNew" class="hidden" placeholder="Escribe la matrícula, ej. CC-KSZ" style="margin-top:8px"></div>
+   <div class="full hidden" id="auPick"><label for="fAut">Usar una autorización</label><select id="fAut"></select><div class="hint" id="fAutI" style="margin:4px 0 0"></div></div>
    <div class="full" id="optsWrap"><label>Tipo de vuelo (marca todo lo que corresponda)</label>
     <div class="opts">
      <label class="opt" id="lXc"><input type="checkbox" id="oXc"><span>Vuelo de travesía</span></label>
@@ -379,6 +381,37 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
   <div class="tools"><input id="vnEmA" type="email" placeholder="Correo de tu alumno" autocomplete="off"><button class="btn" id="vnAddA" type="button">Enlazar alumno</button></div></div>
   <p class="hint hidden" id="vnNoInst" style="margin-top:14px">Si eres instructor de vuelo, decláralo en Bitácora › Mis habilitaciones para enlazar alumnos.</p>
   <span class="hint" id="vnMsg"></span>
+ </div></section>
+
+ <section id="s-autorizaciones" class="hidden"><div class="card" style="max-width:680px">
+  <h2>Autorizaciones</h2>
+  <p class="hint">Tu instructor puede dejarte una autorización lista, o tú puedes pedirle una. Cada autorización queda registrada con quién la dio, cuándo y desde qué cuenta. Necesitas tener enlazado al instructor en <a href="#" data-go="vinculos">Vínculos</a>.</p>
+  <div id="auInstBox" class="hidden">
+   <h3 style="margin:14px 0 4px">Solicitudes de mis alumnos</h3><div id="auSol"></div>
+   <h3 style="margin:14px 0 4px">Dejar una autorización</h3>
+   <div class="form" id="auFormI">
+    <div><label for="auIA">Alumno</label><select id="auIA"></select></div>
+    <div><label for="auIC">Acción</label><select id="auIC"></select></div>
+    <div><label for="auID">Detalle (opcional)</label><input id="auID" placeholder="Ej. zona local, viento máx. 10 kt"></div>
+    <div><label for="auIM">Máx. horas (opcional)</label><input id="auIM" inputmode="decimal" placeholder="2"></div>
+    <div><label for="auIV">Vence (opcional)</label><input id="auIV" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti"></div>
+   </div>
+   <button class="btn" id="auIGo" type="button" style="margin-top:8px">Autorizar</button>
+   <h3 style="margin:18px 0 4px">Autorizaciones que he dado</h3><div id="auEmi"></div>
+  </div>
+  <div id="auAluBox">
+   <h3 style="margin:18px 0 4px">Pedir una autorización</h3>
+   <div class="form" id="auFormA">
+    <div><label for="auAI">Instructor</label><select id="auAI"></select></div>
+    <div><label for="auAC">Acción</label><select id="auAC"></select></div>
+    <div><label for="auAD">Detalle (opcional)</label><input id="auAD" placeholder="Ej. práctica de aterrizajes en SCTB"></div>
+    <div><label for="auAM">Máx. horas (opcional)</label><input id="auAM" inputmode="decimal" placeholder="2"></div>
+    <div><label for="auAV">Vence (opcional)</label><input id="auAV" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti"></div>
+   </div>
+   <button class="btn" id="auAGo" type="button" style="margin-top:8px">Enviar solicitud</button>
+   <h3 style="margin:18px 0 4px">Mis autorizaciones</h3><div id="auMis"></div>
+  </div>
+  <span class="hint" id="auMsg"></span>
  </div></section>
 
  <section id="s-exportar" class="hidden"><div class="card" style="max-width:520px">
@@ -1270,20 +1303,21 @@ $('brAsave').onclick=()=>{
 /* ---------- Navegación ---------- */
 function go(v){
  if(v==='ruta'&&!(!!user&&String(user.email||'').toLowerCase()===ADMIN_EMAIL&&!viewing))v='inicio';
- ['inicio','resumen','vuelos','metricas','chequeo','exportar','briefing','liveatc','mapa','pasaporte','nuevo','importar','cuenta','admin','ruta','conversor','e6b','vinculos'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
- {const G=['vuelos','nuevo','chequeo','mapa','pasaporte','exportar','importar'].includes(v),Hh=v==='briefing'||v==='liveatc'||v==='ruta';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g==='1'?G:b.dataset.g==='h'?Hh:b.dataset.v===v));document.querySelectorAll('#subnav button,#subnav2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G);$('subnav2').classList.toggle('hidden',!Hh)}
+ ['inicio','resumen','vuelos','metricas','chequeo','exportar','briefing','liveatc','mapa','pasaporte','nuevo','importar','cuenta','admin','ruta','conversor','e6b','vinculos','autorizaciones'].forEach(x=>$('s-'+x).classList.toggle('hidden',x!==v));
+ {const G=['vuelos','nuevo','chequeo','autorizaciones','mapa','pasaporte','exportar','importar'].includes(v),Hh=v==='briefing'||v==='liveatc'||v==='ruta';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.g==='1'?G:b.dataset.g==='h'?Hh:b.dataset.v===v));document.querySelectorAll('#subnav button,#subnav2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('subnav').classList.toggle('hidden',!G);$('subnav2').classList.toggle('hidden',!Hh)}
  {const nb=document.querySelector('#nav button.on');if(nb)$('burgerT').textContent=nb.textContent;$('nav').classList.remove('open')}
  $('backBar').classList.toggle('hidden',v==='inicio');
  if(v==='inicio'){renderInicio();const ad=!!user&&String(user.email||'').toLowerCase()===ADMIN_EMAIL&&!viewing;$('inAdm').classList.toggle('hidden',!ad);$('inRuta').classList.toggle('hidden',!ad)}
  if(v==='resumen')renderDash();
  if(v==='vuelos')table();
- if(v==='nuevo'&&!editId)resetForm();
+ if(v==='nuevo'&&!editId){resetForm();auPickLoad()}
  if(v==='admin')loadAdmin();
  if(v==='ruta'&&window.rutaOpen)rutaOpen();
  if(v==='mapa')renderMap();if(v==='pasaporte')renderPasaporte();
  if(v==='metricas')renderMetrics();
  if(v==='chequeo')renderChequeo();
  if(v==='vinculos')renderVinculos();
+ if(v==='autorizaciones')renderAut();
  if(v==='exportar')prepPdf();
  if(v==='briefing')brFill();
  if(v==='cuenta'){note('avMsg','');paintAvatar();$('cuMail').textContent=user.email||'';$('cuHome').value=homeOf();$('cuClub').value=clubOf();note('cuHomeMsg','');$('cuP1').value=$('cuP2').value='';note('cuMsg','')}
@@ -1556,16 +1590,19 @@ $('fCancel').onclick=()=>{resetForm();go('vuelos')};
 $('fSave').onclick=async()=>{
  const total=parseT($('fTotal').value),modelo=getModel(),fecha=DG('fFecha');
  if(!fecha||!modelo||isNaN(total)||total<=0)return note('fMsg','Completa fecha, aeronave y un tiempo total válido.','err');
+ const aut=editId?null:auSel();
+ if(aut&&aut.max_horas&&total>+aut.max_horas&&!confirm('Este vuelo ('+hm(total)+') supera el máximo autorizado ('+aut.max_horas+' h). ¿Guardar de todos modos?'))return;
  let names=[],npax=null;
  if(!editKeep&&chk('pax')){npax=Math.min(9,Math.max(1,parseInt($('fNPax').value)||1));names=paxVals().map(s=>s.trim()).filter(Boolean)}
  const tipo=editKeep||tipoFromChecks();
- const row=Object.assign({fecha,modelo,matricula:getTail()||null,tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:$('fCom').value.trim()||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:{num_pax:npax},editKeep?{}:derived(tipo,total),editKeep?{}:condRow(total,Math.max(0,parseInt($('fAterr').value)||0)));
+ const row=Object.assign({fecha,modelo,matricula:getTail()||null,tipo,total,aterrizajes:Math.max(0,parseInt($('fAterr').value)||0),travesia:(!editKeep&&chk('xc'))||(editKeep&&$('oXc').checked)?total:0,ruta:$('fRuta').value.trim().toUpperCase()||null,comentarios:[$('fCom').value.trim(),aut?'Autorizado por '+(aut.resp_nombre||aut.resp_email)+' ('+auFecha(aut.respondida_en)+')':''].filter(Boolean).join(' · ')||null,instructor:(!editKeep&&chk('dual'))?($('fInst').value.trim()||null):null,pasajeros:names.length?names.join(', '):null},editKeep?{}:{num_pax:npax},editKeep?{}:derived(tipo,total),editKeep?{}:condRow(total,Math.max(0,parseInt($('fAterr').value)||0)));
  $('fSave').disabled=true;
  try{
   const run=r=>editId?sb.from('vuelos').update(r).eq('id',editId):sb.from('vuelos').insert(Object.assign({},r,{user_id:user.id}));
   let{error}=await run(row);
   if(error&&/num_pax/.test(error.message)){const r2=Object.assign({},row);delete r2.num_pax;if(npax&&!names.length)r2.pasajeros=null;({error}=await run(r2));if(!error&&npax&&!names.length)note('fMsg','Guardado, pero sin la cantidad de pasajeros: falta ejecutar migracion_v3.sql en Supabase.','err')}
   if(error)throw error;
+  if(aut){try{await sb.rpc('usar_autorizacion',{p_id:aut.id})}catch(e){}}
   const was=editId;await loadAll();resetForm();note('fMsg',was?'Vuelo actualizado.':'Vuelo guardado.','ok');
   if(was)go('vuelos');
  }catch(e){note('fMsg',hintDb(e.message),'err')}
@@ -2228,7 +2265,64 @@ function paintInicioAlert(){
  $('inAT').textContent=S.issues.length>1?`${S.issues[0]} (+${S.issues.length-1} más)`:(S.issues[0]||'Revisa tu chequeo.');
 }
 /* ---------- Vínculos instructor/alumno ---------- */
-let VN=[];
+let VN=[],AU=[];
+const AU_ACC=['Vuelo solo','Vuelo solo de travesía','Vuelo a otro aeródromo','Uso de aeronave específica','Otra'];
+const auFecha=s=>{if(!s)return'';const d=new Date(s),z=n=>String(n).padStart(2,'0');return z(d.getDate())+'/'+z(d.getMonth()+1)+'/'+d.getFullYear()+' '+z(d.getHours())+':'+z(d.getMinutes())};
+const auVigente=a=>a.estado==='autorizada'&&(!a.vence||a.vence>=todayIso());
+function auLim(a){return [a.max_horas?'máx. '+String(a.max_horas).replace('.',',')+' h':'',a.vence?'vence '+dm(a.vence):''].filter(Boolean).join(' · ')}
+function auEstado(a){
+ const vig=auVigente(a),venc=a.estado==='autorizada'&&!vig;
+ const m={solicitada:['Pendiente','var(--gry)'],autorizada:venc?['Vencida','var(--gry)']:['Autorizada','#2e8b57'],rechazada:['Rechazada','#c0392b'],usada:['Usada','#3b6fb6'],revocada:['Revocada','#c0392b']}[a.estado]||[a.estado,'var(--gry)'];
+ return `<span class="tag" style="background:${m[1]};color:#fff">${m[0]}</span>`}
+function auCard(a,rol){
+ const quien=rol==='alumno'?(a.instructor_nombre||a.instructor_email):(a.alumno_nombre||a.alumno_email);
+ let firma='';
+ if(a.respondida_en&&a.estado!=='rechazada')firma=`<div class="hint" style="margin-top:4px">✔ Autorizado por <b>${esc(a.resp_nombre||a.resp_email)}</b> el <b>${esc(auFecha(a.respondida_en))}</b> desde ${a.verificada?'<b>cuenta verificada</b>':'cuenta sin verificar'} (${esc(a.resp_email||'')})</div>`;
+ else if(a.estado==='rechazada')firma=`<div class="hint" style="margin-top:4px">Rechazada por ${esc(a.resp_nombre||a.resp_email)} el ${esc(auFecha(a.respondida_en))}</div>`;
+ const act=[];
+ if(rol==='instructor'&&a.estado==='solicitada')act.push(`<button class="btn small" data-au="ok" data-i="${a.id}" type="button">Autorizar</button><button class="btn ghost small" data-au="no" data-i="${a.id}" type="button">Rechazar</button>`);
+ if(rol==='instructor'&&a.estado==='autorizada')act.push(`<button class="btn ghost small danger" data-au="rev" data-i="${a.id}" type="button">Revocar</button>`);
+ return `<div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><div><b>${esc(a.accion)}</b> ${auEstado(a)}</div><div style="white-space:nowrap">${act.join(' ')}</div></div>
+ <div class="muted" style="font-size:13px">${rol==='alumno'?'Instructor':'Alumno'}: ${esc(quien)}${auLim(a)?' · '+esc(auLim(a)):''}</div>${a.detalle?`<div style="font-size:13px">${esc(a.detalle)}</div>`:''}${a.comentario_resp?`<div class="muted" style="font-size:13px">Comentario: ${esc(a.comentario_resp)}</div>`:''}${a.usada_en?`<div class="muted" style="font-size:12px">Usada el ${esc(auFecha(a.usada_en))}</div>`:''}${firma}
+ <div class="muted" style="font-size:12px">${a.iniciada_por==='alumno'?'Solicitada':'Pre-autorizada'} el ${esc(auFecha(a.creada))}</div></div>`}
+async function renderAut(){
+ loadChk();
+ const[e1,e2]=await Promise.all([vnLoad(),sb.rpc('mis_autorizaciones')]);
+ if(e1||e2.error){$('auMis').innerHTML='';$('auInstBox').classList.add('hidden');note('auMsg','Esta función aún no está activa (falta ejecutar autorizaciones.sql en Supabase).','err');return}
+ AU=e2.data||[];note('auMsg','');
+ const insts=VN.filter(v=>v.estado==='activo'&&v.mi_rol==='alumno'),alus=VN.filter(v=>v.estado==='activo'&&v.mi_rol==='instructor');
+ const opt=l=>l.map(v=>`<option value="${v.otro_id}">${esc(v.otro_nombre||v.otro_email)}</option>`).join('')||'<option value="">— Sin enlazar —</option>';
+ $('auAI').innerHTML=opt(insts);$('auIA').innerHTML=opt(alus);
+ $('auAC').innerHTML=$('auIC').innerHTML=AU_ACC.map(x=>`<option>${x}</option>`).join('');
+ const isI=!!CK.instv||alus.length>0||AU.some(a=>a.mi_rol==='instructor');
+ $('auInstBox').classList.toggle('hidden',!isI);
+ $('auSol').innerHTML=AU.filter(a=>a.mi_rol==='instructor'&&a.estado==='solicitada').map(a=>auCard(a,'instructor')).join('')||'<div class="hint">No tienes solicitudes pendientes.</div>';
+ $('auEmi').innerHTML=AU.filter(a=>a.mi_rol==='instructor'&&a.estado!=='solicitada').map(a=>auCard(a,'instructor')).join('')||'<div class="hint">Aún no has dado autorizaciones.</div>';
+ $('auMis').innerHTML=AU.filter(a=>a.mi_rol==='alumno').map(a=>auCard(a,'alumno')).join('')||'<div class="hint">Aún no tienes autorizaciones.</div>';
+}
+let AUP=[];
+async function auPickLoad(){
+ $('auPick').classList.add('hidden');AUP=[];
+ try{const{data,error}=await sb.rpc('mis_autorizaciones');if(error||!data)return;
+  AUP=data.filter(a=>a.mi_rol==='alumno'&&auVigente(a))}catch(e){return}
+ if(!AUP.length)return;
+ $('fAut').innerHTML='<option value="">— Ninguna —</option>'+AUP.map(a=>`<option value="${a.id}">${esc(a.accion)}${auLim(a)?' ('+esc(auLim(a))+')':''} · ${esc(a.resp_nombre||a.instructor_nombre||'')}</option>`).join('');
+ $('fAutI').textContent='';$('auPick').classList.remove('hidden')}
+function auSel(){return AUP.find(a=>a.id===$('fAut').value)||null}
+$('fAut').onchange=()=>{const a=auSel();
+ if(!a){$('fAutI').textContent='';return}
+ if(/solo/i.test(a.accion)){$('oSolo').checked=true;if(/travesía|aeródromo/i.test(a.accion))$('oXc').checked=true;applyRules()}
+ $('fAutI').innerHTML=`Autorizado por <b>${esc(a.resp_nombre||a.resp_email)}</b> el ${esc(auFecha(a.respondida_en))} desde ${a.verificada?'cuenta verificada':'cuenta sin verificar'}.${a.detalle?' '+esc(a.detalle):''}`};
+const auNum=s=>{const n=parseFloat(String(s||'').replace(',','.'));return isNaN(n)||n<=0?null:n};
+async function auCrear(fn,args){const{error}=await sb.rpc(fn,args);if(error)return note('auMsg',error.message,'err');await renderAut();note('auMsg','Listo.','ok')}
+$('auAGo').onclick=()=>{const i=$('auAI').value;if(!i)return note('auMsg','Primero enlaza a tu instructor en Vínculos.','err');auCrear('solicitar_autorizacion',{p_instructor:i,p_accion:$('auAC').value,p_detalle:$('auAD').value,p_max:auNum($('auAM').value),p_vence:DG('auAV')||null}).then(()=>{$('auAD').value='';$('auAM').value=''})};
+$('auIGo').onclick=()=>{const i=$('auIA').value;if(!i)return note('auMsg','Aún no tienes alumnos enlazados.','err');auCrear('preautorizar',{p_alumno:i,p_accion:$('auIC').value,p_detalle:$('auID').value,p_max:auNum($('auIM').value),p_vence:DG('auIV')||null}).then(()=>{$('auID').value='';$('auIM').value=''})};
+$('s-autorizaciones').addEventListener('click',async e=>{
+ const b=e.target.closest('[data-au]');if(!b)return;
+ if(b.dataset.au==='rev'){if(!confirm('¿Revocar esta autorización?'))return;return auCrear('revocar_autorizacion',{p_id:b.dataset.i})}
+ const ok=b.dataset.au==='ok',c=prompt(ok?'Comentario para el alumno (opcional):':'Motivo del rechazo (opcional):','');if(c===null)return;
+ auCrear('responder_autorizacion',{p_id:b.dataset.i,p_aceptar:ok,p_comentario:c,p_max:null,p_vence:null})});
+
 async function vnLoad(){const{data,error}=await sb.rpc('mis_vinculos');if(error){VN=null;return error}VN=data||[];return null}
 function vnRow(v){const nm=v.otro_nombre?`<b>${esc(v.otro_nombre)}</b> <span class="muted">${esc(v.otro_email)}</span>`:`<b>${esc(v.otro_email)}</b>`;
  const act=v.recibida?`<button class="btn small" data-vr="${v.id}" data-ok="1" type="button">Aceptar</button> <button class="btn ghost small" data-vr="${v.id}" type="button">Rechazar</button>`
