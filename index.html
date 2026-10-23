@@ -296,6 +296,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
 
  <section id="s-vuelos" class="hidden"><div class="card">
   <h2>Mis vuelos</h2>
+  <div id="insRes" class="hidden" style="display:flex;gap:10px;margin:8px 0 12px;flex-wrap:wrap"></div>
   <div class="tools"><input id="q" type="search" placeholder="Buscar por ruta, matrícula, observación o nombre"><select id="fc" aria-label="Tipo"></select></div>
   <div class="tw"><table><thead><tr><th>Fecha</th><th>Aeronave</th><th>Tiempo</th><th>Aterr.</th><th>Tipo</th><th>Ruta y notas</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
   <button class="btn ghost small" id="more" type="button" style="margin-top:10px">Ver más</button>
@@ -2346,7 +2347,7 @@ async function renderVinculos(){
  $('vnAl').innerHTML=alu.map(v=>{const h=vnRow(v),id=AID[String(v.otro_email).toLowerCase()];return (v.estado==='activo'&&id)?h.replace('<div style="white-space:nowrap">',`<div style="white-space:nowrap"><button class="btn small" data-vv="${id}" data-n="${esc(v.otro_nombre||v.otro_email)}" data-m="${esc(v.otro_email)}" type="button">Ver vuelos</button> `):h}).join('')||'<div class="hint">Aún no tienes alumnos enlazados.</div>';
  const isI=!!CK.instv||alu.length>0;$('vnAlW').classList.toggle('hidden',!isI);$('vnNoInst').classList.toggle('hidden',isI);
 }
-$('vnAl').addEventListener('click',async e=>{const b=e.target.closest('[data-vv]');if(!b)return;b.disabled=true;try{await loadAll(b.dataset.vv);viewing={id:b.dataset.vv,name:b.dataset.n,email:b.dataset.m,inst:true};document.body.classList.add('ro');$('roBar').classList.remove('hidden');$('roTxt').textContent='Viendo los vuelos de '+viewing.name+' (solo lectura)';st.y='Todo';st.a='Todas';go('vuelos');window.scrollTo(0,0)}catch(err){alert('No pude cargar los vuelos: '+err.message+'\n¿Ejecutaste instructor_ve_alumno.sql en Supabase?')}b.disabled=false});
+$('vnAl').addEventListener('click',async e=>{const b=e.target.closest('[data-vv]');if(!b)return;b.disabled=true;try{await loadAll(b.dataset.vv);viewing={id:b.dataset.vv,name:b.dataset.n,email:b.dataset.m,inst:true};document.body.classList.add('ro');$('roBar').classList.remove('hidden');$('roTxt').textContent='Viendo los vuelos de '+viewing.name+' (solo lectura)';{const r=$('insRes'),c=(n,l)=>`<div style="flex:1 1 120px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 14px"><b style="font:700 24px 'Bricolage Grotesque'">${fmt(n)}</b><div class="muted" style="font-size:12.5px">${l}</div></div>`;r.innerHTML=c(sum(ALL,'tot'),'horas totales')+c(sum(ALL,'so'),'horas solo');r.classList.remove('hidden')}st.y='Todo';st.a='Todas';go('vuelos');window.scrollTo(0,0)}catch(err){alert('No pude cargar los vuelos: '+err.message+'\n¿Ejecutaste instructor_ve_alumno.sql en Supabase?')}b.disabled=false});
 async function vnAdd(rol,inp){const em=$(inp).value.trim();if(!em)return note('vnMsg','Escribe un correo.','err');
  const{error}=await sb.rpc('crear_vinculo',{p_rol:rol,p_email:em});
  if(error)return note('vnMsg',error.message,'err');$(inp).value='';await renderVinculos();note('vnMsg','Invitación creada. Queda pendiente hasta que la otra persona la acepte.','ok')}
@@ -2453,7 +2454,7 @@ $('adTbl').onclick=async e=>{
  b.disabled=false;
 };
 $('roExit').onclick=async()=>{
- const wasI=viewing&&viewing.inst;viewing=null;document.body.classList.remove('ro');$('roBar').classList.add('hidden');
+ const wasI=viewing&&viewing.inst;viewing=null;$('insRes').classList.add('hidden');document.body.classList.remove('ro');$('roBar').classList.add('hidden');
  await loadAll();st.y='Todo';st.a='Todas';go(wasI?'vinculos':'admin');
 };
 
