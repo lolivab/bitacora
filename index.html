@@ -450,7 +450,6 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     <input id="pfQ" type="search" autocomplete="off" placeholder="Busca un modelo: C-172, PA-28, Cirrus SR22, King Air…">
     <div id="pfSug" class="hidden" style="position:absolute;left:0;right:0;z-index:20;margin-top:4px;max-height:260px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14)"></div>
     <div class="filters" id="pfSel" style="margin-top:8px"></div>
-    <div class="filters clubonly2" id="pfClubBtn" style="margin-top:6px"><button class="btn ghost small" id="pfClubAdd" type="button">+ Flota del club</button></div>
     <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--dual);font-size:13.5px">Mi avión no está en la lista</summary>
      <div class="form" style="max-width:none;margin-top:8px"><div class="field"><label for="pfOn">Nombre o tipo</label><input id="pfOn" maxlength="20" placeholder="Ej. C-150"></div><div class="field"><label for="pfOv">Velocidad aérea verdadera (kt)</label><input id="pfOv" type="number" min="40" step="1" inputmode="numeric"></div><div class="field"><label for="pfOt">Tarifa por hora, opcional (CLP)</label><input id="pfOt" type="number" min="0" step="1000" inputmode="numeric"></div></div>
      <button class="btn ghost small" id="pfOadd" type="button" style="margin-top:6px">Agregar</button></details></div>
@@ -1321,7 +1320,6 @@ function go(v){
  if(v==='chequeo')renderChequeo();
  if(v==='vinculos')renderVinculos();
  if(v==='autorizaciones')renderAut();
- if(v==='conversor'&&window.pfClubVis)pfClubVis();
  if(v==='exportar')prepPdf();
  if(v==='briefing')brFill();
  if(v==='cuenta'){note('avMsg','');paintAvatar();$('cuMail').textContent=user.email||'';$('cuHome').value=homeOf();$('cuClub').value=clubOf();note('cuHomeMsg','');$('cuP1').value=$('cuP2').value='';note('cuMsg','')}
@@ -2068,14 +2066,12 @@ const sug=()=>{const q=norm($('pfQ').value),box=$('pfSug');let l=ALLP.filter(p=>
 $('pfQ').oninput=sug;$('pfQ').onfocus=sug;
 $('pfSug').addEventListener('mousedown',e=>{const d=e.target.closest('[data-pa]');if(!d)return;e.preventDefault();const p=ALLP.find(x=>x.n===d.dataset.pa);if(p)add(p);$('pfQ').value='';$('pfSug').classList.add('hidden')});
 document.addEventListener('click',e=>{if(!e.target.closest('#pfQ,#pfSug'))$('pfSug').classList.add('hidden')});
-$('pfClubAdd').onclick=()=>FLOTA.forEach(f=>add({n:f[0],t:f[1],v:f[2],c:1}));
 $('pfOadd').onclick=()=>{const v=Number($('pfOv').value);if(!(v>0))return note('pfMsg','Escribe la velocidad aérea verdadera del avión.','err');add({n:$('pfOn').value.trim()||'Otro avión',t:Number($('pfOt').value)||0,v,c:0,own:1});$('pfOn').value='';$('pfOv').value='';$('pfOt').value='';note('pfMsg','','')};
-window.pfClubVis=()=>$('pfClubBtn').classList.toggle('hidden',!clubOf());
 window.pfSel=()=>SEL.map(p=>[p.n,p.t,p.v,p.own?1:0]);
 paintSel();
 $('pfGo').onclick=async()=>{const o=$('pfO').value.trim().toUpperCase(),d=$('pfD').value.trim().toUpperCase(),m=$('pfMsg'),out=$('pfOut');out.innerHTML='';m.textContent='';
  if(!/^[A-Z]{4}$/.test(o)||!/^[A-Z]{4}$/.test(d))return note('pfMsg','Escribe origen y destino con código ICAO de 4 letras.','err');
- const sel=pfSel();pfClubVis();
+ const sel=pfSel();
  try{if(!AP){const r=await fetch('airports.json');if(!r.ok)throw 0;AP=await r.json()}}catch(e){return note('pfMsg','No pude cargar la base de aeródromos.','err')}
  if(!AP[o]||!AP[d])return note('pfMsg','No encuentro '+(!AP[o]?o:d)+' en la base de aeródromos.','err');
  const rt=$('pfR').checked,km=hav([AP[o][0],AP[o][1]],[AP[d][0],AP[d][1]])*(rt?2:1),nm=km/1.852,w=Number($('pfW').value)||0,x=Number($('pfX').value)||0;
