@@ -263,8 +263,8 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
    <div class="card"><h3>Habilitaciones y vínculos</h3><p class="hint">Tus documentos, tu condición como piloto y tus instructores o alumnos</p><div class="in-t">
     <a href="#" data-go="chequeo" class="noclubonly"><b>Mis habilitaciones</b><span>Médico, licencia e instructor de vuelo</span></a>
     <a href="#" data-go="autorizaciones"><b>Autorizaciones <span class="in-badge hidden" id="inAut"></span></b><span>Pide o concede autorizaciones de vuelo</span></a>
-    <a href="#" data-go="vinculos"><b>Enlazar instructor <span class="in-badge hidden" id="inVn"></span></b><span>Vincula a tu instructor de vuelo</span></a>
-    <a href="#" data-go="vinculos" id="inAlu" class="hidden"><b>Enlazar alumno</b><span>Vincula a tus alumnos</span></a></div></div>
+    <a href="#" data-go="vinculos"><b><span id="inVnT">Vincular instructor</span> <span class="in-badge hidden" id="inVn"></span></b><span id="inVnS">Vincula a tu instructor de vuelo</span></a>
+    <i id="inAlu" class="hidden"></i></div></div>
    <div class="card in-hab"><h3>Habilitaciones del Club</h3><p class="hint">Según el Manual de Normas y Procedimientos del Club Aéreo de Santiago, para socios pilotos del Club</p><div class="in-t one">
     <a href="#" data-go="chequeo"><b>Chequeo de habilitaciones <span class="in-badge hidden" id="inChk"></span></b><span>Semáforo por grupo, documentos y cursos a los que puedes acceder</span></a></div></div>
    <div class="card"><h3>Herramientas</h3><p class="hint">Para antes de volar</p><div class="in-t">
@@ -374,12 +374,12 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
 
   <section id="s-vinculos" class="hidden"><div class="card" style="max-width:640px">
   <h2>Vínculos</h2>
-  <p class="hint">Enlaza a tu instructor o a tus alumnos. Al aceptar, el instructor podrá ver tu listado de vuelos (solo lectura). El vínculo queda pendiente hasta que la otra persona lo acepte, y cualquiera de los dos puede quitarlo cuando quiera.</p>
+  <p class="hint">Vincula a tu instructor o a tus alumnos. Al aceptar, el instructor podrá ver tu listado de vuelos (solo lectura). El vínculo queda pendiente hasta que la otra persona lo acepte, y cualquiera de los dos puede quitarlo cuando quiera.</p>
   <div id="vnPend"></div>
   <h3 style="margin:14px 0 4px">Mis instructores</h3><div id="vnInst"></div>
-  <div class="tools"><input id="vnEmI" type="email" placeholder="Correo de tu instructor" autocomplete="off"><button class="btn" id="vnAddI" type="button">Enlazar instructor</button></div>
+  <div class="tools"><input id="vnEmI" type="email" placeholder="Correo de tu instructor" autocomplete="off"><button class="btn" id="vnAddI" type="button">Vincular instructor</button></div>
   <div id="vnAlW"><h3 style="margin:18px 0 4px">Mis alumnos</h3><div id="vnAl"></div>
-  <div class="tools"><input id="vnEmA" type="email" placeholder="Correo de tu alumno" autocomplete="off"><button class="btn" id="vnAddA" type="button">Enlazar alumno</button></div></div>
+  <div class="tools"><input id="vnEmA" type="email" placeholder="Correo de tu alumno" autocomplete="off"><button class="btn" id="vnAddA" type="button">Vincular alumno</button></div></div>
   <p class="hint hidden" id="vnNoInst" style="margin-top:14px">Si eres instructor de vuelo, decláralo en Bitácora › Mis habilitaciones para enlazar alumnos.</p>
   <span class="hint" id="vnMsg"></span>
  </div></section>
@@ -2356,7 +2356,7 @@ $('s-vinculos').addEventListener('click',async e=>{
  if(r){const{error}=await sb.rpc('responder_vinculo',{p_id:r.dataset.vr,p_aceptar:!!r.dataset.ok});if(error)return note('vnMsg',error.message,'err');await renderVinculos();note('vnMsg',r.dataset.ok?'Vínculo aceptado.':'Invitación rechazada.','ok')}
  if(q){if(!confirm('¿Quitar este vínculo?'))return;const{error}=await sb.rpc('quitar_vinculo',{p_id:q.dataset.vq});if(error)return note('vnMsg',error.message,'err');await renderVinculos();note('vnMsg','Vínculo quitado.','ok')}
 });
-async function paintVn(){if(viewing||!user)return;$('inAlu').classList.toggle('hidden',!CK.instv);
+async function paintVn(){if(viewing||!user)return;$('inAlu').classList.toggle('hidden',!CK.instv);{const i=!!CK.instv;$('inVnT').textContent=i?'Vincular alumno o instructor':'Vincular instructor';$('inVnS').textContent=i?'Vincula a tus alumnos o a tu instructor':'Vincula a tu instructor de vuelo'}
  try{const r=await sb.rpc('mis_autorizaciones');const m=r.error?0:(r.data||[]).filter(x=>x.mi_rol==='instructor'&&x.estado==='solicitada').length,bb=$('inAut');bb.textContent=m?m+' solicitud'+(m>1?'es':''):'';bb.classList.toggle('hidden',!m);const P=r.error?[]:(r.data||[]).filter(x=>x.mi_rol==='instructor'&&x.estado==='solicitada'),isI=!!CK.instv||(r.data||[]).some(x=>x.mi_rol==='instructor');$('inNot').classList.toggle('hidden',!isI);const nb=$('inNotB');if(!P.length)nb.innerHTML='<div class="muted" style="font-size:13px">Sin novedades por ahora.</div>';else{const nn=P.map(x=>esc(x.alumno_nombre||x.alumno_email)),lst=nn.length>1?nn.slice(0,-1).join(', ')+' y '+nn[nn.length-1]:nn[0];nb.innerHTML=`<a href="#" data-go="autorizaciones" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:12px;background:#fff4e2;border:2px solid #e8a317;color:#5a3b05;box-shadow:0 0 0 4px rgba(232,163,23,.18);text-decoration:none"><span class="in-dot" style="animation:inP 1.6s infinite"></span><span style="flex:1 1 180px;min-width:0;font-size:14px"><b style="display:block;color:#7a4a00">${P.length} solicitud${P.length>1?'es':''} de vuelo solo</b>${lst} ${P.length>1?'esperan':'espera'} tu respuesta</span><span class="btn small">Revisar</span></a>`}}catch(e){}
  const e=await vnLoad();const n=e?0:(VN||[]).filter(v=>v.recibida).length;const b=$('inVn');b.textContent=n?n+' pendiente'+(n>1?'s':''):'';b.classList.toggle('hidden',!n)}
 function renderInicio(){
