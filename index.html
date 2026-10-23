@@ -353,7 +353,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
       <div class="ckr"><label for="ckMed">Certificado médico</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckMed"><div class="ckn"><span class="hint">Vencimiento</span></div></div>
       <div class="ckr"><label for="ckLic">Licencia</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckLic"><div class="ckn"><span class="hint">Vencimiento</span></div></div>
       <div class="ckgh">Condición</div>
-      <div class="ckr"><label for="ckInstV">Instructor de vuelo</label><div class="filters" style="margin:0"><label class="tog" for="ckInstV"><input type="checkbox" id="ckInstV">Soy instructor de vuelo</label></div><div class="ckn"><span class="hint">Podrás autorizar a tus alumnos y se mostrará en tu perfil</span></div></div>
+      <div class="ckr"><label for="ckInstV">Instructor de vuelo</label><div class="filters" style="margin:0"><label class="tog" for="ckInstV"><input type="checkbox" id="ckInstV">Soy instructor de vuelo o instructor ayudante</label></div><div class="ckn"><span class="hint">Podrás autorizar a tus alumnos. En el club, tus plazos usan 360 días.</span></div></div>
       <div class="ckr hidden" id="ckInstVR"><label for="ckInstVD">Habilitación de instructor</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckInstVD"><div class="ckn"><span class="hint">Vencimiento (opcional)</span></div></div>
       <div class="ckgh clubonly">Fechas de hitos</div>
       <div class="ckr clubonly"><label for="ckLicF">Obtención de la licencia</label><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="dti" id="ckLicF"><div class="ckn"><span class="hint">Fecha de obtención</span><span class="hint" id="ckLicFA"></span></div></div>
@@ -363,7 +363,6 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
      <h3 class="c12 clubonly" style="margin:10px 0 0">Cursos y condición</h3>
      <div class="field c12 clubonly"><label>Cursos y requisitos ya aprobados</label><p class="hint">Se marcan solos si los detecto en tus comentarios.</p>
       <div class="filters" id="ckCur"><label class="tog"><input type="checkbox" data-c="fc">Inspección Fuera de Cancha</label><label class="tog"><input type="checkbox" data-c="cost">Chequeo pistas costeras</label><label class="tog"><input type="checkbox" data-c="psc">Chequeo Pista Corta</label><label class="tog"><input type="checkbox" data-c="am">Área Media</label><label class="tog"><input type="checkbox" data-c="rv2">Habilitado en RV-9A II</label><label class="tog"><input type="checkbox" data-c="g1000">Ramo/curso Garmin 1000</label><label class="tog"><input type="checkbox" data-c="charla">Charla paso variable e inyección</label><label class="tog"><input type="checkbox" data-c="ma">Monomotores Avanzados</label><label class="tog"><input type="checkbox" data-c="noc">VFR Nocturno</label><label class="tog"><input type="checkbox" data-c="ifr">Vuelo por Instrumentos (IFR)</label><label class="tog"><input type="checkbox" data-c="mm">Multimotores</label></div></div>
-     <div class="c12 filters clubonly"><label class="tog" for="ckIns"><input type="checkbox" id="ckIns">Soy instructor o instructor ayudante (360 días en todos los grupos)</label></div>
     </div>
     <button class="btn" id="ckSave">Guardar</button> <span class="hint" id="ckMsg"></span>
     <p class="hint clubonly">Referencia basada en el Manual de Normas y Procedimientos del Club Aéreo de Santiago (nov. 2025), válida para socios pilotos del Club. Considera todos tus vuelos en estos modelos como vuelos en material del Club. No reemplaza la verificación del Club ni de la DGAC.</p>
@@ -402,6 +401,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     <div><label for="auAI">Instructor</label><select id="auAI"></select></div>
     <div><label for="auAM">Horas de vuelo solo que solicitas (opcional)</label><input id="auAM" inputmode="decimal" placeholder="2"></div>
    </div>
+   <div style="margin-top:8px"><label for="auAMsg">Mensaje para tu instructor (opcional)</label><input id="auAMsg" maxlength="140" placeholder="Ej.: para practicar circuitos en SCEL"></div>
    <button class="btn" id="auAGo" type="button" style="margin-top:8px">Enviar solicitud</button>
    <h3 style="margin:18px 0 4px">Mis autorizaciones</h3><div id="auMis"></div>
   </div>
@@ -1018,8 +1018,8 @@ function renderChequeo(){
 function paintChk(){
  const T=todayS(),R=ALL.filter(r=>!r.pv&&r.k!=='Simulador'&&r.d<=T);
  const tot=sum(ALL.filter(r=>r.k!=='Simulador'),'tot');
- ['ckMed','ckLic','ckBie','ckIns','ckInstV','ckInstVD','ckSave','ckLicF','ckAmF'].forEach(i=>$(i).disabled=!!viewing);$('ckSave').style.display=viewing?'none':'';
- DS('ckMed',CK.med);$('ckMsg').textContent=viewing?(CK.med||CK.lic||CK.bie||CK.ins?'Fechas cargadas por '+(viewing.name||viewing.email)+' (solo lectura).':(viewing.name||viewing.email)+' aún no ha cargado fechas.'):'';DS('ckLic',CK.lic);DS('ckBie',CK.bie);$('ckIns').checked=!!CK.ins;$('ckInstV').checked=!!CK.instv;DS('ckInstVD',CK.instvD||'');$('ckInstVR').classList.toggle('hidden',!CK.instv);
+ ['ckMed','ckLic','ckBie','ckInstV','ckInstVD','ckSave','ckLicF','ckAmF'].forEach(i=>$(i).disabled=!!viewing);$('ckSave').style.display=viewing?'none':'';
+ DS('ckMed',CK.med);$('ckMsg').textContent=viewing?(CK.med||CK.lic||CK.bie||CK.ins?'Fechas cargadas por '+(viewing.name||viewing.email)+' (solo lectura).':(viewing.name||viewing.email)+' aún no ha cargado fechas.'):'';DS('ckLic',CK.lic);DS('ckBie',CK.bie);$('ckInstV').checked=!!(CK.instv||CK.ins);DS('ckInstVD',CK.instvD||'');$('ckInstVR').classList.toggle('hidden',!CK.instv);
  const last={},lastF={},lastT={},cnt={},h12={};
  R.forEach(r=>{const a=acType(r.m);if(!a)return;
   if(!last[a.g]||r.d>last[a.g])last[a.g]=r.d;
@@ -1083,7 +1083,7 @@ function bad(i){return i.length>0}
 $('ckInstV').onchange=()=>$('ckInstVR').classList.toggle('hidden',!$('ckInstV').checked);
 $('ckSave').onclick=async()=>{
  if(viewing)return;
- CK={med:DG('ckMed'),lic:DG('ckLic'),bie:DG('ckBie'),ins:$('ckIns').checked,instv:$('ckInstV').checked,instvD:$('ckInstV').checked?DG('ckInstVD'):'',licF:DG('ckLicF'),amF:DG('ckAmF'),cur:{}};document.querySelectorAll('#ckCur input').forEach(i=>{if(i.checked)CK.cur[i.dataset.c]=true});
+ CK={med:DG('ckMed'),lic:DG('ckLic'),bie:DG('ckBie'),ins:$('ckInstV').checked,instv:$('ckInstV').checked,instvD:$('ckInstV').checked?DG('ckInstVD'):'',licF:DG('ckLicF'),amF:DG('ckAmF'),cur:{}};document.querySelectorAll('#ckCur input').forEach(i=>{if(i.checked)CK.cur[i.dataset.c]=true});
  try{localStorage.setItem('chk_'+user.id,JSON.stringify(CK))}catch(e){}
  paintChk();
  const{error}=await sb.from('perfiles').upsert({user_id:user.id,chequeo:CK,updated_at:new Date().toISOString()});
@@ -2283,7 +2283,7 @@ function auCard(a,rol){
  if(rol==='instructor'&&a.estado==='solicitada')act.push(`<button class="btn small" data-au="ok" data-i="${a.id}" type="button">Autorizar</button><button class="btn ghost small" data-au="no" data-i="${a.id}" type="button">Rechazar</button>`);
  if(rol==='instructor'&&a.estado==='autorizada')act.push(`<button class="btn ghost small danger" data-au="rev" data-i="${a.id}" type="button">Revocar</button>`);
  return `<div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><div><b>${esc(a.accion)}</b> ${auEstado(a)}</div><div style="white-space:nowrap">${act.join(' ')}</div></div>
- <div class="muted" style="font-size:13px">${rol==='alumno'?'Instructor':'Alumno'}: ${esc(quien)}${auLim(a)?' · '+esc(auLim(a)):''}</div>${a.comentario_resp?`<div class="muted" style="font-size:13px">Comentario: ${esc(a.comentario_resp)}</div>`:''}${a.usada_en?`<div class="muted" style="font-size:12px">Usada el ${esc(auFecha(a.usada_en))}</div>`:''}${firma}
+ <div class="muted" style="font-size:13px">${rol==='alumno'?'Instructor':'Alumno'}: ${esc(quien)}${auLim(a)?' · '+esc(auLim(a)):''}</div>${a.detalle?`<div class="muted" style="font-size:13px">${a.iniciada_por==='alumno'?'Mensaje del alumno':'Nota'}: ${esc(a.detalle)}</div>`:''}${rol==='instructor'&&a.estado==='solicitada'?`<input id="auR_${a.id}" maxlength="140" placeholder="Respuesta al alumno (ej.: solo vuelo local)" style="margin-top:6px">`:''}${a.comentario_resp?`<div class="muted" style="font-size:13px">Respuesta del instructor: ${esc(a.comentario_resp)}</div>`:''}${a.usada_en?`<div class="muted" style="font-size:12px">Usada el ${esc(auFecha(a.usada_en))}</div>`:''}${firma}
  <div class="muted" style="font-size:12px">${a.iniciada_por==='alumno'?'Solicitada':'Pre-autorizada'} el ${esc(auFecha(a.creada))}</div></div>`}
 async function renderAut(){
  loadChk();
@@ -2314,14 +2314,14 @@ $('fAut').onchange=()=>{const a=auSel();
  $('fAutI').innerHTML=`Autorizado por <b>${esc(auIni(a.resp_nombre||a.resp_email))}</b> el ${esc(auFecha(a.respondida_en))} desde ${a.verificada?'cuenta verificada':'cuenta sin verificar'}.${a.detalle?' '+esc(a.detalle):''}`};
 const auNum=s=>{const n=parseFloat(String(s||'').replace(',','.'));return isNaN(n)||n<=0?null:n};
 async function auCrear(fn,args){const{error}=await sb.rpc(fn,args);if(error)return note('auMsg',error.message,'err');await renderAut();note('auMsg','Listo.','ok')}
-$('auAGo').onclick=()=>{const i=$('auAI').value;if(!i)return note('auMsg','Primero enlaza a tu instructor en Vínculos.','err');auCrear('solicitar_autorizacion',{p_instructor:i,p_accion:AU_ACC,p_detalle:null,p_max:auNum($('auAM').value),p_vence:null}).then(()=>{$('auAM').value=''})};
+$('auAGo').onclick=()=>{const i=$('auAI').value;if(!i)return note('auMsg','Primero enlaza a tu instructor en Vínculos.','err');auCrear('solicitar_autorizacion',{p_instructor:i,p_accion:AU_ACC,p_detalle:$('auAMsg').value.trim()||null,p_max:auNum($('auAM').value),p_vence:null}).then(()=>{$('auAM').value='';$('auAMsg').value=''})};
 $('auIGo').onclick=()=>{const i=$('auIA').value;if(!i)return note('auMsg','Aún no tienes alumnos enlazados.','err');if(!auNum($('auIM').value))return note('auMsg','Indica el máximo de horas autorizadas.','err');auCrear('preautorizar',{p_alumno:i,p_accion:AU_ACC,p_detalle:null,p_max:auNum($('auIM').value),p_vence:null}).then(()=>{$('auIM').value=''})};
 $('s-autorizaciones').addEventListener('click',async e=>{
  const b=e.target.closest('[data-au]');if(!b)return;
  if(b.dataset.au==='rev'){if(!confirm('¿Revocar esta autorización?'))return;return auCrear('revocar_autorizacion',{p_id:b.dataset.i})}
  const ok=b.dataset.au==='ok',a0=AU.find(x=>x.id===b.dataset.i);let mx=null;
  if(ok){const t=prompt('Máximo de horas de vuelo solo que autorizas:',a0&&a0.max_horas?String(a0.max_horas).replace('.',','):'');if(t===null)return;mx=auNum(t);if(!mx)return note('auMsg','Indica un máximo de horas válido.','err')}
- const c=prompt(ok?'Comentario para el alumno (opcional):':'Motivo del rechazo (opcional):','');if(c===null)return;
+ const ci=document.getElementById('auR_'+b.dataset.i),c=ci?ci.value.trim():'';
  auCrear('responder_autorizacion',{p_id:b.dataset.i,p_aceptar:ok,p_comentario:c,p_max:mx,p_vence:null})});
 
 async function vnLoad(){const{data,error}=await sb.rpc('mis_vinculos');if(error){VN=null;return error}VN=data||[];return null}
