@@ -112,6 +112,7 @@ body.ro [data-d],body.ro [data-e],body.ro #subnav [data-v=nuevo],body.ro #subnav
 .in-stats b{font-family:'Bricolage Grotesque',sans-serif;font-size:24px}.in-stats span{font-size:12px;color:#b9c6da}
 .in-alert{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:#fff4e2;border:1px solid #f0d3a4;color:#5a3b05;margin-bottom:14px;text-decoration:none;font-size:14px}.in-alert b{color:#b45309;white-space:nowrap}
 .in-alert.bad{background:#fde8e6;border-color:#f3b8b2;color:#6b1a14}.in-alert.bad b{color:var(--bad)}
+@keyframes inP{50%{opacity:.35}}
 .in-dot{width:10px;height:10px;border-radius:50%;background:#e8a317;flex:none}.in-alert.bad .in-dot{background:var(--bad)}
 #cuPlan:not(:empty){background:#0f2747;color:#fff;padding:12px 14px;border-radius:10px;margin:10px 0;font-size:14px;line-height:1.4}#cuPlan b{color:#f2a86b;font-size:15px}
 .ckrows{display:flex;flex-direction:column}.ckgh{font-weight:700;font-size:16px;margin:14px 0 6px;padding-bottom:6px;border-bottom:1px solid var(--line)}.ckgh:first-child{margin-top:0}.ckr{display:grid;grid-template-columns:210px 150px 1fr;gap:6px 16px;align-items:start;padding:8px 0}.ckr label{margin:0;padding-top:10px;color:var(--ink);font-weight:500}.ckr input{width:100%;box-sizing:border-box}.ckn{display:flex;flex-direction:column;gap:2px;padding-top:9px}.ckn .hint{margin:0}@media(max-width:640px){.ckr{grid-template-columns:1fr 150px}.ckr label{grid-column:1/-1;padding-top:0}.ckn{grid-column:1/-1;padding-top:0}}
@@ -245,6 +246,7 @@ input[type=time],input[type=number]{-webkit-appearance:none;appearance:none;disp
     <div class="in-cta"><button class="btn" data-go="nuevo" type="button">+ Registrar vuelo</button><button class="btn ghost" data-go="vuelos" type="button">Ver mis vuelos</button></div></div>
    <div class="in-stats"><div><b id="inH1">–</b><span>horas totales</span></div><div><b id="inH2">–</b><span>horas últimos 90 días</span></div><div class="in-hab"><b id="inH3">–</b><span id="inH3l">próximo vencimiento</span></div><div id="inWx" class="in-wx hidden"></div></div>
   </div>
+  <div class="card hidden" id="inNot" style="margin-bottom:14px"><h3 style="margin:0 0 8px;font-family:'Bricolage Grotesque',sans-serif;font-size:16px">Notificaciones</h3><div id="inNotB"></div></div>
   <a class="in-alert hidden" id="inAcc" href="#" onclick="return false"><span class="in-dot"></span><span id="inAccT" style="flex:1"></span><b>Ver planes →</b></a>
   <a class="in-alert hidden" id="inAlert" data-go="chequeo" href="#" onclick="return false"><span class="in-dot" id="inDot"></span><span id="inAT" style="flex:1"></span><b>Ver chequeo →</b></a>
   <div class="in-grid">
@@ -2355,7 +2357,7 @@ $('s-vinculos').addEventListener('click',async e=>{
  if(q){if(!confirm('¿Quitar este vínculo?'))return;const{error}=await sb.rpc('quitar_vinculo',{p_id:q.dataset.vq});if(error)return note('vnMsg',error.message,'err');await renderVinculos();note('vnMsg','Vínculo quitado.','ok')}
 });
 async function paintVn(){if(viewing||!user)return;$('inAlu').classList.toggle('hidden',!CK.instv);
- try{const r=await sb.rpc('mis_autorizaciones');const m=r.error?0:(r.data||[]).filter(x=>x.mi_rol==='instructor'&&x.estado==='solicitada').length,bb=$('inAut');bb.textContent=m?m+' solicitud'+(m>1?'es':''):'';bb.classList.toggle('hidden',!m)}catch(e){}
+ try{const r=await sb.rpc('mis_autorizaciones');const m=r.error?0:(r.data||[]).filter(x=>x.mi_rol==='instructor'&&x.estado==='solicitada').length,bb=$('inAut');bb.textContent=m?m+' solicitud'+(m>1?'es':''):'';bb.classList.toggle('hidden',!m);const P=r.error?[]:(r.data||[]).filter(x=>x.mi_rol==='instructor'&&x.estado==='solicitada'),isI=!!CK.instv||(r.data||[]).some(x=>x.mi_rol==='instructor');$('inNot').classList.toggle('hidden',!isI);const nb=$('inNotB');if(!P.length)nb.innerHTML='<div class="muted" style="font-size:13px">Sin novedades por ahora.</div>';else{const nn=P.map(x=>esc(x.alumno_nombre||x.alumno_email)),lst=nn.length>1?nn.slice(0,-1).join(', ')+' y '+nn[nn.length-1]:nn[0];nb.innerHTML=`<a href="#" data-go="autorizaciones" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:12px;background:#fff4e2;border:2px solid #e8a317;color:#5a3b05;box-shadow:0 0 0 4px rgba(232,163,23,.18);text-decoration:none"><span class="in-dot" style="animation:inP 1.6s infinite"></span><span style="flex:1 1 180px;min-width:0;font-size:14px"><b style="display:block;color:#7a4a00">${P.length} solicitud${P.length>1?'es':''} de vuelo solo</b>${lst} ${P.length>1?'esperan':'espera'} tu respuesta</span><span class="btn small">Revisar</span></a>`}}catch(e){}
  const e=await vnLoad();const n=e?0:(VN||[]).filter(v=>v.recibida).length;const b=$('inVn');b.textContent=n?n+' pendiente'+(n>1?'s':''):'';b.classList.toggle('hidden',!n)}
 function renderInicio(){
  paintWx();paintSun();
